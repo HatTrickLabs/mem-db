@@ -4,16 +4,15 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{C39118DF-D936-4BE4-8AED-F88D4C30160C}</ProjectGuid>
-    <OutputType>Exe</OutputType>
-    <RootNamespace>HTL.MemDb.TestHarness</RootNamespace>
-    <AssemblyName>HTL.MemDb.TestHarness</AssemblyName>
+    <ProjectGuid>{92E16900-7584-438B-B864-121CF5E7A9B6}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>HatTrick.MemDb</RootNamespace>
+    <AssemblyName>HatTrick.MemDb</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -23,7 +22,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -42,23 +40,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DBRecord\BookTextRecord.cs" />
-    <Compile Include="Program.cs" />
+    <Compile Include="IMemDbAccessor.cs" />
+    <Compile Include="IMemDbCryptoProvider.cs" />
+    <Compile Include="IMemDbSerializable.cs" />
+    <Compile Include="MemDb.cs" />
+    <Compile Include="MemDbExpression.cs" />
+    <Compile Include="MemDbMap.cs" />
+    <Compile Include="MemDbPointer.cs" />
+    <Compile Include="MemDbRecord.cs" />
+    <Compile Include="NotCryptoReadyException.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="App.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="BookText\Adventures_Of_Huckleberry_Finn.txt" />
-    <Content Include="BookText\Lord_Of_The_Flies.txt" />
-    <Content Include="BookText\The_Adventures_Of_Tom_Sawyer.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\HTL.MemDb\HTL.MemDb.csproj">
-      <Project>{92e16900-7584-438b-b864-121cf5e7a9b6}</Project>
-      <Name>HTL.MemDb</Name>
-    </ProjectReference>
+    <Compile Include="StaleRecordException.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

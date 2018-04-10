@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27130.2027
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HTL.MemDb", "HTL.MemDb\HTL.MemDb.csproj", "{92E16900-7584-438B-B864-121CF5E7A9B6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HatTrick.MemDb", "HatTrick.MemDb\HatTrick.MemDb.csproj", "{92E16900-7584-438B-B864-121CF5E7A9B6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HTL.MemDb.TestHarness", "HTL.MemDb.TestHarness\HTL.MemDb.TestHarness.csproj", "{C39118DF-D936-4BE4-8AED-F88D4C30160C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HatTrick.MemDb.TestHarness", "HatTrick.MemDb.TestHarness\HatTrick.MemDb.TestHarness.csproj", "{C39118DF-D936-4BE4-8AED-F88D4C30160C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
