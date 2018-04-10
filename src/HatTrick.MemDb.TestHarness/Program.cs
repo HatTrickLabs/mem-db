@@ -19,32 +19,31 @@ namespace TestHarness
         {
             _sw = new Stopwatch();
             _sw.Start();
-            _db = MemDb<BookTextRecord>.Open(DbRoot, "books");
-            //using (_db = MemDb<BookTextRecord>.Open(DbRoot, "books"))
-            //{
+            using (_db = MemDb<BookTextRecord>.Open(DbRoot, "books"))
+            {
                 _sw.Stop();
                 Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
                 _sw.Start();
 
                 //Book text is included in the project but NOT copied to the output dir...
                 //ImportBooks(@"C:\target\BookText");
+                
                 //SearchText();
                 //RunQueries();
                 //ExecuteUpdates("Lord Of The Flies");//("Adventures Of Huckleberry Finn");
                 //RunQueries();
                 //ConfirmUpdates();
                 //DefragDB();
-
                 //MultiThreadImport();
                 //MultiThreadedUpdate();
                 //MultiThreadRunQueries();
                 //MultiThreadChaos();
-            //}
+            }
 
             _sw.Stop();
             Console.WriteLine("Process completed in " + _sw.ElapsedMilliseconds + " milliseconds.");
             Console.WriteLine("Press [Enter] to exit.");
-            //Console.ReadLine();
+            Console.ReadLine();
         }
 
         #region import books
