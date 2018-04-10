@@ -7,7 +7,7 @@ using System.IO;
 
 namespace HatTrick.MemDb
 {
-    public abstract class MemDbRecord// : IMemDbSerializable
+    public abstract class MemDbRecord : IMemDbSerializable
     {
         #region read only
         public static readonly int BaseRecordLength = 14;

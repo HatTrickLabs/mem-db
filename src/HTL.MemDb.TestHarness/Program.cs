@@ -13,15 +13,15 @@ namespace TestHarness
     {
         static Stopwatch _sw;
         static MemDb<BookTextRecord> _db;
-        static string DbRoot = @"C:\target";
+        static string DbRoot = @"C:\target\books";
 
         static void Main(string[] args)
         {
             _sw = new Stopwatch();
             _sw.Start();
-
-            using (_db = MemDb<BookTextRecord>.Open(DbRoot, "books"))
-            {
+            _db = MemDb<BookTextRecord>.Open(DbRoot, "books");
+            //using (_db = MemDb<BookTextRecord>.Open(DbRoot, "books"))
+            //{
                 _sw.Stop();
                 Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
                 _sw.Start();
@@ -29,8 +29,8 @@ namespace TestHarness
                 //Book text is included in the project but NOT copied to the output dir...
                 //ImportBooks(@"C:\target\BookText");
                 //SearchText();
-                RunQueries();
-                //ExecuteUpdates("Adventures Of Huckleberry Finn");
+                //RunQueries();
+                //ExecuteUpdates("Lord Of The Flies");//("Adventures Of Huckleberry Finn");
                 //RunQueries();
                 //ConfirmUpdates();
                 //DefragDB();
@@ -39,12 +39,12 @@ namespace TestHarness
                 //MultiThreadedUpdate();
                 //MultiThreadRunQueries();
                 //MultiThreadChaos();
-            }
+            //}
 
             _sw.Stop();
             Console.WriteLine("Process completed in " + _sw.ElapsedMilliseconds + " milliseconds.");
             Console.WriteLine("Press [Enter] to exit.");
-            Console.ReadLine();
+            //Console.ReadLine();
         }
 
         #region import books
@@ -186,9 +186,9 @@ namespace TestHarness
             sw.Restart();
             for (int i = 0; i < recs.Length; i++)
             {
-                recs[i].Text = recs[i].Text + " xxx";
+                recs[i].Text = recs[i].Text + " @@@";
                 recs[i].WordCount += 1;
-                //recs[i].Text = recs[i].Text.Replace(" xxx", string.Empty);
+                //recs[i].Text = recs[i].Text.Replace(" @@@", string.Empty);
                 //recs[i].WordCount -= 1;
                 _db.Update(recs[i]);
                 cnt += 1;
@@ -231,7 +231,7 @@ namespace TestHarness
             Thread t1 = new Thread(new ParameterizedThreadStart(ImportBooks)); //23,241 records
             Thread t2 = new Thread(new ParameterizedThreadStart(ImportBooks)); //23,241 records
 
-            string path = @"D:\git\htl\htl - memdb\src\HatTrick.MemDb.TestHarness\BookText";
+            string path = @"C:\target\BookText";
             t1.Start(path);
             t2.Start(path);
 
@@ -278,19 +278,19 @@ namespace TestHarness
         {
             Thread t1 = new Thread(new ThreadStart(RunQueries));
             Thread t2 = new Thread(new ParameterizedThreadStart(ExecuteUpdates)); ;
-            Thread t3 = new Thread(new ThreadStart(DefragDB)); ;
+            //Thread t3 = new Thread(new ThreadStart(DefragDB)); ;
             Thread t4 = new Thread(new ThreadStart(RunQueries));
             Thread t5 = new Thread(new ParameterizedThreadStart(ExecuteUpdates));
 
             t1.Start();
             t2.Start("Adventures Of Huckleberry Finn");
-            t3.Start();
+            //t3.Start();
             t4.Start();
             t5.Start("Lord Of The Flies");
 
             t1.Join();
             t2.Join();
-            t3.Join();
+            //t3.Join();
             t4.Join();
             t5.Join();
         }

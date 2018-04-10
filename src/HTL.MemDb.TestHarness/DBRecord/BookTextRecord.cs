@@ -8,7 +8,7 @@ using HatTrick.MemDb;
 
 namespace TestHarness
 {
-    public class BookTextRecord : MemDbRecord, IMemDbSerializable
+    public class BookTextRecord : MemDbRecord//, IMemDbSerializable
     {
         public string Text { get; set; }
 
