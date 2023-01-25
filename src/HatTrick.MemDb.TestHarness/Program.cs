@@ -13,7 +13,7 @@ namespace TestHarness
     {
         static Stopwatch _sw;
         static MemDb<BookTextRecord> _db;
-        static string DbRoot = @"C:\target\books";
+        static string DbRoot = @"d:\tmp\mem-db\books";
 
         static void Main(string[] args)
         {
@@ -26,7 +26,7 @@ namespace TestHarness
                 _sw.Start();
 
                 //Book text is included in the project but NOT copied to the output dir...
-                //ImportBooks(@"C:\target\BookText");
+                //ImportBooks(@"D:\git\HatTrickLabs\mem-db\src\HatTrick.MemDb.TestHarness\BookText");
                 
                 //SearchText();
                 //RunQueries();
@@ -38,6 +38,8 @@ namespace TestHarness
                 //MultiThreadedUpdate();
                 //MultiThreadRunQueries();
                 //MultiThreadChaos();
+
+                _db.Delete(
             }
 
             _sw.Stop();
@@ -277,19 +279,19 @@ namespace TestHarness
         {
             Thread t1 = new Thread(new ThreadStart(RunQueries));
             Thread t2 = new Thread(new ParameterizedThreadStart(ExecuteUpdates)); ;
-            //Thread t3 = new Thread(new ThreadStart(DefragDB)); ;
+            Thread t3 = new Thread(new ThreadStart(DefragDB)); ;
             Thread t4 = new Thread(new ThreadStart(RunQueries));
             Thread t5 = new Thread(new ParameterizedThreadStart(ExecuteUpdates));
 
             t1.Start();
             t2.Start("Adventures Of Huckleberry Finn");
-            //t3.Start();
+            t3.Start();
             t4.Start();
             t5.Start("Lord Of The Flies");
 
             t1.Join();
             t2.Join();
-            //t3.Join();
+            t3.Join();
             t4.Join();
             t5.Join();
         }
