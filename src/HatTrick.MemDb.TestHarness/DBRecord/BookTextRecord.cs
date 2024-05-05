@@ -8,40 +8,30 @@ using HatTrick.MemDb;
 
 namespace TestHarness
 {
-    public class BookTextRecord : MemDbRecord//, IMemDbSerializable
+    public class BookTextRecord
     {
+        public int Id { get; set; }
+
         public string Text { get; set; }
 
         public string BookName { get; set; }
 
         public int WordCount { get; set; }
 
-        public override void DeserializeFrom(Stream buffer, int length)
+        public void DeserializeFrom(BinaryReader buffer)
         {
-            base.DeserializeFrom(buffer, MemDbRecord.BaseRecordLength);
-
-            int payloadLength = (length - MemDbRecord.BaseRecordLength);
-
-            byte[] payload = new byte[payloadLength];
-
-            buffer.Read(payload, 0, payloadLength);
-
-            string val = Encoding.UTF8.GetString(payload);
-
-            string[] vars = val.Split('|');
-            this.Text = vars[0];
-            this.BookName = vars[1];
-            this.WordCount = int.Parse(vars[2]);
+            this.Id = buffer.ReadInt32();
+            this.Text = buffer.ReadString();
+            this.BookName = buffer.ReadString();
+            this.WordCount = buffer.ReadInt32();
         }
 
-        public override void SerializeTo(Stream buffer)
+        public void SerializeTo(BinaryWriter buffer)
         {
-            base.SerializeTo(buffer);
-
-            //byte[] val = Encoding.UTF8.GetBytes($"{this.Text}|{this.BookName}|{this.WordCount}");
-            byte[] val = Encoding.UTF8.GetBytes(this.Text + "|" + this.BookName + "|" + this.WordCount);
-
-            buffer.Write(val, 0, val.Length);
+            buffer.Write(this.Id);
+            buffer.Write(this.Text);
+            buffer.Write(this.BookName);
+            buffer.Write(this.WordCount);
         }
     }
 }

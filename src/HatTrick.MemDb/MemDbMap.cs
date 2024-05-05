@@ -17,7 +17,7 @@ namespace HatTrick.MemDb
         #region interface
         public int PointerCount { get { return _pointerCount; } }
 
-        public int ByteLength { get { return PointerCount * MemDbPointer.Length; } }
+        public int ByteLength { get { return PointerCount * MemDbPointer.Size; } }
 
         public List<MemDbPointer> Pointers { get { return _pointers; } }
         #endregion

@@ -10,13 +10,13 @@ namespace HatTrick.MemDb
     public struct MemDbPointer
     {
         #region interface
-        public static readonly int Length = 14;
+        public static readonly int Size = 14;
 
         public int Id;
         public bool IsStale;
         public bool IsEncrypted;
-        public int RecordStartPosition;
-        public int RecordLength;
+        public int Position;
+        public int Length;
         #endregion
 
         #region constructor
@@ -25,8 +25,8 @@ namespace HatTrick.MemDb
             this.Id = id;
             this.IsStale = isStale;
             this.IsEncrypted = isEncrypted;
-            this.RecordStartPosition = startPosition;
-            this.RecordLength = length;
+            this.Position = startPosition;
+            this.Length = length;
         }
         #endregion
 
@@ -34,11 +34,11 @@ namespace HatTrick.MemDb
         public int SerializeTo(Stream buffer)
         {
 
-            byte[] buff = new byte[MemDbPointer.Length];
+            byte[] buff = new byte[MemDbPointer.Size];
             this.SerializeTo(buff, 0);
-            buffer.Write(buff, 0, MemDbPointer.Length);
+            buffer.Write(buff, 0, MemDbPointer.Size);
 
-            return MemDbPointer.Length;
+            return MemDbPointer.Size;
         }
 
         public int SerializeTo(byte[] buffer, int index)
@@ -54,10 +54,10 @@ namespace HatTrick.MemDb
             BitConverter.GetBytes(this.IsEncrypted).CopyTo(buffer, position);
             position += 1;
 
-            BitConverter.GetBytes(this.RecordStartPosition).CopyTo(buffer, position);
+            BitConverter.GetBytes(this.Position).CopyTo(buffer, position);
             position += 4;
 
-            BitConverter.GetBytes(this.RecordLength).CopyTo(buffer, position);
+            BitConverter.GetBytes(this.Length).CopyTo(buffer, position);
             position += 4;
 
             return (position - index);
@@ -65,8 +65,8 @@ namespace HatTrick.MemDb
 
         public static int DeserializeFrom(Stream buffer, out MemDbPointer pointer)
         {
-            byte[] buf = new byte[MemDbPointer.Length];
-            buffer.Read(buf, 0, MemDbPointer.Length);
+            byte[] buf = new byte[MemDbPointer.Size];
+            buffer.Read(buf, 0, MemDbPointer.Size);
             return MemDbPointer.DeserializeFrom(buf, 0, out pointer);
         }
 
@@ -91,7 +91,7 @@ namespace HatTrick.MemDb
 
             pointer = new MemDbPointer(id, isStale, isEncrypted, startPosition, length);
 
-            return MemDbPointer.Length; //length deserialized... (4 + 1 + 4 + 4)
+            return MemDbPointer.Size; //byte length deserialized... (4 + 1 + 4 + 4)
         }
         #endregion
     }

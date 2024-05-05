@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace HatTrick.MemDb
 {
-    public class MemDbExpression<T> where T : MemDbRecord, new()
+    public class MemDbExpression<T> where T :/* MemDbRecord, */new()
     {
         #region internals
         private ExecuteQuery _executionFunc;

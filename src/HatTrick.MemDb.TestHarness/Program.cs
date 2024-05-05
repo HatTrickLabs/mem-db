@@ -26,9 +26,9 @@ namespace TestHarness
                 _sw.Start();
 
                 //Book text is included in the project but NOT copied to the output dir...
-                //ImportBooks(@"D:\git\HatTrickLabs\mem-db\src\HatTrick.MemDb.TestHarness\BookText");
+                ImportBooks(@"D:\git\HatTrickLabs\mem-db\src\HatTrick.MemDb.TestHarness\BookText");
                 
-                SearchText();
+                //SearchText();
                 //RunQueries();
                 //ExecuteUpdates("Lord Of The Flies");//("Adventures Of Huckleberry Finn");
                 //RunQueries();
@@ -64,7 +64,6 @@ namespace TestHarness
                         {
                             line = sr.ReadLine();
                             BookTextRecord rec = new BookTextRecord();
-                            _db.PreAllocId(ref rec);
                             rec.Text = line;
                             rec.WordCount = line.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).Length;
                             rec.BookName = bookName;
@@ -176,22 +175,20 @@ namespace TestHarness
         {
             Stopwatch sw = new Stopwatch();
             string bookName = (string)book;
-            sw.Restart();
-            BookTextRecord[] recs = _db.FindAll(r => r.BookName == bookName);
-            sw.Stop();
-            Console.WriteLine("retrieved entire text of " + bookName + " in " + sw.ElapsedMilliseconds + " milliseconds; " + recs.Length + " records");
 
             int cnt = 0;
-            sw.Restart();
-            for (int i = 0; i < recs.Length; i++)
+            Action<BookTextRecord> update = (rec) =>
             {
-                recs[i].Text = recs[i].Text + " @@@";
-                recs[i].WordCount += 1;
-                //recs[i].Text = recs[i].Text.Replace(" @@@", string.Empty);
-                //recs[i].WordCount -= 1;
-                _db.Update(recs[i]);
-                cnt += 1;
-            }
+                rec.Text = rec.Text + " @@@";
+                rec.WordCount += 1;
+            };
+            Action<BookTextRecord> reverse = (rec) =>
+            {
+                rec.Text = rec.Text.Replace(" @@@", string.Empty);
+                rec.WordCount -= 1;
+            };
+            sw.Start();
+            cnt = _db.Update(update, r => r.BookName == bookName);
             sw.Stop();
             Console.WriteLine("updated " + cnt + " records in " + sw.ElapsedMilliseconds + " milliseconds");
 

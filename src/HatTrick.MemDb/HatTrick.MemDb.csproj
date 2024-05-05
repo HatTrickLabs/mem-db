@@ -43,6 +43,7 @@
     <Compile Include="IMemDbAccessor.cs" />
     <Compile Include="IMemDbCryptoProvider.cs" />
     <Compile Include="IMemDbSerializable.cs" />
+    <Compile Include="ISerializationProvider.cs" />
     <Compile Include="MemDb.cs" />
     <Compile Include="MemDbExpression.cs" />
     <Compile Include="MemDbMap.cs" />

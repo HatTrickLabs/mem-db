@@ -7,39 +7,39 @@ using System.IO;
 
 namespace HatTrick.MemDb
 {
-    public interface IMemDbAcceessor<T> : IDisposable where T : MemDbRecord, new()
+    public interface IMemDbAcceessor<T> : IDisposable where T :/* MemDbRecord, */new()
     {
-        void PreAllocId(ref T rec);
+        //void PreAllocId(ref T rec);
 
         int Count();
 
-        int Count(Func<T, bool> func);
+        int Count(Func<T, bool> selector);
 
-        Y Max<Y>(Func<T, Y> func);
+        Y Max<Y>(Func<T, Y> selector);
 
-        Y Min<Y>(Func<T, Y> func);
+        Y Min<Y>(Func<T, Y> selector);
 
-        int Sum(Func<T, int> func);
+        int Sum(Func<T, int> selector);
 
-        double Sum(Func<T, double> func);
+        double Sum(Func<T, double> selector);
 
-        decimal Sum(Func<T, decimal> func);
+        decimal Sum(Func<T, decimal> selector);
 
         Y[] FindDistinct<Y>(Converter<T, Y> converter) where Y : IConvertible;
 
-        T Find(Func<T, bool> func);
+        T Find(Func<T, bool> where);
 
-        T[] FindAll(Func<T, bool> p);
+        T[] FindAll(Func<T, bool> where);
 
         void Insert(T rec);
 
         void InsertEncrypted(T rec);
 
-        bool Update(T rec);
+        int Update(Action<T> apply, Func<T, bool> where);
 
-        bool Delete(T rec);
+        int Delete(Func<T, bool> where);
 
-        bool Delete(int Id);
+        //bool Delete(int Id);
 
         MemDbExpression<T> Query();
 

@@ -7,9 +7,9 @@ using System.IO;
 
 namespace HatTrick.MemDb
 {
-    public interface IMemDbSerializable
-    {
-        void SerializeTo(Stream buffer);
-        void DeserializeFrom(Stream buffer, int payloadLength);
-    }
+    //public interface IMemDbSerializable
+    //{
+    //    void SerializeTo(Stream buffer);
+    //    void DeserializeFrom(Stream buffer/*, int payloadLength*/);
+    //}
 }
