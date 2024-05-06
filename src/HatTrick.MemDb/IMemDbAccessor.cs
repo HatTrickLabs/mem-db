@@ -9,8 +9,6 @@ namespace HatTrick.MemDb
 {
     public interface IMemDbAcceessor<T> : IDisposable where T :/* MemDbRecord, */new()
     {
-        //void PreAllocId(ref T rec);
-
         int Count();
 
         int Count(Func<T, bool> selector);
@@ -39,13 +37,11 @@ namespace HatTrick.MemDb
 
         int Delete(Func<T, bool> where);
 
-        //bool Delete(int Id);
-
         MemDbExpression<T> Query();
 
         void Flush();
 
-        Dictionary<string, string> Stats();
+        Dictionary<string, decimal> Stats();
 
         void Defrag();
 

@@ -10,7 +10,6 @@ namespace HatTrick.MemDb
     {
         #region internals
         private ExecuteQuery _executionFunc;
-        //private Predicate<T> _filter;
         private Func<T, bool> _filter;
         private Comparison<T> _orderBy;
         private int? _skip;
@@ -18,21 +17,21 @@ namespace HatTrick.MemDb
         #endregion
 
         #region interface
-        public bool HasFilter { get { return _filter != null; } }
-        public Func<T, bool> Filter { get { return _filter; } }
+        public bool HasFilter => _filter is not null;
+        public Func<T, bool> Filter => _filter ?? ((x) => true);
 
-        public bool HasOrderBy { get { return _orderBy != null; } }
-        public Comparison<T> OrderByComparison { get { return _orderBy; } }
+        public bool HasOrderBy => _orderBy is not null;
+        public Comparison<T> OrderByComparison => _orderBy;
 
-        public bool HasSkip { get { return _skip.HasValue; } }
-        public int SkipCount { get { return (_skip.HasValue) ? _skip.Value : 0; } }
+        public bool HasSkip => _skip.HasValue;
+        public int SkipCount => _skip.HasValue ? _skip.Value : 0;
 
-        public bool HasLimit { get { return _limit.HasValue; } }
-        public int LimitCount { get { return (_limit.HasValue) ? _limit.Value : 0; } }
+        public bool HasLimit => _limit.HasValue;
+        public int LimitCount => _limit.HasValue ? _limit.Value : 0;
         #endregion
 
         #region delegates
-        internal delegate T[] ExecuteQuery(MemDbExpression<T> expression, bool deepCopy = true);
+        internal delegate T[] ExecuteQuery(MemDbExpression<T> expression, bool deepCopy);
         #endregion
 
         #region constructors
@@ -43,12 +42,6 @@ namespace HatTrick.MemDb
         #endregion
 
         #region where
-        //public FlatDBExpression<T> Where(Predicate<T> p)
-        //{
-        //    _filter = p;
-        //    return this;
-        //}
-
         public MemDbExpression<T> Where(Func<T, bool> func)
         {
             _filter = func;
@@ -86,19 +79,19 @@ namespace HatTrick.MemDb
         #region sum
         public int Sum(Func<T, int> selector)
         {
-            int val = _executionFunc(this, false).ToList().Sum(selector);
+            int val = _executionFunc(this, false).Sum(selector);
             return val;
         }
 
         public double Sum(Func<T, double> selector)
         {
-            double val = _executionFunc(this, false).ToList().Sum(selector);
+            double val = _executionFunc(this, false).Sum(selector);
             return val;
         }
 
         public decimal Sum(Func<T, decimal> selector)
         {
-            decimal val = _executionFunc(this, false).ToList().Sum(selector);
+            decimal val = _executionFunc(this, false).Sum(selector);
             return val;
         }
         #endregion
@@ -107,7 +100,7 @@ namespace HatTrick.MemDb
         public Y Max<Y>(Func<T, Y> func)
         {
             Y max = default(Y);
-            max = _executionFunc(this, false).ToList().Max<T, Y>(func);
+            max = _executionFunc(this, false).Max<T, Y>(func);
             return max;
         }
         #endregion
@@ -116,7 +109,7 @@ namespace HatTrick.MemDb
         public Y Min<Y>(Func<T, Y> func)
         {
             Y min = default(Y);
-            min = _executionFunc(this, false).ToList().Min<T, Y>(func);
+            min = _executionFunc(this, false).Min<T, Y>(func);
             return min;
         }
         #endregion
@@ -150,7 +143,7 @@ namespace HatTrick.MemDb
         #region find all
         public T[] FindAll()
         {
-            return _executionFunc(this);
+            return _executionFunc(this, true);
         }
         #endregion
     }

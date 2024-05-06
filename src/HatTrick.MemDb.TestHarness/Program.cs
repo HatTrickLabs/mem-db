@@ -6,6 +6,7 @@ using System.IO;
 using System.Threading;
 using System.Diagnostics;
 using HatTrick.MemDb;
+using System.Collections.Generic;
 
 namespace TestHarness
 {
@@ -19,25 +20,26 @@ namespace TestHarness
         {
             _sw = new Stopwatch();
             _sw.Start();
-            using (_db = MemDb<BookTextRecord>.Open(DbRoot, "books"))
+            using (_db = MemDb<BookTextRecord>.Open(DbRoot, "books", BookTextRecordSerializer.GetInstance()))
             {
                 _sw.Stop();
                 Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
                 _sw.Start();
 
                 //Book text is included in the project but NOT copied to the output dir...
-                ImportBooks(@"D:\git\HatTrickLabs\mem-db\src\HatTrick.MemDb.TestHarness\BookText");
-                
-                //SearchText();
+                //ImportBooks(@"D:\git\HatTrickLabs\mem-db\src\HatTrick.MemDb.TestHarness\BookText");
+
                 //RunQueries();
                 //ExecuteUpdates("Lord Of The Flies");//("Adventures Of Huckleberry Finn");
+                //SearchText();
                 //RunQueries();
-                //ConfirmUpdates();
                 //DefragDB();
                 //MultiThreadImport();
-                //MultiThreadedUpdate();
+                MultiThreadedUpdate();
+                ConfirmUpdates();
                 //MultiThreadRunQueries();
-                //MultiThreadChaos();
+                MultiThreadChaos();
+                ConfirmUpdates();
             }
 
             _sw.Stop();
@@ -49,7 +51,8 @@ namespace TestHarness
         #region import books
         private static void ImportBooks(object path)
         {
-            int cnt = 0;
+            int id = _db.Max(r => r.Id);
+            int origId = id;
             string[] files = Directory.GetFiles((string)path);
             foreach (string file in files)
             {
@@ -64,16 +67,16 @@ namespace TestHarness
                         {
                             line = sr.ReadLine();
                             BookTextRecord rec = new BookTextRecord();
+                            rec.Id = ++id;
                             rec.Text = line;
                             rec.WordCount = line.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).Length;
                             rec.BookName = bookName;
                             _db.Insert(rec);
-                            cnt += 1;
                         } while (!sr.EndOfStream);
                     }
                 }
             }
-            Console.WriteLine(string.Format("imported {0} lines of text", cnt));
+            Console.WriteLine(string.Format("imported {0} lines of text", id - origId));
         }
         #endregion
 
@@ -188,7 +191,7 @@ namespace TestHarness
                 rec.WordCount -= 1;
             };
             sw.Start();
-            cnt = _db.Update(update, r => r.BookName == bookName);
+            cnt = _db.Update(reverse, r => r.BookName == bookName);
             sw.Stop();
             Console.WriteLine("updated " + cnt + " records in " + sw.ElapsedMilliseconds + " milliseconds");
 
@@ -204,15 +207,15 @@ namespace TestHarness
         #region confirm upates
         static void ConfirmUpdates()
         {
-            int cnt = _db.FindAll(r => r.Text.EndsWith(" xxx")).Count();
-            Console.WriteLine(cnt + " records end with xxx.");
+            int cnt = _db.FindAll(r => r.Text.EndsWith(" @@@")).Count();
+            Console.WriteLine(cnt + " records end with @@@.");
         }
         #endregion
 
         #region defrag db
         static void DefragDB()
         {
-            System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+            Stopwatch sw = new Stopwatch();
             sw.Restart();
             _db.Defrag();
             sw.Stop();
@@ -243,12 +246,15 @@ namespace TestHarness
         {
             Thread t1 = new Thread(new ParameterizedThreadStart(ExecuteUpdates));
             Thread t2 = new Thread(new ParameterizedThreadStart(ExecuteUpdates));
+            Thread t3 = new Thread(new ParameterizedThreadStart(ExecuteUpdates));
 
             t1.Start("Adventures Of Huckleberry Finn");
             t2.Start("Lord Of The Flies");
+            t3.Start("The Adventures Of Tom Sawyer");
 
             t1.Join();
             t2.Join();
+            t3.Join();
         }
         #endregion
 

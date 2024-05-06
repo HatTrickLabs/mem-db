@@ -138,7 +138,7 @@ namespace HatTrick.MemDb
                                 int index = -1;
                                 for (int i = 0; i < _map.PointerCount; i++)
                                 {
-                                    rec = new MemDbRecord<T>(null);
+                                    rec = new MemDbRecord<T>();
                                     pointer = _map.Pointers[i];
 
                                     if (pointer.IsStale)
@@ -265,7 +265,6 @@ namespace HatTrick.MemDb
 
                     filesCreated = true;
                 }
-
             }
         }
         #endregion
@@ -550,13 +549,21 @@ namespace HatTrick.MemDb
         #region find all
         public T[] FindAll(Func<T, bool> where)
         {
-            IEnumerable<MemDbRecord<T>> matches = _records.Where(r => r.IsStale == false && where(r.Value));
-            List<T> set = new List<T>();
-            foreach (var rec in matches)
+            List<MemDbRecord<T>> matches = null;
+            //TODO: this looks like a race conidtion issue...prob need to enumerate set with
+            //Where(predicate) and deep copy with a Select(r => MemDbRecord<T>.DeepCopyOf(r.Value)
+            //within the record lock OR just accept that a match.Value could get marked stale prior
+            //to being deep copied
+            lock (_recLock)
             {
-                set.Add(MemDbRecord<T>.DeepCopyOf(rec.Value));
+                matches = _records.FindAll(r => r.IsStale == false && where(r.Value));
             }
-            return set.ToArray();
+            T[] set = new T[matches.Count];
+            for (int i = 0; i < set.Length; i++)
+            {
+                set[i] = MemDbRecord<T>.DeepCopyOf(matches[i].Value);
+            }
+            return set;
         }
         #endregion
 
@@ -601,19 +608,28 @@ namespace HatTrick.MemDb
             if (where == null)
                 throw new ArgumentNullException(nameof(where));
 
-            IEnumerable<MemDbRecord<T>> matches = _records.Where(r => r.IsStale == false && where(r.Value));
-            int count = 0;
-            foreach (var oldRec in matches)
+            List<MemDbRecord<T>> matches = null;
+            lock (_recLock)
             {
-                count += 1;
+                matches = _records.FindAll(r => r.IsStale == false && where(r.Value));
+            }
+
+            if (matches.Count == 0)
+                return 0;
+
+            for (int i = 0; i < matches.Count; i++)
+            {
+                var oldRec = matches[i];
                 var newRec = new MemDbRecord<T>(MemDbRecord<T>.DeepCopyOf(oldRec.Value));
+                matches[i].IsStale = true;//must mark stale AFTER deep copy
                 apply(newRec.Value);
+
                 lock (_recLock)
                 {
-                    oldRec.IsStale = true;
                     _records.Add(newRec);
-                    newRec.Index = (_records.Count - 1);
+                    newRec.Index = _records.Count - 1;
                 }
+
                 lock (_queueLock)
                 {
                     _insertActionQueue.Enqueue(new InsertAction(newRec.Index));
@@ -621,59 +637,22 @@ namespace HatTrick.MemDb
                 }
             }
 
-            return count;
+            return matches.Count;
         }
-        //public bool Update(T record)
-        //{
-        //    if (record == null)
-        //        throw new ArgumentNullException(nameof(record));
-
-        //    bool updated = false;
-
-        //    //if (record.IsEncrypted && !this.IsCryptoReady)
-        //    //    throw new NotCryptoReadyException();
-
-        //    //if (record.SyncRef != _syncRef || record.IsStale)
-        //    //    throw new StaleRecordException();
-
-        //    T rec = MemDbRecord<T>.DeepCopyOf(record);
-
-        //    //record.IsStale = true; //this is the external deep copy of the rec...
-
-        //    lock (_recLock)
-        //    {
-        //        if (!_records[record.Index].IsStale)
-        //        {
-        //            _records[record.Index].IsStale = true;
-        //            _records.Add(rec);
-        //            rec.Index = (_records.Count - 1);
-        //            updated = true;
-        //        }
-        //    }
-
-        //    if (updated)
-        //    {
-        //        lock (_queueLock)
-        //        {
-        //            _insertActionQueue.Enqueue(new InsertAction(rec.Index));
-        //            _markStaleActionQueue.Enqueue(new MarkStaleAction(record.Index));
-        //        }
-        //    }
-
-        //    return updated;
-        //}
         #endregion
 
         #region delete
         public int Delete(Func<T, bool> where)
         {
-            List<MemDbRecord<T>> matches = _records.FindAll(r => r.IsStale == false && where(r.Value));
+            IEnumerable<MemDbRecord<T>> matches = _records.Where(r => r.IsStale == false && where(r.Value));
 
-            if (matches.Count == 0)
+            if (!matches.Any())
                 return 0;
 
+            int cnt = 0;
             foreach (var oldRec in matches)
             {
+                cnt += 1;
                 lock (_recLock)
                 {
                     oldRec.IsStale = true;
@@ -684,52 +663,8 @@ namespace HatTrick.MemDb
                 }
             }
 
-            return matches.Count;
+            return cnt;
         }
-        //public bool Delete(T rec)
-        //{
-        //    bool deleted = false;
-        //    if (rec != null)
-        //    {
-        //        if (rec.SyncRef != _syncRef || rec.IsStale)
-        //            throw new StaleRecordException();
-
-        //        rec.IsStale = true;
-
-        //        lock (_recLock)
-        //        {
-        //            if (!_records[rec.Index].IsStale)
-        //            {
-        //                _records[rec.Index].IsStale = true;
-        //                deleted = true;
-        //            }
-        //        }
-
-        //        if (deleted)
-        //        {
-        //            lock (_queueLock)
-        //            {
-        //                _markStaleActionQueue.Enqueue(new MarkStaleAction(rec.Index));
-        //            }
-        //        }
-        //    }
-        //    return (deleted);
-        //}
-
-        //public bool Delete(int Id)
-        //{
-        //    T rec = null;
-        //    for (int i = 0; i < _records.Count; i++)
-        //    {
-        //        if (_records[i].Id == Id && _records[i].IsStale == false)
-        //        {
-        //            rec = _records[i];
-        //            rec.SyncRef = _syncRef;
-        //            break;
-        //        }
-        //    }
-        //    return this.Delete(rec);
-        //}
         #endregion
 
         #region query
@@ -742,57 +677,53 @@ namespace HatTrick.MemDb
         #region execute query
         private T[] ExecuteQuery(MemDbExpression<T> expression, bool deepCopy = true)
         {
+            Func<MemDbRecord<T>, bool> filter = expression.HasFilter
+                ? (r) => r.IsStale == false && expression.Filter(r.Value)
+                : (r) => r.IsStale == false;
+
+            T[] copies = Array.Empty<T>();
+
             lock (_recLock)
             {
-                List<T> matches = (expression.HasFilter)
-                    ? _records.FindAll(r => r.IsStale == false && expression.Filter(r.Value)).ConvertAll(r => r.Value)
-                    : _records.FindAll(r => r.IsStale == false).ConvertAll(r => r.Value);
+                List<T> matches = _records.Where(filter).Select(r => r.Value).ToList();
 
                 if (matches.Count > 0)
                 {
                     if (expression.HasOrderBy)
-                    {
                         matches.Sort(expression.OrderByComparison);
-                    }
-                    if (expression.HasSkip && expression.HasLimit)
-                    {
-                        matches = matches.Skip(expression.SkipCount).Take(expression.LimitCount).ToList();
-                    }
-                    else if (expression.HasSkip)
-                    {
-                        matches = matches.Skip(expression.SkipCount).ToList();
-                    }
-                    else if (expression.HasLimit)
-                    {
-                        matches = matches.Take(expression.LimitCount).ToList();
-                    }
-                }
 
-                if (matches.Count > 0 && deepCopy)
-                {
-                    T[] copies = new T[matches.Count];
-                    for (int i = 0; i < matches.Count; i++)
+                    if (expression.HasSkip && expression.HasLimit)
+                        matches = matches.Skip(expression.SkipCount).Take(expression.LimitCount).ToList();
+
+                    else if (expression.HasSkip)
+                        matches = matches.Skip(expression.SkipCount).ToList();
+
+                    else if (expression.HasLimit)
+                        matches = matches.Take(expression.LimitCount).ToList();
+
+                    if (deepCopy)
                     {
-                        copies[i] = MemDbRecord<T>.DeepCopyOf(matches[i]);
+                        copies = new T[matches.Count];
+                        for (int i = 0; i < matches.Count; i++)
+                        {
+                            copies[i] = MemDbRecord<T>.DeepCopyOf(matches[i]);
+                        }
                     }
-                    return copies;
-                }
-                else if (matches.Count > 0)
-                {
-                    return matches.ToArray();
-                }
-                else
-                {
-                    return new T[0];
+                    else
+                    {
+                        copies = matches.ToArray();
+                    }
                 }
             }
+
+            return copies;
         }
         #endregion
 
         #region stats
-        public Dictionary<string, string> Stats()
+        public Dictionary<string, decimal> Stats()
         {
-            Dictionary<string, string> stats = new Dictionary<string, string>();
+            Dictionary<string, decimal> stats = new Dictionary<string, decimal>();
             decimal staleMapLength;
             decimal freshMapLength;
             decimal staleRecCount;
@@ -838,26 +769,22 @@ namespace HatTrick.MemDb
             if (totalRecCount > 0)
             {
                 if (freshRecCount == 0)
-                {
                     fragmentation = 100;
-                }
+
                 else
-                {
                     fragmentation = (staleRecCount / freshRecCount);
-                }
             }
 
-            stats.Add("Fresh Recs", freshRecCount.ToString());
-            stats.Add("Stale Recs", staleRecCount.ToString());
-            stats.Add("Fresh Length", freshRecLength.ToString());
-            stats.Add("Stale Length", staleRecLength.ToString());
-            stats.Add("Avg Length", avgRecLength.ToString());
-            stats.Add("DB File Size", totalDBSize.ToString());
-            stats.Add("Fresh Map Length", freshMapLength.ToString());
-            stats.Add("Stale Map Length", staleMapLength.ToString());
-            stats.Add("Map File Size", totalMapSize.ToString());
-
-            stats.Add("Fragmentation Index", fragmentation.ToString());
+            stats.Add("Fresh Recs", freshRecCount);
+            stats.Add("Stale Recs", staleRecCount);
+            stats.Add("Fresh Length", freshRecLength);
+            stats.Add("Stale Length", staleRecLength);
+            stats.Add("Avg Length", avgRecLength);
+            stats.Add("DB File Size", totalDBSize);
+            stats.Add("Fresh Map Length", freshMapLength);
+            stats.Add("Stale Map Length", staleMapLength);
+            stats.Add("Map File Size", totalMapSize);
+            stats.Add("Fragmentation Index", fragmentation);
 
             return stats;
         }
@@ -866,74 +793,70 @@ namespace HatTrick.MemDb
         #region defrag
         public void Defrag()
         {
-            if (File.Exists(_fullDbPath) && File.Exists(_fullMapPath))
+            lock (_fileLock)
             {
-                lock (_recLock)
+                if (File.Exists(_fullDbPath) && File.Exists(_fullMapPath))
                 {
-                    lock (_queueLock)
+                    lock (_recLock)
                     {
-                        List<InsertAction> inserts = new List<InsertAction>(_records.Count(r => r.IsStale == false));
-
-                        _records.Sort((a, b) => a.Id.CompareTo(b.Id)); //re-order the records by Id asc...
-
-                        lock (_fileLock)
+                        lock (_queueLock)
                         {
-
-                            if (File.Exists(_fullDbPath + "bak"))
-                            {
-                                File.Delete(_fullDbPath + "bak");
-                            }
-                            File.Copy(_fullDbPath, _fullDbPath + "bak");
-                            File.Delete(_fullDbPath);
-
-                            if (File.Exists(_fullMapPath + "bak"))
-                            {
-                                File.Delete(_fullMapPath + "bak");
-                            }
-                            File.Copy(_fullMapPath, _fullMapPath + "bak");
-                            File.Delete(_fullMapPath);
-
-                            for (int i = 0; i < _records.Count; i++)
-                            {
-                                if (_records[i].IsStale == false)
-                                {
-                                    inserts.Add(new InsertAction(i));
-                                }
-                            }
-
-                            MemDbMap tmpMap = _map;
-
-                            try
-                            {
-                                _map = new MemDbMap();
-                                this.EnsureFiles(out bool fileCreated);
-                                this.InjectRecords(inserts);
-                                File.Delete(_fullDbPath + "bak");
-                                File.Delete(_fullMapPath + "bak");
-                                _insertActionQueue.Clear();
-                                _markStaleActionQueue.Clear();
-                                _records.RemoveAll(r => r.IsStale);
-                            }
-                            catch
-                            {
-                                _map = tmpMap;
-
-                                if (File.Exists(_fullDbPath))
-                                {
-                                    File.Delete(_fullDbPath);
-                                }
-
-                                if (File.Exists(_fullMapPath))
-                                {
-                                    File.Delete(_fullMapPath);
-                                }
-                                File.Copy(_fullDbPath + "bak", _fullDbPath);
-                                File.Copy(_fullMapPath + "bak", _fullMapPath);
-                            }
+                            this.LockedDefrag();
                         }
-
                     }
                 }
+            }
+        }
+
+        private void LockedDefrag()
+        {
+            this.Flush();
+
+            _records.Sort((a, b) => a.Id.CompareTo(b.Id)); //re-order the records by Id asc...
+
+            if (File.Exists(_fullDbPath + "bak"))
+                File.Delete(_fullDbPath + "bak");
+
+            if (File.Exists(_fullMapPath + "bak"))
+                File.Delete(_fullMapPath + "bak");
+
+            File.Copy(_fullDbPath, _fullDbPath + "bak");
+            File.Copy(_fullMapPath, _fullMapPath + "bak");
+
+            File.Delete(_fullDbPath);
+            File.Delete(_fullMapPath);
+
+            List<InsertAction> inserts = _records.Where(r => r.IsStale == false)
+                .Select((r) => new InsertAction(r.Index))
+                .ToList();
+
+            MemDbMap tmpMap = _map;
+
+            try
+            {
+                _map = new MemDbMap();
+                this.EnsureFiles(out bool fileCreated);
+                this.InjectRecords(inserts);
+                File.Delete(_fullDbPath + "bak");
+                File.Delete(_fullMapPath + "bak");
+                _insertActionQueue.Clear();
+                _insertActionQueue.TrimExcess();
+                _markStaleActionQueue.Clear();
+                _markStaleActionQueue.TrimExcess();
+                _records.RemoveAll(r => r.IsStale);
+            }
+            catch
+            {
+                _map = tmpMap;
+
+                if (File.Exists(_fullDbPath))
+                    File.Delete(_fullDbPath);
+
+                if (File.Exists(_fullMapPath))
+                    File.Delete(_fullMapPath);
+
+                File.Copy(_fullDbPath + "bak", _fullDbPath);
+                File.Copy(_fullMapPath + "bak", _fullMapPath);
             }
         }
         #endregion

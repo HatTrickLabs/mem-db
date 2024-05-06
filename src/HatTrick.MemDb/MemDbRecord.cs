@@ -19,9 +19,6 @@ namespace HatTrick.MemDb
         internal bool IsEncrypted { get; set; }
         internal int Index { get; set; }
         internal int MapIndex { get; set; }
-
-        //not serialized...
-        //internal Guid SyncRef { get; set; }
         #endregion
 
         #region serialize to
@@ -90,7 +87,7 @@ namespace HatTrick.MemDb
         internal override void SerializeTo(BinaryWriter buffer)
         {
             base.SerializeTo(buffer);
-            _serializer.Serialize(_value, buffer);
+            _serializer.SerializeTo(_value, buffer);
         }
         #endregion
 
@@ -98,7 +95,7 @@ namespace HatTrick.MemDb
         internal override void DeserializeFrom(BinaryReader buffer)
         {
             base.DeserializeFrom(buffer);
-            _value = _serializer.Deserialize(buffer);
+            _value = _serializer.DeserializeFrom(buffer);
         }
         #endregion
 
@@ -111,13 +108,13 @@ namespace HatTrick.MemDb
             {
                 using (BinaryWriter writer = new BinaryWriter(ms, Encoding.UTF8, true))
                 {
-                    _serializer.Serialize(value, writer);
+                    _serializer.SerializeTo(value, writer);
                 }
                 int length = (int)ms.Position;
                 ms.Position = 0;
                 using (BinaryReader reader = new BinaryReader(ms, Encoding.UTF8, true))
                 {
-                    rec = _serializer.Deserialize(reader);
+                    rec = _serializer.DeserializeFrom(reader);
                 }
             }
             return rec;
