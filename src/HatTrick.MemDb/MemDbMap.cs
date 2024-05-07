@@ -26,7 +26,7 @@ namespace HatTrick.MemDb
         public MemDbMap()
         {
             _pointerCount = 0;
-            _pointers = new List<MemDbPointer>(2048);
+            _pointers = new List<MemDbPointer>();
         }
         #endregion
 
@@ -63,10 +63,8 @@ namespace HatTrick.MemDb
             _pointerCount = count;
             length += 4;
 
-            if (_pointerCount > 2048)
-            {
+            if (_pointerCount >= 2048)
                 _pointers = new List<MemDbPointer>((int)(_pointerCount * 1.5));
-            }
 
             MemDbPointer p;
             for (int i = 0; i < count; i++)

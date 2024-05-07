@@ -7,7 +7,7 @@ using System.IO;
 
 namespace HatTrick.MemDb
 {
-    public interface IMemDbAcceessor<T> : IDisposable where T :/* MemDbRecord, */new()
+    public interface IMemDbAcceessor<T> : IDisposable where T : class, new()
     {
         int Count();
 
@@ -42,8 +42,6 @@ namespace HatTrick.MemDb
         void Flush();
 
         Dictionary<string, decimal> Stats();
-
-        void Defrag();
 
         void RegisterCryptoProvider(IMemDbCryptoProvider provider);
     }

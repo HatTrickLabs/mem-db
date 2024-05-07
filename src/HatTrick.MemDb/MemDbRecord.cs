@@ -119,6 +119,29 @@ namespace HatTrick.MemDb
             }
             return rec;
         }
+
+        internal static T[] DeepCopyOf(T[] values)
+        {
+            T[] newValues = new T[values.Length];
+            using (MemoryStream ms = new MemoryStream())
+            {
+                using (BinaryWriter writer = new BinaryWriter(ms, Encoding.UTF8, true))
+                {
+                    using (BinaryReader reader = new BinaryReader(ms, Encoding.UTF8, true))
+                    {
+                        for (int i = 0; i < values.Length; i++)
+                        {
+                            _serializer.SerializeTo(values[i], writer);
+                            int length = (int)ms.Position;
+                            ms.Position = 0;
+                            newValues[i] = _serializer.DeserializeFrom(reader);
+                            ms.Position = 0;
+                        }
+                    }
+                }
+            }
+            return newValues;
+        }
         #endregion
     }
 }

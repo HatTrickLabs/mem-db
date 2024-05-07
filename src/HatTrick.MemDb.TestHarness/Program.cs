@@ -31,15 +31,15 @@ namespace TestHarness
 
                 //RunQueries();
                 //ExecuteUpdates("Lord Of The Flies");//("Adventures Of Huckleberry Finn");
-                //SearchText();
+                SearchText();
                 //RunQueries();
                 //DefragDB();
                 //MultiThreadImport();
-                MultiThreadedUpdate();
-                ConfirmUpdates();
+                //MultiThreadedUpdate();
+                //ConfirmUpdates();
                 //MultiThreadRunQueries();
-                MultiThreadChaos();
-                ConfirmUpdates();
+                //MultiThreadChaos();
+                //ConfirmUpdates();
             }
 
             _sw.Stop();
@@ -215,12 +215,12 @@ namespace TestHarness
         #region defrag db
         static void DefragDB()
         {
-            Stopwatch sw = new Stopwatch();
-            sw.Restart();
-            _db.Defrag();
-            sw.Stop();
-            Console.WriteLine("defragged db in " + sw.ElapsedMilliseconds + " milliseconds");
-            sw.Reset();
+            //Stopwatch sw = new Stopwatch();
+            //sw.Restart();
+            //_db.Defrag();
+            //sw.Stop();
+            //Console.WriteLine("defragged db in " + sw.ElapsedMilliseconds + " milliseconds");
+            //sw.Reset();
         }
         #endregion
 
@@ -280,19 +280,19 @@ namespace TestHarness
         {
             Thread t1 = new Thread(new ThreadStart(RunQueries));
             Thread t2 = new Thread(new ParameterizedThreadStart(ExecuteUpdates)); ;
-            Thread t3 = new Thread(new ThreadStart(DefragDB)); ;
+            //Thread t3 = new Thread(new ThreadStart(DefragDB)); ;
             Thread t4 = new Thread(new ThreadStart(RunQueries));
             Thread t5 = new Thread(new ParameterizedThreadStart(ExecuteUpdates));
 
             t1.Start();
             t2.Start("Adventures Of Huckleberry Finn");
-            t3.Start();
+            //t3.Start();
             t4.Start();
             t5.Start("Lord Of The Flies");
 
             t1.Join();
             t2.Join();
-            t3.Join();
+            //t3.Join();
             t4.Join();
             t5.Join();
         }

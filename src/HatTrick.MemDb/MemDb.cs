@@ -70,9 +70,6 @@ namespace HatTrick.MemDb
 
             MemDbRecord<T>.RegisterSerializer(serializer);
 
-            _map = new MemDbMap();
-            _records = new List<MemDbRecord<T>>(2048);
-
             this.Init();
             _fileSyncTimer = new Timer(new TimerCallback(this.FileSync), null, (1000 * 5), Timeout.Infinite); //5 seconds...
         }
@@ -90,24 +87,6 @@ namespace HatTrick.MemDb
         }
         #endregion
 
-        #region register crypto provider
-        public void RegisterCryptoProvider(IMemDbCryptoProvider provider)
-        {
-            if (provider == null)
-                throw new ArgumentNullException(nameof(provider));
-
-            lock (_fileLock)
-            {
-                _cryptoProvider = provider;
-                if (_unHydratedCryptoRecCount > 0)
-                {
-                    this.HydrateCryptoRecords();
-                    _unHydratedCryptoRecCount = 0;
-                }
-            }
-        }
-        #endregion
-
         #region init
         private void Init()
         {
@@ -119,71 +98,13 @@ namespace HatTrick.MemDb
                 {
                     lock (_recLock)
                     {
-                        using (FileStream fsMap = new FileStream(_fullMapPath, FileMode.Open, FileAccess.Read))
-                        {
-                            _map.DeserializeFrom(fsMap);
-                            if (_map.PointerCount > 2048)
-                            {
-                                _records = new List<MemDbRecord<T>>((int)(_map.PointerCount * 1.25));
-                            }
-                        }
+                        this.HydrateMap();
 
-                        using (FileStream fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read))
-                        {
-                            using (BinaryReader reader = new BinaryReader(fsDb, Encoding.UTF8, true))
-                            {
-                                MemDbRecord<T> rec;
-                                MemDbPointer pointer;
-                                int staleCount = 0;
-                                int index = -1;
-                                for (int i = 0; i < _map.PointerCount; i++)
-                                {
-                                    rec = new MemDbRecord<T>();
-                                    pointer = _map.Pointers[i];
+                        int capaciity = _map.PointerCount >= 1024 ? (int)(_map.PointerCount * 1.25) : 1024;
+                        _records = new List<MemDbRecord<T>>(capaciity);
 
-                                    if (pointer.IsStale)
-                                    {
-                                        fsDb.Position += pointer.Length;
-                                        staleCount += 1;
-                                    }
-                                    else if (pointer.IsEncrypted && !this.IsCryptoReady)
-                                    {
-                                        fsDb.Position += pointer.Length;
-                                        _unHydratedCryptoRecCount += 1;
-                                    }
-                                    else
-                                    {
-                                        if (pointer.IsEncrypted)
-                                        {
-                                            using (MemoryStream msEncrypted = new MemoryStream())
-                                            {
-                                                byte[] buffer = new byte[pointer.Length];
-                                                fsDb.Read(buffer, 0, pointer.Length);
-                                                msEncrypted.Write(buffer, 0, pointer.Length);
+                        this.HydrateUnencryptedRecords();
 
-                                                using (MemoryStream msClear = new MemoryStream())
-                                                {
-                                                    _cryptoProvider.Decrypt(msEncrypted, msClear, pointer.Id.ToString("0000000000"));
-                                                    msClear.Position = 0;
-                                                    using (BinaryReader localReader = new BinaryReader(msClear, Encoding.UTF8, true))
-                                                    {
-                                                        rec.DeserializeFrom(localReader);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        else
-                                        {
-                                            rec.DeserializeFrom(reader);
-                                        }
-
-                                        rec.MapIndex = i;
-                                        rec.Index = ++index;
-                                        _records.Add(rec);
-                                    }
-                                }
-                            }
-                        }
                         this.InitLastId();
                     }
                 }
@@ -191,51 +112,112 @@ namespace HatTrick.MemDb
         }
         #endregion
 
-        #region hydrate crypto records
-        private void HydrateCryptoRecords()
+        #region register crypto provider
+        public void RegisterCryptoProvider(IMemDbCryptoProvider provider)
         {
-            lock (_fileLock) //re-enterable lock via same thread...
+            if (provider == null)
+                throw new ArgumentNullException(nameof(provider));
+
+            lock (_fileLock)
             {
-                lock (_recLock)
+                _cryptoProvider = provider;
+                if (_unHydratedCryptoRecCount > 0)
                 {
-                    using (FileStream fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read))
+                    lock (_recLock)
                     {
-                        MemDbRecord<T> rec;
-                        MemDbPointer pointer;
-                        int index = -1;
-                        for (int i = 0; i < _map.PointerCount; i++)
+                        this.HydrateEncryptedRecords();
+                        _unHydratedCryptoRecCount = 0;
+                    }
+                }
+            }
+        }
+        #endregion
+
+        #region hydrate map
+        private void HydrateMap()
+        {
+            _map = new MemDbMap();
+            using (FileStream fsMap = new FileStream(_fullMapPath, FileMode.Open, FileAccess.Read))
+            {
+                _map.DeserializeFrom(fsMap);
+            }
+        }
+        #endregion
+
+        #region hydrate Unencrypted records
+        private void HydrateUnencryptedRecords()
+        {
+            using (FileStream fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read))
+            {
+                using (BinaryReader reader = new BinaryReader(fsDb, Encoding.UTF8, true))
+                {
+                    MemDbPointer pointer;
+                    int index = -1;
+                    for (int i = 0; i < _map.PointerCount; i++)
+                    {
+                        pointer = _map.Pointers[i];
+
+                        if (pointer.IsStale)
                         {
-                            rec = new MemDbRecord<T>(null);
-                            pointer = _map.Pointers[i];
+                            fsDb.Position += pointer.Length;
+                        }
+                        else if (pointer.IsEncrypted)
+                        {
+                            fsDb.Position += pointer.Length;
+                            _unHydratedCryptoRecCount += 1;
+                        }
+                        else
+                        {
+                            MemDbRecord<T> rec = new MemDbRecord<T>();
+                            rec.DeserializeFrom(reader);
+                            rec.MapIndex = i;
+                            rec.Index = ++index;
+                            _records.Add(rec);
+                        }
+                    }
+                }
+            }
+        }
+        #endregion
 
-                            if (pointer.IsEncrypted && !pointer.IsStale)
+        #region hydrate enccrypted records
+        private void HydrateEncryptedRecords()
+        {
+            using (FileStream fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read))
+            {
+                MemDbPointer pointer;
+                for (int i = 0; i < _map.PointerCount; i++)
+                {
+                    pointer = _map.Pointers[i];
+
+                    if (pointer.IsStale || !pointer.IsEncrypted)
+                    {
+                        fsDb.Position += pointer.Length;
+                    }
+                    else
+                    {
+                        MemDbRecord<T> rec = new MemDbRecord<T>();
+                        using (MemoryStream msEncrypted = new MemoryStream())
+                        {
+                            byte[] buffer = new byte[pointer.Length];
+                            fsDb.Read(buffer, 0, pointer.Length);
+                            msEncrypted.Write(buffer, 0, pointer.Length);
+
+                            using (MemoryStream msClear = new MemoryStream())
                             {
-                                using (MemoryStream msEncrypted = new MemoryStream())
+                                using (BinaryReader reader = new BinaryReader(msClear, Encoding.UTF8, true))
                                 {
-                                    byte[] buffer = new byte[pointer.Length];
-                                    fsDb.Read(buffer, 0, pointer.Length);
-                                    msEncrypted.Write(buffer, 0, pointer.Length);
-
-                                    using (MemoryStream msClear = new MemoryStream())
-                                    {
-                                        using (BinaryReader reader = new BinaryReader(msClear, Encoding.UTF8, true))
-                                        {
-                                            msEncrypted.Position = 0;
-                                            _cryptoProvider.Decrypt(msEncrypted, msClear, pointer.Id.ToString("0000000000"));
-                                            msClear.Position = 0;
-                                            rec.DeserializeFrom(reader);
-                                        }
-                                    }
+                                    msEncrypted.Position = 0;
+                                    _cryptoProvider.Decrypt(msEncrypted, msClear, pointer.Id.ToString("0000000000"));
+                                    msClear.Position = 0;
+                                    rec.DeserializeFrom(reader);
                                 }
-                                rec.MapIndex = i;
-                                rec.Index = ++index;
-                                _records.Add(rec);
-                            }
-                            else
-                            {
-                                fsDb.Position += pointer.Length;
                             }
                         }
+
+                        rec.MapIndex = i;
+                        _records.Add(rec);
+                        rec.Index = (_records.Count - 1);
                     }
                 }
             }
@@ -251,10 +233,9 @@ namespace HatTrick.MemDb
                 if (!File.Exists(_fullDbPath))
                 {
                     string dir = _path;
+
                     if (!Directory.Exists(_path))
-                    {
                         Directory.CreateDirectory(_path);
-                    }
 
                     using (FileStream fs = File.Create(_fullMapPath))
                     {
@@ -283,46 +264,71 @@ namespace HatTrick.MemDb
         #region file sync
         private void FileSync(object state)
         {
-            if (state == null && _isClosed) { return; }
+            if (state == null && _isClosed) 
+                return;
 
-            List<InsertAction> insertActions = null;
-            List<MarkStaleAction> markStaleActions = null;
-
-            //TODO: JRod, move queue pop/pull from here to 'InjectRecords', 'MarkRecordsStale'...pop 1 at at time 
-            lock (_queueLock)
-            {
-                if (_insertActionQueue.Count > 0)
-                {
-                    insertActions = _insertActionQueue.ToList();
-                    _insertActionQueue.Clear();
-                }
-
-                if (_markStaleActionQueue.Count > 0)
-                {
-                    markStaleActions = _markStaleActionQueue.ToList();
-                    _markStaleActionQueue.Clear();
-                }
-            }
-
-            if (insertActions != null)
-            {
-                this.InjectRecords(insertActions);
-            }
-
-            if (markStaleActions != null)
-            {
-                this.MarkRecordsStale(markStaleActions);
-            }
+            this.FlushMarkStaleActions();
+            this.FlushInsertActions();
 
             if (!_isClosed)
-            {
                 _fileSyncTimer.Change((1000 * 5), Timeout.Infinite);//5 seconds...
+        }
+        #endregion
+
+        #region flush insert actions
+        private void FlushInsertActions()
+        {
+            if (_insertActionQueue.Count == 0)
+                return;
+
+            Func<InsertAction> getNext = () =>
+            {
+                lock (_queueLock)
+                {
+                    if (_insertActionQueue.TryDequeue(out InsertAction action))
+                        return action;
+                    else
+                        return new InsertAction(-1);
+                }
+            };
+
+            this.InjectRecords(getNext);
+
+            lock (_queueLock)
+            {
+                _insertActionQueue.TrimExcess();
+            }
+        }
+        #endregion
+
+        #region flush mark stale actions
+        private void FlushMarkStaleActions()
+        {
+            if (_markStaleActionQueue.Count == 0)
+                return;
+
+            Func<MarkStaleAction> getNext = () =>
+            {
+                lock (_queueLock)
+                {
+                    if (_markStaleActionQueue.TryDequeue(out MarkStaleAction action))
+                        return action;
+                    else
+                        return new MarkStaleAction(-1);
+                }
+            };
+
+            this.MarkRecordsStale(getNext);
+
+            lock (_queueLock)
+            {
+                _markStaleActionQueue.TrimExcess();
             }
         }
         #endregion
 
         #region inject records
-        private void InjectRecords(List<InsertAction> inserts)
+        private void InjectRecords(Func<InsertAction> getNextAction)
         {
             lock (_fileLock)
             {
@@ -337,12 +343,14 @@ namespace HatTrick.MemDb
                             fsDb.Position = fsDb.Length;
                             int lastPosition = (int)fsDb.Position;
                             int length;
-                            foreach (InsertAction insert in inserts)
+
+                            InsertAction action;
+                            while ((action = getNextAction()).RecordIndex != -1)
                             {
                                 var rec = default(MemDbRecord<T>);
                                 lock (_recLock)
                                 {
-                                    rec = _records[insert.RecordIndex];
+                                    rec = _records[action.RecordIndex];
                                 }
 
                                 if (rec.IsEncrypted)
@@ -384,15 +392,16 @@ namespace HatTrick.MemDb
         }
         #endregion
 
-        #region mark record stale
-        private void MarkRecordsStale(List<MarkStaleAction> actions)
+        #region mark records stale
+        private void MarkRecordsStale(Func<MarkStaleAction> getNextAction)
         {
             lock (_fileLock)
             {
                 using (FileStream fsMap = new FileStream(_fullMapPath, FileMode.Open, FileAccess.ReadWrite))
                 {
                     var rec = default(MemDbRecord<T>);
-                    foreach (MarkStaleAction action in actions)
+                    MarkStaleAction action;
+                    while ((action = getNextAction()).RecordIndex != -1)
                     {
                         MemDbPointer oldPointer;
                         lock (_recLock)
@@ -436,7 +445,7 @@ namespace HatTrick.MemDb
         {
             lock (_lastIdLock)
             {
-                return (++_lastId);
+                return ++_lastId;
             }
         }
         #endregion
@@ -549,20 +558,21 @@ namespace HatTrick.MemDb
         #region find all
         public T[] FindAll(Func<T, bool> where)
         {
-            List<MemDbRecord<T>> matches = null;
+            T[] matches;
             //TODO: this looks like a race conidtion issue...prob need to enumerate set with
             //Where(predicate) and deep copy with a Select(r => MemDbRecord<T>.DeepCopyOf(r.Value)
             //within the record lock OR just accept that a match.Value could get marked stale prior
             //to being deep copied
             lock (_recLock)
             {
-                matches = _records.FindAll(r => r.IsStale == false && where(r.Value));
+                matches = _records.Where(r => r.IsStale == false && where(r.Value)).Select(r => r.Value).ToArray();
             }
-            T[] set = new T[matches.Count];
-            for (int i = 0; i < set.Length; i++)
-            {
-                set[i] = MemDbRecord<T>.DeepCopyOf(matches[i].Value);
-            }
+            //T[] set = new T[matches.Count];
+            //for (int i = 0; i < set.Length; i++)
+            //{
+            //    set[i] = MemDbRecord<T>.DeepCopyOf(matches[i].Value);
+            //}
+            T[] set = MemDbRecord<T>.DeepCopyOf(matches);
             return set;
         }
         #endregion
@@ -787,77 +797,6 @@ namespace HatTrick.MemDb
             stats.Add("Fragmentation Index", fragmentation);
 
             return stats;
-        }
-        #endregion
-
-        #region defrag
-        public void Defrag()
-        {
-            lock (_fileLock)
-            {
-                if (File.Exists(_fullDbPath) && File.Exists(_fullMapPath))
-                {
-                    lock (_recLock)
-                    {
-                        lock (_queueLock)
-                        {
-                            this.LockedDefrag();
-                        }
-                    }
-                }
-            }
-        }
-
-        private void LockedDefrag()
-        {
-            this.Flush();
-
-            _records.Sort((a, b) => a.Id.CompareTo(b.Id)); //re-order the records by Id asc...
-
-            if (File.Exists(_fullDbPath + "bak"))
-                File.Delete(_fullDbPath + "bak");
-
-            if (File.Exists(_fullMapPath + "bak"))
-                File.Delete(_fullMapPath + "bak");
-
-            File.Copy(_fullDbPath, _fullDbPath + "bak");
-            File.Copy(_fullMapPath, _fullMapPath + "bak");
-
-            File.Delete(_fullDbPath);
-            File.Delete(_fullMapPath);
-
-            List<InsertAction> inserts = _records.Where(r => r.IsStale == false)
-                .Select((r) => new InsertAction(r.Index))
-                .ToList();
-
-            MemDbMap tmpMap = _map;
-
-            try
-            {
-                _map = new MemDbMap();
-                this.EnsureFiles(out bool fileCreated);
-                this.InjectRecords(inserts);
-                File.Delete(_fullDbPath + "bak");
-                File.Delete(_fullMapPath + "bak");
-                _insertActionQueue.Clear();
-                _insertActionQueue.TrimExcess();
-                _markStaleActionQueue.Clear();
-                _markStaleActionQueue.TrimExcess();
-                _records.RemoveAll(r => r.IsStale);
-            }
-            catch
-            {
-                _map = tmpMap;
-
-                if (File.Exists(_fullDbPath))
-                    File.Delete(_fullDbPath);
-
-                if (File.Exists(_fullMapPath))
-                    File.Delete(_fullMapPath);
-
-                File.Copy(_fullDbPath + "bak", _fullDbPath);
-                File.Copy(_fullMapPath + "bak", _fullMapPath);
-            }
         }
         #endregion
 
