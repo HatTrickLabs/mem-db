@@ -29,10 +29,10 @@ namespace TestHarness
                 //Book text is included in the project but NOT copied to the output dir...
                 //ImportBooks(@"D:\git\HatTrickLabs\mem-db\src\HatTrick.MemDb.TestHarness\BookText");
 
-                //RunQueries();
+                RunQueries();
                 //ExecuteUpdates("Lord Of The Flies");//("Adventures Of Huckleberry Finn");
-                SearchText();
                 //RunQueries();
+                //SearchText();
                 //DefragDB();
                 //MultiThreadImport();
                 //MultiThreadedUpdate();

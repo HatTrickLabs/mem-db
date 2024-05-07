@@ -90,23 +90,55 @@ namespace HatTrick.MemDb
         #region init
         private void Init()
         {
+            _map = new MemDbMap();
+
             this.EnsureFiles(out bool filesCreated);
 
-            if (!filesCreated)
+            if (filesCreated)
             {
-                lock (_fileLock)
+                _records = new List<MemDbRecord<T>>(256);
+                _lastId = 0;
+                return;
+            }
+
+            lock (_fileLock)
+            {
+                lock (_recLock)
                 {
-                    lock (_recLock)
+                    this.HydrateMap();
+
+                    int capaciity = _map.PointerCount >= 1024 ? (int)(_map.PointerCount * 1.25) : 1024;
+                    _records = new List<MemDbRecord<T>>(capaciity);
+
+                    this.HydrateUnencryptedRecords();
+
+                    this.InitLastId();
+                }
+            }
+        }
+        #endregion
+
+        #region ensure files
+        private void EnsureFiles(out bool filesCreated)
+        {
+            filesCreated = false;
+            lock (_fileLock)
+            {
+                if (!File.Exists(_fullDbPath))
+                {
+                    string dir = _path;
+
+                    if (!Directory.Exists(_path))
+                        Directory.CreateDirectory(_path);
+
+                    using (FileStream fs = File.Create(_fullMapPath))
                     {
-                        this.HydrateMap();
-
-                        int capaciity = _map.PointerCount >= 1024 ? (int)(_map.PointerCount * 1.25) : 1024;
-                        _records = new List<MemDbRecord<T>>(capaciity);
-
-                        this.HydrateUnencryptedRecords();
-
-                        this.InitLastId();
+                        _map.SerializeTo(fs);
                     }
+
+                    using (FileStream fs = File.Create(_fullDbPath)) { }
+
+                    filesCreated = true;
                 }
             }
         }
@@ -136,7 +168,6 @@ namespace HatTrick.MemDb
         #region hydrate map
         private void HydrateMap()
         {
-            _map = new MemDbMap();
             using (FileStream fsMap = new FileStream(_fullMapPath, FileMode.Open, FileAccess.Read))
             {
                 _map.DeserializeFrom(fsMap);
@@ -219,32 +250,6 @@ namespace HatTrick.MemDb
                         _records.Add(rec);
                         rec.Index = (_records.Count - 1);
                     }
-                }
-            }
-        }
-        #endregion
-
-        #region ensure files
-        private void EnsureFiles(out bool filesCreated)
-        {
-            filesCreated = false;
-            lock (_fileLock)
-            {
-                if (!File.Exists(_fullDbPath))
-                {
-                    string dir = _path;
-
-                    if (!Directory.Exists(_path))
-                        Directory.CreateDirectory(_path);
-
-                    using (FileStream fs = File.Create(_fullMapPath))
-                    {
-                        _map.SerializeTo(fs);
-                    }
-
-                    using (FileStream fs = File.Create(_fullDbPath)) { }
-
-                    filesCreated = true;
                 }
             }
         }
@@ -567,12 +572,9 @@ namespace HatTrick.MemDb
             {
                 matches = _records.Where(r => r.IsStale == false && where(r.Value)).Select(r => r.Value).ToArray();
             }
-            //T[] set = new T[matches.Count];
-            //for (int i = 0; i < set.Length; i++)
-            //{
-            //    set[i] = MemDbRecord<T>.DeepCopyOf(matches[i].Value);
-            //}
+
             T[] set = MemDbRecord<T>.DeepCopyOf(matches);
+
             return set;
         }
         #endregion
@@ -711,18 +713,12 @@ namespace HatTrick.MemDb
                     else if (expression.HasLimit)
                         matches = matches.Take(expression.LimitCount).ToList();
 
+
                     if (deepCopy)
-                    {
-                        copies = new T[matches.Count];
-                        for (int i = 0; i < matches.Count; i++)
-                        {
-                            copies[i] = MemDbRecord<T>.DeepCopyOf(matches[i]);
-                        }
-                    }
+                        copies = MemDbRecord<T>.DeepCopyOf(matches);
+                    
                     else
-                    {
                         copies = matches.ToArray();
-                    }
                 }
             }
 

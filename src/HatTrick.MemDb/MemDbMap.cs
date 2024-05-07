@@ -15,11 +15,11 @@ namespace HatTrick.MemDb
         #endregion
 
         #region interface
-        public int PointerCount { get { return _pointerCount; } }
+        public int PointerCount => _pointerCount;
 
-        public int ByteLength { get { return PointerCount * MemDbPointer.Size; } }
+        public int ByteLength => PointerCount * MemDbPointer.Size;
 
-        public List<MemDbPointer> Pointers { get { return _pointers; } }
+        public List<MemDbPointer> Pointers => _pointers;
         #endregion
 
         #region constructors
