@@ -7,73 +7,71 @@ using System.IO;
 
 namespace HatTrick.MemDb
 {
-    public class MemDbMap
+    internal sealed class MemDbMap
     {
         #region internals
-        private int _pointerCount;
         private List<MemDbPointer> _pointers;
         #endregion
 
         #region interface
-        public int PointerCount => _pointerCount;
+        internal int ByteLength => _pointers.Count * MemDbPointer.Size;
 
-        public int ByteLength => PointerCount * MemDbPointer.Size;
-
-        public List<MemDbPointer> Pointers => _pointers;
+        internal List<MemDbPointer> Pointers => _pointers;
         #endregion
 
         #region constructors
-        public MemDbMap()
+        internal MemDbMap()
         {
-            _pointerCount = 0;
             _pointers = new List<MemDbPointer>();
+        }
+
+        internal MemDbMap(int capacity)
+        {
+            _pointers = new List<MemDbPointer>(capacity);
+        }
+
+        private MemDbMap(List<MemDbPointer> pointers)
+        {
+            _pointers = pointers;
+        }
+        #endregion
+
+        #region from
+        internal static MemDbMap Create(List<MemDbPointer> pointers)
+        {
+            MemDbMap map = new MemDbMap(pointers);
+            return map;
         }
         #endregion
 
         #region add pointer
-        public void AddPointer(MemDbPointer pointer)
+        internal void AddPointer(MemDbPointer pointer)
         {
             this.Pointers.Add(pointer);
-            _pointerCount += 1;
         }
         #endregion
 
         #region serialization
-        public int SerializeTo(Stream buffer)
+        internal void SerializeTo(BinaryWriter writer)
         {
-            int length = 0;
-            buffer.Write(BitConverter.GetBytes(this.PointerCount), 0, 4);
-            length += 4;
+            writer.Write(_pointers.Count);
 
             foreach (MemDbPointer p in this.Pointers)
             {
-                length += p.SerializeTo(buffer);
+                p.SerializeTo(writer);
             }
-
-            return length;
         }
 
-        public int DeserializeFrom(Stream buffer)
+        internal void DeserializeFrom(BinaryReader reader)
         {
-            int length = 0;
-            byte[] buff = new byte[4];
+            int count = reader.ReadInt32();
 
-            buffer.Read(buff, 0, 4);
-            int count = BitConverter.ToInt32(buff, 0);
-            _pointerCount = count;
-            length += 4;
+            _pointers = new List<MemDbPointer>(count);
 
-            if (_pointerCount >= 2048)
-                _pointers = new List<MemDbPointer>((int)(_pointerCount * 1.5));
-
-            MemDbPointer p;
             for (int i = 0; i < count; i++)
             {
-                length += MemDbPointer.DeserializeFrom(buffer, out p);
-                this.Pointers.Add(p);
+                _pointers.Add(MemDbPointer.DeserializeFrom(reader));
             }
-
-            return length;
         }
         #endregion
     }

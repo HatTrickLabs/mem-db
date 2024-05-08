@@ -105,12 +105,12 @@ namespace HatTrick.MemDb
             {
                 lock (_recLock)
                 {
-                    this.HydrateMap();
+                    this.ReadMap();
 
-                    int capaciity = _map.PointerCount >= 1024 ? (int)(_map.PointerCount * 1.25) : 1024;
+                    int capaciity = _map.Pointers.Count >= 1024 ? (int)(_map.Pointers.Count * 1.25) : 1024;
                     _records = new List<MemDbRecord<T>>(capaciity);
 
-                    this.HydrateUnencryptedRecords();
+                    this.ReadUnencryptedRecords();
 
                     this.InitLastId();
                 }
@@ -133,7 +133,10 @@ namespace HatTrick.MemDb
 
                     using (FileStream fs = File.Create(_fullMapPath))
                     {
-                        _map.SerializeTo(fs);
+                        using (var writer = new BinaryWriter(fs, Encoding.UTF8, true))
+                        {
+                            _map.SerializeTo(writer);
+                        }
                     }
 
                     using (FileStream fs = File.Create(_fullDbPath)) { }
@@ -157,7 +160,7 @@ namespace HatTrick.MemDb
                 {
                     lock (_recLock)
                     {
-                        this.HydrateEncryptedRecords();
+                        this.ReadEncryptedRecords();
                         _unHydratedCryptoRecCount = 0;
                     }
                 }
@@ -165,26 +168,29 @@ namespace HatTrick.MemDb
         }
         #endregion
 
-        #region hydrate map
-        private void HydrateMap()
+        #region read map
+        private void ReadMap()
         {
-            using (FileStream fsMap = new FileStream(_fullMapPath, FileMode.Open, FileAccess.Read))
+            using (var fsMap = new FileStream(_fullMapPath, FileMode.Open, FileAccess.Read))
             {
-                _map.DeserializeFrom(fsMap);
+                using (var reader = new BinaryReader(fsMap, Encoding.UTF8, true))
+                {
+                    _map.DeserializeFrom(reader);
+                }
             }
         }
         #endregion
 
-        #region hydrate Unencrypted records
-        private void HydrateUnencryptedRecords()
+        #region read Unencrypted records
+        private void ReadUnencryptedRecords()
         {
-            using (FileStream fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read))
+            using (var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read))
             {
-                using (BinaryReader reader = new BinaryReader(fsDb, Encoding.UTF8, true))
+                using (var reader = new BinaryReader(fsDb, Encoding.UTF8, true))
                 {
                     MemDbPointer pointer;
                     int index = -1;
-                    for (int i = 0; i < _map.PointerCount; i++)
+                    for (int i = 0; i < _map.Pointers.Count; i++)
                     {
                         pointer = _map.Pointers[i];
 
@@ -211,13 +217,13 @@ namespace HatTrick.MemDb
         }
         #endregion
 
-        #region hydrate enccrypted records
-        private void HydrateEncryptedRecords()
+        #region read encrypted records
+        private void ReadEncryptedRecords()
         {
-            using (FileStream fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read))
+            using (var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read))
             {
                 MemDbPointer pointer;
-                for (int i = 0; i < _map.PointerCount; i++)
+                for (int i = 0; i < _map.Pointers.Count; i++)
                 {
                     pointer = _map.Pointers[i];
 
@@ -228,13 +234,13 @@ namespace HatTrick.MemDb
                     else
                     {
                         MemDbRecord<T> rec = new MemDbRecord<T>();
-                        using (MemoryStream msEncrypted = new MemoryStream())
+                        using (var msEncrypted = new MemoryStream())
                         {
                             byte[] buffer = new byte[pointer.Length];
                             fsDb.Read(buffer, 0, pointer.Length);
                             msEncrypted.Write(buffer, 0, pointer.Length);
 
-                            using (MemoryStream msClear = new MemoryStream())
+                            using (var msClear = new MemoryStream())
                             {
                                 using (BinaryReader reader = new BinaryReader(msClear, Encoding.UTF8, true))
                                 {
@@ -337,61 +343,64 @@ namespace HatTrick.MemDb
         {
             lock (_fileLock)
             {
-                using (FileStream fsMap = new FileStream(_fullMapPath, FileMode.Open, FileAccess.ReadWrite))
+                using (var fsMap = new FileStream(_fullMapPath, FileMode.Open, FileAccess.ReadWrite))
                 {
-                    fsMap.Position = fsMap.Length;
-
-                    using (FileStream fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.ReadWrite))
+                    using (var mapWriter = new BinaryWriter(fsMap, Encoding.UTF8, true))
                     {
-                        using (BinaryWriter writer = new BinaryWriter(fsDb, Encoding.UTF8, true))
+                        fsMap.Position = fsMap.Length;
+
+                        using (var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.ReadWrite))
                         {
-                            fsDb.Position = fsDb.Length;
-                            int lastPosition = (int)fsDb.Position;
-                            int length;
-
-                            InsertAction action;
-                            while ((action = getNextAction()).RecordIndex != -1)
+                            using (var dbWriter = new BinaryWriter(fsDb, Encoding.UTF8, true))
                             {
-                                var rec = default(MemDbRecord<T>);
-                                lock (_recLock)
-                                {
-                                    rec = _records[action.RecordIndex];
-                                }
+                                fsDb.Position = fsDb.Length;
+                                int lastPosition = (int)fsDb.Position;
+                                int length;
 
-                                if (rec.IsEncrypted)
+                                InsertAction action;
+                                while ((action = getNextAction()).RecordIndex != -1)
                                 {
-                                    using (MemoryStream msClear = new MemoryStream())
+                                    var rec = default(MemDbRecord<T>);
+                                    lock (_recLock)
                                     {
-                                        using (BinaryWriter localWriter = new BinaryWriter(msClear, Encoding.UTF8, true))
-                                        {
-                                            rec.SerializeTo(localWriter);
-                                            using (MemoryStream msEncrypted = new MemoryStream())
-                                            {
-                                                msClear.Position = 0;
-                                                _cryptoProvider.Encrypt(msClear, msEncrypted, rec.Id.ToString("0000000000"));
+                                        rec = _records[action.RecordIndex];
+                                    }
 
-                                                fsDb.Write(msEncrypted.ToArray(), 0, (int)msEncrypted.Length);
+                                    if (rec.IsEncrypted)
+                                    {
+                                        using (var msClear = new MemoryStream())
+                                        {
+                                            using (BinaryWriter localWriter = new BinaryWriter(msClear, Encoding.UTF8, true))
+                                            {
+                                                rec.SerializeTo(localWriter);
+                                                using (MemoryStream msEncrypted = new MemoryStream())
+                                                {
+                                                    msClear.Position = 0;
+                                                    _cryptoProvider.Encrypt(msClear, msEncrypted, rec.Id.ToString("0000000000"));
+
+                                                    fsDb.Write(msEncrypted.ToArray(), 0, (int)msEncrypted.Length);
+                                                }
                                             }
                                         }
                                     }
-                                }
-                                else
-                                {
-                                    rec.SerializeTo(writer);
-                                }
+                                    else
+                                    {
+                                        rec.SerializeTo(dbWriter);
+                                    }
 
-                                length = (int)fsDb.Position - lastPosition;
-                                MemDbPointer pointer = new MemDbPointer(rec.Id, false, rec.IsEncrypted, lastPosition, length);
-                                _map.AddPointer(pointer);
-                                pointer.SerializeTo(fsMap);
-                                rec.MapIndex = (_map.PointerCount - 1);
-                                lastPosition += length;
+                                    length = (int)fsDb.Position - lastPosition;
+                                    MemDbPointer pointer = new MemDbPointer(rec.Id, false, rec.IsEncrypted, lastPosition, length);
+                                    _map.AddPointer(pointer);
+                                    pointer.SerializeTo(mapWriter);
+                                    rec.MapIndex = (_map.Pointers.Count - 1);
+                                    lastPosition += length;
+                                }
                             }
                         }
                     }
 
                     fsMap.Position = 0;
-                    fsMap.Write(BitConverter.GetBytes(_map.PointerCount), 0, 4); //overwrite the map global count ...
+                    fsMap.Write(BitConverter.GetBytes(_map.Pointers.Count), 0, 4); //overwrite the map global count ...
                 }
             }
         }
@@ -402,7 +411,7 @@ namespace HatTrick.MemDb
         {
             lock (_fileLock)
             {
-                using (FileStream fsMap = new FileStream(_fullMapPath, FileMode.Open, FileAccess.ReadWrite))
+                using (var fsMap = new FileStream(_fullMapPath, FileMode.Open, FileAccess.ReadWrite))
                 {
                     var rec = default(MemDbRecord<T>);
                     MarkStaleAction action;
@@ -434,7 +443,7 @@ namespace HatTrick.MemDb
                     int lastIssued = _lastId;
 
                     //if not crypto ready, encrypted rec may have hightest Id because rec couldnt be hydrated yet...
-                    int lastMapId = (_map.PointerCount > 0) ? _map.Pointers.Max(p => p.Id) : 0;
+                    int lastMapId = (_map.Pointers.Count > 0) ? _map.Pointers.Max(p => p.Id) : 0;
 
                     //records don't get added to the map.pointer list until flushed to disc.
                     int lastRecId = (_records.Count > 0) ? _records.Max(r => r.Id) : 0;
@@ -656,9 +665,13 @@ namespace HatTrick.MemDb
         #region delete
         public int Delete(Func<T, bool> where)
         {
-            IEnumerable<MemDbRecord<T>> matches = _records.Where(r => r.IsStale == false && where(r.Value));
+            MemDbRecord<T>[] matches;
+            lock (_recLock)
+            {
+                matches = _records.Where(r => r.IsStale == false && where(r.Value)).ToArray();
+            }
 
-            if (!matches.Any())
+            if (matches.Length == 0)
                 return 0;
 
             int cnt = 0;

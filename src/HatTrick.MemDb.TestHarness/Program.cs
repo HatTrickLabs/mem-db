@@ -20,6 +20,10 @@ namespace TestHarness
         {
             _sw = new Stopwatch();
             _sw.Start();
+
+            //var defrag = new MemDbDefragmenter(DbRoot, "books");
+            //defrag.Defrag();
+
             using (_db = MemDb<BookTextRecord>.Open(DbRoot, "books", BookTextRecordSerializer.GetInstance()))
             {
                 _sw.Stop();
@@ -29,7 +33,7 @@ namespace TestHarness
                 //Book text is included in the project but NOT copied to the output dir...
                 //ImportBooks(@"D:\git\HatTrickLabs\mem-db\src\HatTrick.MemDb.TestHarness\BookText");
 
-                RunQueries();
+                //RunQueries();
                 //ExecuteUpdates("Lord Of The Flies");//("Adventures Of Huckleberry Finn");
                 //RunQueries();
                 //SearchText();
@@ -58,7 +62,7 @@ namespace TestHarness
             {
                 FileInfo fi = new FileInfo(file);
                 string bookName = fi.Name.Replace("_", " ").Replace(".txt", string.Empty);
-                using (FileStream fs = new FileStream(file, FileMode.Open, FileAccess.Read))
+                using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read))
                 {
                     using (StreamReader sr = new StreamReader(fs))
                     {
@@ -191,7 +195,7 @@ namespace TestHarness
                 rec.WordCount -= 1;
             };
             sw.Start();
-            cnt = _db.Update(reverse, r => r.BookName == bookName);
+            cnt = _db.Update(update, r => r.BookName == bookName);
             sw.Stop();
             Console.WriteLine("updated " + cnt + " records in " + sw.ElapsedMilliseconds + " milliseconds");
 
@@ -279,20 +283,20 @@ namespace TestHarness
         static void MultiThreadChaos()
         {
             Thread t1 = new Thread(new ThreadStart(RunQueries));
-            Thread t2 = new Thread(new ParameterizedThreadStart(ExecuteUpdates)); ;
-            //Thread t3 = new Thread(new ThreadStart(DefragDB)); ;
+            Thread t2 = new Thread(new ParameterizedThreadStart(ExecuteUpdates));
+            Thread t3 = new Thread(new ParameterizedThreadStart(ImportBooks));
             Thread t4 = new Thread(new ThreadStart(RunQueries));
             Thread t5 = new Thread(new ParameterizedThreadStart(ExecuteUpdates));
 
             t1.Start();
             t2.Start("Adventures Of Huckleberry Finn");
-            //t3.Start();
+            t3.Start(@"D:\git\HatTrickLabs\mem-db\src\HatTrick.MemDb.TestHarness\BookText");
             t4.Start();
             t5.Start("Lord Of The Flies");
 
             t1.Join();
             t2.Join();
-            //t3.Join();
+            t3.Join();
             t4.Join();
             t5.Join();
         }
