@@ -24,25 +24,22 @@ namespace HatTrick.MemDb
         #region serialize to
         internal virtual void SerializeTo(BinaryWriter buffer)
         {
-            buffer.Write(BitConverter.GetBytes(this.Id), 0, 4);
-            buffer.Write(BitConverter.GetBytes(this.IsStale), 0, 1);
-            buffer.Write(BitConverter.GetBytes(this.IsEncrypted), 0, 1);
-            buffer.Write(BitConverter.GetBytes(this.Index), 0, 4);
-            buffer.Write(BitConverter.GetBytes(this.MapIndex), 0, 4);
+            buffer.Write(this.Id);
+            buffer.Write(this.IsStale);
+            buffer.Write(this.IsEncrypted);
+            buffer.Write(this.Index);
+            buffer.Write(this.MapIndex);
         }
         #endregion
 
         #region deserialize from
         internal virtual void DeserializeFrom(BinaryReader buffer)
         {
-            byte[] buff = new byte[MemDbRecord.Size];
-            buffer.Read(buff, 0, MemDbRecord.Size);
-
-            this.Id = BitConverter.ToInt32(buff, 0);
-            this.IsStale = BitConverter.ToBoolean(buff, 4);
-            this.IsEncrypted = BitConverter.ToBoolean(buff, 5);
-            this.Index = BitConverter.ToInt32(buff, 6);
-            this.MapIndex = BitConverter.ToInt32(buff, 10);
+            this.Id = buffer.ReadInt32();
+            this.IsStale = buffer.ReadBoolean();
+            this.IsEncrypted = buffer.ReadBoolean();
+            this.Index = buffer.ReadInt32();
+            this.MapIndex = buffer.ReadInt32();
         }
         #endregion
     }
@@ -100,7 +97,6 @@ namespace HatTrick.MemDb
         #endregion
 
         #region deep copy value
-        //TODO: we need a DeepCopyOfSet(T[] values) in order to avoid numerous alloc of stream object on LARGE data sets.
         internal static T DeepCopyOf(T value)
         {
             T rec = default(T);

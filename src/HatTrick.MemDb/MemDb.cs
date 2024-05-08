@@ -849,8 +849,8 @@ namespace HatTrick.MemDb
         }
         #endregion
 
-        #region Queue action item
-        public struct InsertAction
+        #region queue action items
+        private struct InsertAction
         {
             #region interface
             public int RecordIndex { get; private set; }
@@ -864,7 +864,7 @@ namespace HatTrick.MemDb
             #endregion
         }
 
-        public struct MarkStaleAction
+        private struct MarkStaleAction
         {
             #region interface
             public int RecordIndex { get; private set; }
