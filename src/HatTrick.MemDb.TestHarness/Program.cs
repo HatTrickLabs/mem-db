@@ -34,7 +34,7 @@ namespace TestHarness
                 //ImportBooks(@"D:\git\HatTrickLabs\mem-db\src\HatTrick.MemDb.TestHarness\BookText");
 
                 //RunQueries();
-                //ExecuteUpdates("Lord Of The Flies");//("Adventures Of Huckleberry Finn");
+                //ExecuteUpdates("Lord Of The Flies");
                 //RunQueries();
                 //SearchText();
                 //DefragDB();
@@ -213,18 +213,6 @@ namespace TestHarness
         {
             int cnt = _db.FindAll(r => r.Text.EndsWith(" @@@")).Count();
             Console.WriteLine(cnt + " records end with @@@.");
-        }
-        #endregion
-
-        #region defrag db
-        static void DefragDB()
-        {
-            //Stopwatch sw = new Stopwatch();
-            //sw.Restart();
-            //_db.Defrag();
-            //sw.Stop();
-            //Console.WriteLine("defragged db in " + sw.ElapsedMilliseconds + " milliseconds");
-            //sw.Reset();
         }
         #endregion
 

@@ -360,7 +360,7 @@ namespace HatTrick.MemDb
                                 InsertAction action;
                                 while ((action = getNextAction()).RecordIndex != -1)
                                 {
-                                    var rec = default(MemDbRecord<T>);
+                                    MemDbRecord<T> rec = null;
                                     lock (_recLock)
                                     {
                                         rec = _records[action.RecordIndex];
@@ -368,20 +368,7 @@ namespace HatTrick.MemDb
 
                                     if (rec.IsEncrypted)
                                     {
-                                        using (var msClear = new MemoryStream())
-                                        {
-                                            using (BinaryWriter localWriter = new BinaryWriter(msClear, Encoding.UTF8, true))
-                                            {
-                                                rec.SerializeTo(localWriter);
-                                                using (MemoryStream msEncrypted = new MemoryStream())
-                                                {
-                                                    msClear.Position = 0;
-                                                    _cryptoProvider.Encrypt(msClear, msEncrypted, rec.Id.ToString("0000000000"));
-
-                                                    fsDb.Write(msEncrypted.ToArray(), 0, (int)msEncrypted.Length);
-                                                }
-                                            }
-                                        }
+                                        this.InjectEncryptedRecord(rec, fsDb);
                                     }
                                     else
                                     {
@@ -397,10 +384,30 @@ namespace HatTrick.MemDb
                                 }
                             }
                         }
+                        //overwrite the map pointer count header.
+                        fsMap.Position = 0;
+                        mapWriter.Write(_map.Pointers.Count);
                     }
+                }
+            }
+        }
+        #endregion
 
-                    fsMap.Position = 0;
-                    fsMap.Write(BitConverter.GetBytes(_map.Pointers.Count), 0, 4); //overwrite the map global count ...
+        #region inject encrypted record
+        private void InjectEncryptedRecord(MemDbRecord<T> record, Stream dbStream)
+        {
+            using (var msClear = new MemoryStream())
+            {
+                using (var localWriter = new BinaryWriter(msClear, Encoding.UTF8, true))
+                {
+                    record.SerializeTo(localWriter);
+                    using (var msEncrypted = new MemoryStream())
+                    {
+                        msClear.Position = 0;
+                        _cryptoProvider.Encrypt(msClear, msEncrypted, record.Id.ToString("0000000000"));
+
+                        dbStream.Write(msEncrypted.ToArray(), 0, (int)msEncrypted.Length);
+                    }
                 }
             }
         }
@@ -552,20 +559,18 @@ namespace HatTrick.MemDb
         public T Find(Func<T, bool> where)
         {
             MemDbRecord<T> rec = null;
-            for (int i = 0; i < _records.Count; i++)
+            lock (_recLock)
             {
-                if (_records[i].IsStale == false && where(_records[i].Value))
+                for (int i = 0; i < _records.Count; i++)
                 {
-                    rec = _records[i];
-                    break;
+                    if (_records[i].IsStale == false && where(_records[i].Value))
+                    {
+                        rec = _records[i];
+                        break;
+                    }
                 }
             }
-            T outVal = null;
-            if (rec != null)
-            {
-                outVal = MemDbRecord<T>.DeepCopyOf(rec.Value);
-            }
-            return outVal;
+            return rec is null ? null : MemDbRecord<T>.DeepCopyOf(rec.Value);
         }
         #endregion
 
@@ -665,6 +670,9 @@ namespace HatTrick.MemDb
         #region delete
         public int Delete(Func<T, bool> where)
         {
+            if (where == null)
+                throw new ArgumentNullException(nameof(where));
+
             MemDbRecord<T>[] matches;
             lock (_recLock)
             {
