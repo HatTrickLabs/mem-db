@@ -98,7 +98,7 @@ namespace HatTrick.MemDb
         {
             //get file length of the non-stale map pointers (needed for the defragged map)
             //(non-stalePointerCount * PointerByteSize) + sizeof(int)
-            //the 4 is to account for the 32 bit int at the very beginning of the file (total pointer count)
+            //the sizeof(int) is to account for the 32 bit int at the very beginning of the file (total pointer count)
             long mapLength = ((_map.Pointers.Count - _staleCount) * MemDbPointer.Size) + 4;
 
             //get file length of the non-stale db records
