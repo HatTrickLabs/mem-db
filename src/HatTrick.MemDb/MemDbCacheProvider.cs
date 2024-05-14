@@ -8,21 +8,26 @@ namespace HatTrick.MemDb
     {
         #region internals
         private List<MemDbRecord<T>> _records;
-        private object _recLock;
+        private object _recSyncLock;
+
+        private MemDbStorageProvider<T> _storage;
         #endregion
 
         #region constructors
-        public MemDbCacheProvider()
+        public MemDbCacheProvider(IMemDbStorageProvider<T> storageProvider)
         {
+            if (storageProvider is null)
+                throw new ArgumentNullException(nameof(storageProvider));
+
+            _recSyncLock = new();
+            _records = new List<MemDbRecord<T>>();//TODO: accurate capacity
         }
         #endregion
 
-
-        #region count
         #region count
         public int Count()
         {
-            lock (_recLock)
+            lock (_recSyncLock)
             {
                 return _records.Count(r => r.IsStale == false);
             }
@@ -30,7 +35,7 @@ namespace HatTrick.MemDb
 
         public int Count(Func<T, bool> selector)
         {
-            lock (_recLock)
+            lock (_recSyncLock)
             {
                 return _records.Count(r => r.IsStale == false && selector(r.Value));
             }
@@ -41,7 +46,7 @@ namespace HatTrick.MemDb
         public Y Max<Y>(Func<T, Y> selector)
         {
             Y max = default(Y);
-            lock (_recLock)
+            lock (_recSyncLock)
             {
                 if (_records.Count > 0)
                 {
@@ -56,7 +61,7 @@ namespace HatTrick.MemDb
         public Y Min<Y>(Func<T, Y> selector)
         {
             Y min = default(Y);
-            lock (_recLock)
+            lock (_recSyncLock)
             {
                 if (_records.Count > 0)
                 {
@@ -70,7 +75,7 @@ namespace HatTrick.MemDb
         #region sum
         public int Sum(Func<T, int> selector)
         {
-            lock (_recLock)
+            lock (_recSyncLock)
             {
                 return _records.Where(r => r.IsStale == false).Sum((r) => selector(r.Value));
             }
@@ -78,7 +83,7 @@ namespace HatTrick.MemDb
 
         public double Sum(Func<T, double> selector)
         {
-            lock (_recLock)
+            lock (_recSyncLock)
             {
                 return _records.Where(r => r.IsStale == false).Sum((r) => selector(r.Value));
             }
@@ -86,7 +91,7 @@ namespace HatTrick.MemDb
 
         public decimal Sum(Func<T, decimal> selector)
         {
-            lock (_recLock)
+            lock (_recSyncLock)
             {
                 return _records.Where(r => r.IsStale == false).Sum((r) => selector(r.Value));
             }
@@ -96,7 +101,7 @@ namespace HatTrick.MemDb
         #region find distinct
         public Y[] FindDistinct<Y>(Converter<T, Y> converter) where Y : IConvertible
         {
-            lock (_recLock)
+            lock (_recSyncLock)
             {
                 return _records.Where(r => r.IsStale == false).Select((r) => converter(r.Value)).Distinct().ToArray();
             }
@@ -107,7 +112,7 @@ namespace HatTrick.MemDb
         public T Find(Func<T, bool> where)
         {
             MemDbRecord<T> rec = null;
-            lock (_recLock)
+            lock (_recSyncLock)
             {
                 for (int i = 0; i < _records.Count; i++)
                 {
@@ -126,7 +131,7 @@ namespace HatTrick.MemDb
         public T[] FindAll(Func<T, bool> where)
         {
             T[] matches;
-            lock (_recLock)
+            lock (_recSyncLock)
             {
                 matches = _records.Where(r => r.IsStale == false && where(r.Value)).Select(r => r.Value).ToArray();
             }
@@ -140,51 +145,136 @@ namespace HatTrick.MemDb
         #region query
         public MemDbExpression<T> Query()
         {
-            throw new NotImplementedException();
+            return new MemDbExpression<T>(this.ExecuteQuery);
+        }
+        #endregion
+
+        #region execute query
+        private T[] ExecuteQuery(MemDbExpression<T> expression, bool deepCopy = true)
+        {
+            Func<MemDbRecord<T>, bool> filter = expression.HasFilter
+                ? (r) => r.IsStale == false && expression.Filter(r.Value)
+                : (r) => r.IsStale == false;
+
+            T[] copies = Array.Empty<T>();
+
+            lock (_recSyncLock)
+            {
+                List<T> matches = _records.Where(filter).Select(r => r.Value).ToList();
+
+                if (matches.Count > 0)
+                {
+                    if (expression.HasOrderBy)
+                        matches.Sort(expression.OrderByComparison);
+
+                    if (expression.HasSkip && expression.HasLimit)
+                        matches = matches.Skip(expression.SkipCount).Take(expression.LimitCount).ToList();
+
+                    else if (expression.HasSkip)
+                        matches = matches.Skip(expression.SkipCount).ToList();
+
+                    else if (expression.HasLimit)
+                        matches = matches.Take(expression.LimitCount).ToList();
+
+
+                    if (deepCopy)
+                        copies = MemDbRecord<T>.DeepCopyOf(matches);
+
+                    else
+                        copies = matches.ToArray();
+                }
+            }
+
+            return copies;
         }
         #endregion
 
         #region insert
-        public void Insert(T record)
+        public void Insert(T record, bool encrypt = false)
         {
-            this.Insert(record, false);
-        }
+            MemDbRecord<T> rec = new MemDbRecord<T>(MemDbRecord<T>.DeepCopyOf(record), encrypt);
 
-        public void InsertEncrypted(T record)
-        {
-            this.Insert(record, true);
-        }
-
-        private void Insert(T record, bool encrypt)
-        {
-            if (encrypt && !this.IsCryptoReady)
-                throw new NotCryptoReadyException();
-
-            MemDbRecord<T> rec = new MemDbRecord<T>(MemDbRecord<T>.DeepCopyOf(record));
-            rec.Id = this.GetNextId();
-
-            lock (_recLock)
+            lock (_recSyncLock)
             {
                 _records.Add(rec);
                 rec.Index = (_records.Count - 1);
             }
 
-            lock (_queueLock)
-            {
-                _insertActionQueue.Enqueue(new InsertAction(rec.Index));
-            }
+            _storage.Insert(rec);
         }
         #endregion
 
         #region update
         public int Update(Action<T> apply, Func<T, bool> where)
         {
-            throw new NotImplementedException();
+            if (apply == null)
+                throw new ArgumentNullException(nameof(apply));
+
+            if (where == null)
+                throw new ArgumentNullException(nameof(where));
+
+            List<MemDbRecord<T>> matches = null;
+            lock (_recSyncLock)
+            {
+                matches = _records.FindAll(r => r.IsStale == false && where(r.Value));
+            }
+
+            if (matches.Count == 0)
+                return 0;
+
+            for (int i = 0; i < matches.Count; i++)
+            {
+                var oldRec = matches[i];
+                var newRec = new MemDbRecord<T>(MemDbRecord<T>.DeepCopyOf(oldRec.Value), oldRec.IsEncrypted);
+                matches[i].IsStale = true;
+                apply(newRec.Value);
+
+                lock (_recSyncLock)
+                {
+                    _records.Add(newRec);
+                    newRec.Index = _records.Count - 1;
+                }
+
+                _storage.Insert(newRec);
+                _storage.MarkStale(oldRec);
+            }
+
+            return matches.Count;
         }
         #endregion
 
         #region delete
         public int Delete(Func<T, bool> where)
+        {
+            if (where == null)
+                throw new ArgumentNullException(nameof(where));
+
+            List<MemDbRecord<T>> matches = new List<MemDbRecord<T>>(8);
+            lock (_recSyncLock)
+            {
+                var set = _records.Where(r => r.IsStale == false && where(r.Value));
+                foreach (var r in set)
+                {
+                    r.IsStale = true;
+                    matches.Add(r);
+                }
+            }
+
+            if (matches.Count == 0)
+                return 0;
+
+            for (int i = 0; i < matches.Count; i++)
+            {
+                var oldRec = matches[i];
+                _storage.MarkStale(oldRec);
+            }
+
+            return matches.Count;
+        }
+        #endregion
+
+        #region flush
+        public void Flush()
         {
             throw new NotImplementedException();
         }

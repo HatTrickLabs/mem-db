@@ -57,7 +57,7 @@ namespace HatTrick.MemDb
         #endregion
 
         #region constructors
-        internal MemDbRecord(T value)
+        internal MemDbRecord(T value, bool isEncrypted)
         {
             if (value == null)
                 throw new ArgumentNullException(nameof(value));

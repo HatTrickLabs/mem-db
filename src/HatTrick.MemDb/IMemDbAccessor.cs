@@ -29,9 +29,7 @@ namespace HatTrick.MemDb
 
         public T[] FindAll(Func<T, bool> where);
 
-        public void Insert(T rec);
-
-        public void InsertEncrypted(T rec);
+        public void Insert(T rec, bool encrypt);
 
         public int Update(Action<T> apply, Func<T, bool> where);
 
@@ -39,10 +37,6 @@ namespace HatTrick.MemDb
 
         public MemDbExpression<T> Query();
 
-        //public void Flush();
-
-        //public Dictionary<string, decimal> Stats();
-
-        //public void RegisterCryptoProvider(IMemDbCryptoProvider provider);
+        public void Flush();
     }
 }
