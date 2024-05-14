@@ -7,42 +7,42 @@ using System.IO;
 
 namespace HatTrick.MemDb
 {
-    public interface IMemDbAcceessor<T> : IDisposable where T : class, new()
+    public interface IMemDbAcceessor<T> where T : class, new()
     {
-        int Count();
+        public int Count();
 
-        int Count(Func<T, bool> selector);
+        public int Count(Func<T, bool> selector);
 
-        Y Max<Y>(Func<T, Y> selector);
+        public Y Max<Y>(Func<T, Y> selector);
 
-        Y Min<Y>(Func<T, Y> selector);
+        public Y Min<Y>(Func<T, Y> selector);
 
-        int Sum(Func<T, int> selector);
+        public int Sum(Func<T, int> selector);
 
-        double Sum(Func<T, double> selector);
+        public double Sum(Func<T, double> selector);
 
-        decimal Sum(Func<T, decimal> selector);
+        public decimal Sum(Func<T, decimal> selector);
 
-        Y[] FindDistinct<Y>(Converter<T, Y> converter) where Y : IConvertible;
+        public Y[] FindDistinct<Y>(Converter<T, Y> converter) where Y : IConvertible;
 
-        T Find(Func<T, bool> where);
+        public T Find(Func<T, bool> where);
 
-        T[] FindAll(Func<T, bool> where);
+        public T[] FindAll(Func<T, bool> where);
 
-        void Insert(T rec);
+        public void Insert(T rec);
 
-        void InsertEncrypted(T rec);
+        public void InsertEncrypted(T rec);
 
-        int Update(Action<T> apply, Func<T, bool> where);
+        public int Update(Action<T> apply, Func<T, bool> where);
 
-        int Delete(Func<T, bool> where);
+        public int Delete(Func<T, bool> where);
 
-        MemDbExpression<T> Query();
+        public MemDbExpression<T> Query();
 
-        void Flush();
+        //public void Flush();
 
-        Dictionary<string, decimal> Stats();
+        //public Dictionary<string, decimal> Stats();
 
-        void RegisterCryptoProvider(IMemDbCryptoProvider provider);
+        //public void RegisterCryptoProvider(IMemDbCryptoProvider provider);
     }
 }

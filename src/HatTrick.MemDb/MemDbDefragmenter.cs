@@ -82,13 +82,11 @@ namespace HatTrick.MemDb
         private void ReadFragmentedMap()
         {
             _map = new MemDbMap();
-            using (var fsMap = new FileStream(_fullMapPath, FileMode.Open, FileAccess.Read))
-            {
-                using (var reader = new BinaryReader(fsMap, Encoding.UTF8, true))
-                {
-                    _map.DeserializeFrom(reader);
-                }
-            }
+
+            using var fsMap = new FileStream(_fullMapPath, FileMode.Open, FileAccess.Read);
+            using var reader = new BinaryReader(fsMap, Encoding.UTF8, true);
+
+            _map.DeserializeFrom(reader);
             _staleCount = _map.Pointers.Count(p => p.IsStale);
         }
         #endregion
@@ -147,37 +145,30 @@ namespace HatTrick.MemDb
             byte[] buffer = new byte[maxRecLength];
 
             //rebuild the db and map bypassing all stale records
-            using (var oldDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read))
+            using var oldDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read);
+            using var newDb = new FileStream(_fullTempDbPath, FileMode.Open, FileAccess.Write);
+
+            for (int i = 0; i < originalMap.Pointers.Count; i++)
             {
-                using (var newDb = new FileStream(_fullTempDbPath, FileMode.Open, FileAccess.Write))
-                {
-                    for (int i = 0; i < originalMap.Pointers.Count; i++)
-                    {
-                        MemDbPointer oPtr = originalMap.Pointers[i];
+                MemDbPointer oPtr = originalMap.Pointers[i];
 
-                        if (oPtr.IsStale)
-                            continue;
+                if (oPtr.IsStale)
+                    continue;
 
-                        oldDb.Position = oPtr.Position;
-                        oldDb.ReadExactly(buffer, 0, oPtr.Length);
+                oldDb.Position = oPtr.Position;
+                oldDb.ReadExactly(buffer, 0, oPtr.Length);
 
-                        var nPtr = new MemDbPointer(oPtr.Id, false, oPtr.IsEncrypted, (int)newDb.Position, oPtr.Length);
-                        pointers.Add(nPtr);
+                var nPtr = new MemDbPointer(oPtr.Id, false, oPtr.IsEncrypted, (int)newDb.Position, oPtr.Length);
+                pointers.Add(nPtr);
 
-                        newDb.Write(buffer, 0, oPtr.Length);
-                    }
-                }
+                newDb.Write(buffer, 0, oPtr.Length);
             }
 
             //write the defragged map file
             var defraggedMap = MemDbMap.Create(pointers);
-            using (var fs = new FileStream(_fullTempMapPath, FileMode.Open, FileAccess.Write))
-            {
-                using (var writer = new BinaryWriter(fs, Encoding.UTF8, true))
-                {
-                    defraggedMap.SerializeTo(writer);
-                }
-            }
+            using var fs = new FileStream(_fullTempMapPath, FileMode.Open, FileAccess.Write);
+            using var writer = new BinaryWriter(fs, Encoding.UTF8, true);
+            defraggedMap.SerializeTo(writer);
         }
         #endregion
 

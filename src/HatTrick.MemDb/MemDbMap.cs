@@ -52,6 +52,14 @@ namespace HatTrick.MemDb
         #endregion
 
         #region serialization
+        internal void SerializeTo(Stream stream)
+        {
+            using (BinaryWriter writer = new BinaryWriter(stream, Encoding.UTF8, true))
+            {
+                this.SerializeTo(writer);
+            }
+        }
+
         internal void SerializeTo(BinaryWriter writer)
         {
             writer.Write(_pointers.Count);

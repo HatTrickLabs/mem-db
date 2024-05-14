@@ -36,6 +36,10 @@ namespace HatTrick.MemDb
         private IMemDbCryptoProvider _cryptoProvider;
 
         private bool _isClosed;
+
+        /***************************************************/
+        private MemDbCacheProvider<T> _cache;
+        private MappedFileStorageProvider<T> _storage;
         #endregion
 
         #region interface
@@ -72,6 +76,9 @@ namespace HatTrick.MemDb
 
             this.Init();
             _fileSyncTimer = new Timer(new TimerCallback(this.FileSync), null, (1000 * 5), Timeout.Infinite); //5 seconds...
+
+            /***************************************/
+            _cache = new MemDbCacheProvider<T>();
         }
         #endregion
 

@@ -6,3 +6,4 @@ TODO:
   - IMemDbAccessor: Implement all access methods (Find, FindAll, Exists, Sum, etc...).
   - IMemDbCacheProvider: : Implement the thread safe internal cached list of objects.
   - IMemDbPersistenceProvider: Implement of persistence (Disk).
+- Eliminate the 'Pointers' interface propery on MemDbMap...Make it all internal
