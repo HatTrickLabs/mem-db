@@ -19,7 +19,7 @@ namespace HatTrick.MemDb
             if (persister is null)
                 throw new ArgumentNullException(nameof(persister));
 
-            _persister = persister;
+            _persister = persister; 
             _recSyncLock = new();
             _records = new List<MemDbRecord<T>>();//TODO: accurate capacity
         }
@@ -277,7 +277,7 @@ namespace HatTrick.MemDb
         #region flush
         public void Flush()
         {
-            throw new NotImplementedException();
+            _persister.Flush(true);
         }
         #endregion
     }

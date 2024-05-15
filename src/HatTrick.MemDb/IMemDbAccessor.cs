@@ -29,7 +29,7 @@ namespace HatTrick.MemDb
 
         public T[] FindAll(Func<T, bool> where);
 
-        public void Insert(T rec, bool encrypt);
+        public void Insert(T rec, bool encrypt = false);
 
         public int Update(Action<T> apply, Func<T, bool> where);
 

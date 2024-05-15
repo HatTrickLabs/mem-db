@@ -2,10 +2,10 @@
 
 namespace HatTrick.MemDb
 {
-    public interface IMemDbPersister<T> where T : class, new()
+    internal interface IMemDbPersister<T> where T : class, new()
     {
-        //public void Insert(MemDbRecord<T> record);
-        //public void MarkStale(MemDbRecord<T> record);
-        //public void Flush(object state);
+        internal void Insert(MemDbRecord<T> record);
+        internal void MarkStale(MemDbRecord<T> record);
+        internal void Flush(object state);
     }
 }

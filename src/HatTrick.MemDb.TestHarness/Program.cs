@@ -14,6 +14,7 @@ namespace TestHarness
     {
         static Stopwatch _sw;
         static MemDb<BookTextRecord> _db;
+        static string datasetName = "books";
         static string DbRoot = @"d:\tmp\mem-db\books";
 
         static void Main(string[] args)
@@ -24,16 +25,14 @@ namespace TestHarness
             //var defrag = new MemDbDefragmenter(DbRoot, "books");
             //defrag.Defrag();
 
-            MemDb.ConfigureFor<BookTextRecord>("books")
+            MemDb.ConfigureFor<BookTextRecord>(datasetName, DbRoot)
                 .SerializeWith(BookTextRecordSerializer.GetInstance())
-                .EncryptWith(null)
-                .CloneWith(null)
-                .CacheWith(null)
-                .PersistWith(null)
+                //.EncryptWith(null)
+                //.CloneWith(null)
                 .Register();
 
 
-            using (_db = MemDb<BookTextRecord>.Open(DbRoot, "books"))
+            using (_db = MemDb<BookTextRecord>.Open("books"))
             {
                 _sw.Stop();
                 Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");

@@ -30,19 +30,32 @@ namespace HatTrick.MemDb
         private int _nextId;
         private object _idSyncLock;
 
-        private IMemDbEncrypter _cryptoProvider;
-        private int _encryptedCount;
+        private IMemDbSerializer<T> _serializer;
+        private IMemDbCloner<T> _cloner;
+        private IMemDbEncrypter<T> _encrypter;
+        
+        private int _cryptoRecordCount;
 
         private bool _isClosed;
         #endregion
 
         #region interface
-        internal bool IsEncryptionReady => _cryptoProvider is not null;
+        internal bool IsEncryptionReady => _encrypter is not null;
         #endregion
 
         #region constructors
-        //string path, string datasetName, ISerializationProvier<T> serializer, ICloneProvider<T>, 
         internal MemDbMappedFile(string path, string datasetName, IMemDbSerializer<T> serializer)
+            : this(path, datasetName, serializer, null)
+        {
+
+        }
+
+        internal MemDbMappedFile(string path, string datasetName, IMemDbSerializer<T> serializer, IMemDbCloner<T> cloner)
+            : this(path, datasetName, serializer, cloner, null)
+        {
+        }
+
+        public MemDbMappedFile(string path, string datasetName, IMemDbSerializer<T> serializer, IMemDbCloner<T> cloner, IMemDbEncrypter<T> encrypter)
         {
             if (string.IsNullOrWhiteSpace(path))
                 throw new ArgumentException("arg must have a value.", nameof(path));
@@ -57,6 +70,10 @@ namespace HatTrick.MemDb
             _name = datasetName;
             _dbSyncLock = new();
 
+            _serializer = serializer;
+            _cloner = cloner;
+            _encrypter = encrypter;
+
             _fullDbPath = Path.Combine(path, $"htl.{datasetName}.db");
             _fullMapPath = Path.Combine(path, $"htl.{datasetName}.map");
             _mapSyncLock = new();
@@ -69,11 +86,13 @@ namespace HatTrick.MemDb
             _staleStateQueue = new Queue<MemDbRecord<T>>(256);
             _staleStateSyncLock = new();
 
+            this.Initialize();
+
             _fileSyncTimer = new Timer(new TimerCallback(this.Flush), null, (1000 * 5), Timeout.Infinite); //5 seconds...
         }
         #endregion
 
-        #region init
+        #region initialize
         private void Initialize()
         {
             this.EnsureFiles(out bool dbCreated);
@@ -87,7 +106,7 @@ namespace HatTrick.MemDb
                 using var reader = new BinaryReader(fsMap, Encoding.UTF8, true);
                 _map.DeserializeFrom(reader);
 
-                _nextId = _map.Pointers[^1].Id + 1;
+                _nextId = _map.Pointers.Count == 0 ? 1 : _map.Pointers[^1].Id + 1;
             }
         }
         #endregion
@@ -116,8 +135,8 @@ namespace HatTrick.MemDb
                 dbCreated = true;
                 lock (_dbSyncLock)
                 {
-                    using var fs = new FileStream(_fullDbPath, FileMode.CreateNew);
                     dbCreated = true;
+                    using var fs = new FileStream(_fullDbPath, FileMode.CreateNew);
                 }
 
                 lock (_mapSyncLock)
@@ -157,7 +176,7 @@ namespace HatTrick.MemDb
                             }
                             else
                             {
-                                //TODO:implement
+                                //TODO:
                             }
                         }
                         else
@@ -170,7 +189,7 @@ namespace HatTrick.MemDb
                     }
                 }
             }
-            _encryptedCount = encrypted;
+            _cryptoRecordCount = encrypted;
         }
         #endregion
 
@@ -275,7 +294,7 @@ namespace HatTrick.MemDb
 
                                 rec.SerializeTo(localWriter);
                                 msClear.Position = 0;
-                                _cryptoProvider.Encrypt(msClear, msEncrypted, rec.Id.ToString("0000000000"));
+                                _encrypter.Encrypt(msClear, msEncrypted, rec.Id.ToString("0000000000"));
                                 msEncrypted.CopyTo(fsDb);
                             }
                             else
@@ -296,7 +315,7 @@ namespace HatTrick.MemDb
         }
         #endregion
 
-        #region flush stale items
+        #region mark stale items
         private void MarkStaleItems()
         {
             lock (_mapSyncLock)

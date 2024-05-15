@@ -27,9 +27,9 @@ namespace HatTrick.MemDb
         #endregion
 
         #region configure for
-        public static MemDbConfiguration<T> ConfigureFor<T>(string datasetName) where T : class, new()
+        public static MemDbConfiguration<T> ConfigureFor<T>(string datasetName, string path) where T : class, new()
         {
-            return new MemDbConfiguration<T>(datasetName, MemDb.Register);
+            return new MemDbConfiguration<T>(datasetName, path, MemDb.Register);
         }
         #endregion
 
@@ -63,26 +63,29 @@ namespace HatTrick.MemDb
         #endregion
 
         #region constructors
-        private MemDb(string path, string datasetName, IMemDbCacher<T> cacher)
+        private MemDb(string datasetName, string path, IMemDbCacher<T> cacher)
         {
-            if (string.IsNullOrWhiteSpace(path))
-                throw new ArgumentException("arg must have a value.", nameof(path));
-
             if (string.IsNullOrEmpty(datasetName))
                 throw new ArgumentException("arg must have a value.", nameof(datasetName));
+
+            if (string.IsNullOrWhiteSpace(path))
+                throw new ArgumentException("arg must have a value.", nameof(path));
         }
         #endregion
 
         #region open
-        public static MemDb<T> Open(string path, string datasetName)
+        public static MemDb<T> Open(string datasetName)
         {
             MemDbConfiguration config = MemDb.Configurations.Find(r => r.DatasetName == datasetName);
 
             if (config is null)
-                throw new ArgumentException("");
+                throw new ArgumentException($"No configuration registered for provided datasetName: {datasetName}");
 
+            var configOfT = config.EnsureGenericType<T>(config);
 
-            return new MemDb<T>(path, datasetName, null);
+            configOfT.Initialize();
+
+            return new MemDb<T>(config.DatasetName, config.Path, configOfT.GetCache());
         }
         #endregion
 
@@ -161,7 +164,7 @@ namespace HatTrick.MemDb
         #endregion
 
         #region insert
-        public void Insert(T record, bool encrypt)
+        public void Insert(T record, bool encrypt = false)
         {
             _cache.Insert(record, encrypt);
         }
