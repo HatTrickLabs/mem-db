@@ -47,7 +47,7 @@ namespace HatTrick.MemDb
     internal class MemDbRecord<T> : MemDbRecord where T: class, new()
     {
         #region internals
-        private static ISerializationProvider<T> _serializer;
+        private static IMemDbSerializer<T> _serializer;
 
         private T _value;
         #endregion
@@ -71,7 +71,7 @@ namespace HatTrick.MemDb
         #endregion
 
         #region register serializer
-        internal static void RegisterSerializer(ISerializationProvider<T> serializer)
+        internal static void RegisterSerializer(IMemDbSerializer<T> serializer)
         {
             if (serializer == null)
                 throw new ArgumentNullException(nameof(serializer));

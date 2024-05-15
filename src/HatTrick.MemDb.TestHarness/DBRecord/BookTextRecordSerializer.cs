@@ -4,7 +4,7 @@ using HatTrick.MemDb;
 
 namespace TestHarness
 {
-    public class BookTextRecordSerializer : ISerializationProvider<BookTextRecord>
+    public class BookTextRecordSerializer : IMemDbSerializer<BookTextRecord>
     {
         private static BookTextRecordSerializer _instance;
 

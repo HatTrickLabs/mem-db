@@ -6,7 +6,7 @@ using System.Text;
 
 namespace HatTrick.MemDb
 {
-    public class MemDbDefragmenter
+    public class MemDbDefragmenter<T> : IMemDbDefragmenter<T> where T : class, new()
     {
         #region internals
         private string _path;

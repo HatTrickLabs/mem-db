@@ -8,11 +8,54 @@ using System.IO;
 
 namespace HatTrick.MemDb
 {
-    public class MemDb<T> : IDisposable, IMemDbAcceessor<T> where T : class, new()
+    #region [class] memdb
+    public abstract class MemDb : IDisposable
+    {
+        #region static internals
+        private static List<MemDbConfiguration> _configurations;
+        #endregion
+
+        #region static interface
+        protected static List<MemDbConfiguration> Configurations => _configurations;
+        #endregion
+
+        #region static constructor
+        static MemDb()
+        {
+            _configurations = new List<MemDbConfiguration>();
+        }
+        #endregion
+
+        #region configure for
+        public static MemDbConfiguration<T> ConfigureFor<T>(string datasetName) where T : class, new()
+        {
+            return new MemDbConfiguration<T>(datasetName, MemDb.Register);
+        }
+        #endregion
+
+        #region register
+        private static void Register<T>(MemDbConfiguration<T> configuration) where T : class, new()
+        {
+            if (_configurations.Exists(c => string.Compare(c.DatasetName, configuration.DatasetName, true) == 0))
+                throw new MemDbConfigurationException("Cannot register configuration with duplicate dataset name of existing configuration: " + configuration.DatasetName);
+
+            _configurations.Add(configuration);
+        }
+        #endregion
+
+        #region dispose
+        public void Dispose()
+        {
+        }
+        #endregion
+    }
+    #endregion
+
+    #region [class] memdb<T>
+    public class MemDb<T> : MemDb, IDisposable, IMemDbAcceessor<T> where T : class, new()
     {
         #region internals
-        private MemDbCacheProvider<T> _cache;
-        private MemDbStorageProvider<T> _storage;
+        private MemDbCache<T> _cache;
         private bool _isClosed;
         #endregion
 
@@ -20,30 +63,26 @@ namespace HatTrick.MemDb
         #endregion
 
         #region constructors
-        private MemDb(string path, string datasetName, ISerializationProvider<T> serializer)
+        private MemDb(string path, string datasetName, IMemDbCacher<T> cacher)
         {
             if (string.IsNullOrWhiteSpace(path))
                 throw new ArgumentException("arg must have a value.", nameof(path));
 
             if (string.IsNullOrEmpty(datasetName))
                 throw new ArgumentException("arg must have a value.", nameof(datasetName));
-
-            if (serializer == null)
-                throw new ArgumentNullException(nameof(serializer));
-
-            _cache = new MemDbCacheProvider<T>();
         }
         #endregion
 
         #region open
-        public static MemDb<T> Open(string path, string name)
+        public static MemDb<T> Open(string path, string datasetName)
         {
-            return new MemDb<T>(path, name, null);//TODO: need some type of default serializer (JSON) after update to .net 8.0
-        }
+            MemDbConfiguration config = MemDb.Configurations.Find(r => r.DatasetName == datasetName);
 
-        public static MemDb<T> Open(string path, string name, ISerializationProvider<T> serializer)
-        {
-            return new MemDb<T>(path, name, serializer);
+            if (config is null)
+                throw new ArgumentException("");
+
+
+            return new MemDb<T>(path, datasetName, null);
         }
         #endregion
 
@@ -149,13 +188,6 @@ namespace HatTrick.MemDb
         }
         #endregion
 
-        #region execute query
-        //private T[] ExecuteQuery(MemDbExpression<T> expression, bool deepCopy = true)
-        //{
-        //    return _cache.ExecuteQuery(expression, deepCopy);
-        //}
-        #endregion
-
         #region dispose
         public void Dispose()
         {
@@ -183,4 +215,5 @@ namespace HatTrick.MemDb
         }
         #endregion
     }
+    #endregion
 }

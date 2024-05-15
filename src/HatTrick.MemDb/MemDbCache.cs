@@ -4,21 +4,22 @@ using System.Collections.Generic;
 
 namespace HatTrick.MemDb
 {
-    internal class MemDbCacheProvider<T> : IMemDbAcceessor<T> where T : class, new()
+    internal class MemDbCache<T> : IMemDbCacher<T> where T : class, new()
     {
         #region internals
         private List<MemDbRecord<T>> _records;
         private object _recSyncLock;
 
-        private MemDbStorageProvider<T> _storage;
+        private IMemDbPersister<T> _persister;
         #endregion
 
         #region constructors
-        public MemDbCacheProvider(IMemDbStorageProvider<T> storageProvider)
+        public MemDbCache(IMemDbPersister<T> persister)
         {
-            if (storageProvider is null)
-                throw new ArgumentNullException(nameof(storageProvider));
+            if (persister is null)
+                throw new ArgumentNullException(nameof(persister));
 
+            _persister = persister;
             _recSyncLock = new();
             _records = new List<MemDbRecord<T>>();//TODO: accurate capacity
         }
@@ -200,7 +201,7 @@ namespace HatTrick.MemDb
                 rec.Index = (_records.Count - 1);
             }
 
-            _storage.Insert(rec);
+            _persister.Insert(rec);
         }
         #endregion
 
@@ -235,8 +236,8 @@ namespace HatTrick.MemDb
                     newRec.Index = _records.Count - 1;
                 }
 
-                _storage.Insert(newRec);
-                _storage.MarkStale(oldRec);
+                _persister.Insert(newRec);
+                _persister.MarkStale(oldRec);
             }
 
             return matches.Count;
@@ -266,7 +267,7 @@ namespace HatTrick.MemDb
             for (int i = 0; i < matches.Count; i++)
             {
                 var oldRec = matches[i];
-                _storage.MarkStale(oldRec);
+                _persister.MarkStale(oldRec);
             }
 
             return matches.Count;

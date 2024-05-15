@@ -7,7 +7,7 @@ using System.Threading;
 
 namespace HatTrick.MemDb
 {
-    internal sealed class MemDbStorageProvider<T> : IMemDbStorageProvider<T>, IDisposable where T : class, new()
+    internal sealed class MemDbMappedFile<T> : IMemDbPersister<T>, IDisposable where T : class, new()
     {
         #region internals
         private string _path;
@@ -30,7 +30,7 @@ namespace HatTrick.MemDb
         private int _nextId;
         private object _idSyncLock;
 
-        private IMemDbCryptoProvider _cryptoProvider;
+        private IMemDbEncrypter _cryptoProvider;
         private int _encryptedCount;
 
         private bool _isClosed;
@@ -42,7 +42,7 @@ namespace HatTrick.MemDb
 
         #region constructors
         //string path, string datasetName, ISerializationProvier<T> serializer, ICloneProvider<T>, 
-        internal MemDbStorageProvider(string path, string datasetName, ISerializationProvider<T> serializer)
+        internal MemDbMappedFile(string path, string datasetName, IMemDbSerializer<T> serializer)
         {
             if (string.IsNullOrWhiteSpace(path))
                 throw new ArgumentException("arg must have a value.", nameof(path));
@@ -345,7 +345,7 @@ namespace HatTrick.MemDb
         #endregion
 
         #region finalizer
-        ~MemDbStorageProvider()
+        ~MemDbMappedFile()
         {
             if (!_isClosed)
             {
