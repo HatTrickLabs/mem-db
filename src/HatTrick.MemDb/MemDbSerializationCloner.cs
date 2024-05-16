@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 
 namespace HatTrick.MemDb
 {
-    #region memd db serialization cloner
     internal class MemDbSerializationCloner<T> : IMemDbCloner<T> where T : class, new()
     {
         #region internals
@@ -57,5 +56,4 @@ namespace HatTrick.MemDb
         }
         #endregion
     }
-    #endregion
 }

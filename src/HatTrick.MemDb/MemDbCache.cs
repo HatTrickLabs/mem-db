@@ -173,8 +173,6 @@ namespace HatTrick.MemDb
                 ? (r) => r.IsStale == false && expression.Filter(r.Value)
                 : (r) => r.IsStale == false;
 
-            T[] copies = Array.Empty<T>();
-
             lock (_recSyncLock)
             {
                 List<T> matches = _records.Where(filter).Select(r => r.Value).ToList();
@@ -195,14 +193,14 @@ namespace HatTrick.MemDb
 
 
                     if (deepCopy)
-                        copies = _cloner.DeepCopy(matches);
+                        return _cloner.DeepCopy(matches);
 
                     else
-                        copies = matches.ToArray();
+                        return matches.ToArray();
                 }
             }
 
-            return copies;
+            return Array.Empty<T>();
         }
         #endregion
 
