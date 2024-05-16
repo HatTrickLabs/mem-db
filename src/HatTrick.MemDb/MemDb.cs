@@ -49,7 +49,7 @@ namespace HatTrick.MemDb
     public class MemDb<T> : MemDb, IDisposable, IMemDbAcceessor<T> where T : class, new()
     {
         #region internals
-        private MemDbCache<T> _cache;
+        private IMemDbCacher<T> _cache;
         private bool _isClosed;
         #endregion
 
@@ -67,6 +67,8 @@ namespace HatTrick.MemDb
 
             if (cacher is null)
                 throw new ArgumentNullException(nameof(cacher));
+
+            _cache = cacher;
         }
         #endregion
 

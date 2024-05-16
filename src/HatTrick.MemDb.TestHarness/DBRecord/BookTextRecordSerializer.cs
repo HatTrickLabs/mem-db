@@ -17,7 +17,7 @@ namespace TestHarness
             return _instance ?? (_instance = new BookTextRecordSerializer());
         }
 
-        public void SerializeTo(BookTextRecord record, BinaryWriter buffer)
+        public void Serialize(BookTextRecord record, BinaryWriter buffer)
         {
             buffer.Write(record.Id);
             buffer.Write(record.Text);
@@ -25,7 +25,7 @@ namespace TestHarness
             buffer.Write(record.WordCount);
         }
 
-        public BookTextRecord DeserializeFrom(BinaryReader buffer)
+        public BookTextRecord Deserialize(BinaryReader buffer)
         {
             var record = new BookTextRecord();
             record.Id = buffer.ReadInt32();

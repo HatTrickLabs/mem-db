@@ -28,11 +28,10 @@ namespace HatTrick.MemDb
         private MemDbMap _map;
         private object _mapSyncLock;
 
-        private int _nextId;
+        private int _lastId;
         private object _idSyncLock;
 
-        private MemDbBinarySerializer<T> _serializer;
-        private IMemDbCloner<T> _cloner;
+        private IMemDbSerializer<T> _serializer;
         private IMemDbEncrypter<T> _encrypter;
         
         private int _cryptoRecordCount;
@@ -41,22 +40,19 @@ namespace HatTrick.MemDb
         #endregion
 
         #region interface
-        internal bool IsEncryptionReady => _encrypter is not null;
+        public AccessMode Mode => _mode;
+
+        public int RecordCount => _map.Pointers.Count(p => p.IsStale == false);
+
+        public bool IsEncryptionReady => _encrypter is not null;
         #endregion
 
         #region constructors
-        internal MemDbMappedFile(string datasetName, string path, AccessMode mode,  MemDbBinarySerializer<T> serializer)
+        internal MemDbMappedFile(string datasetName, string path, AccessMode mode,  IMemDbSerializer<T> serializer)
             : this(datasetName, path, mode, serializer, null)
-        {
+        { }
 
-        }
-
-        internal MemDbMappedFile(string datasetName, string path, AccessMode mode, MemDbBinarySerializer<T> serializer, IMemDbCloner<T> cloner)
-            : this(datasetName, path, mode, serializer, cloner, null)
-        {
-        }
-
-        public MemDbMappedFile(string datasetName, string path, AccessMode mode, MemDbBinarySerializer<T> serializer, IMemDbCloner<T> cloner, IMemDbEncrypter<T> encrypter)
+        public MemDbMappedFile(string datasetName, string path, AccessMode mode, IMemDbSerializer<T> serializer, IMemDbEncrypter<T> encrypter)
         {
             if (string.IsNullOrEmpty(datasetName))
                 throw new ArgumentException("arg must have a value.", nameof(datasetName));
@@ -73,8 +69,7 @@ namespace HatTrick.MemDb
             _dbSyncLock = new();
 
             _serializer = serializer;
-            _cloner = cloner;
-            _encrypter = encrypter;
+            _encrypter = encrypter;//can be null...
 
             _fullDbPath = Path.Combine(path, $"htl.{datasetName}.db");
             _fullMapPath = Path.Combine(path, $"htl.{datasetName}.map");
@@ -89,8 +84,6 @@ namespace HatTrick.MemDb
             _staleStateSyncLock = new();
 
             this.Initialize();
-
-            _fileSyncTimer = new Timer(new TimerCallback(this.Flush), null, (1000 * 5), Timeout.Infinite); //5 seconds...
         }
         #endregion
 
@@ -99,17 +92,19 @@ namespace HatTrick.MemDb
         {
             this.EnsureFiles(out bool dbCreated);
 
-            if (dbCreated)
-                return; //brand new db, no need to read map
-
-            lock (_mapSyncLock)
+            if (!dbCreated)//if the db is NOT brand new, read int the record map file
             {
-                using var fsMap = new FileStream(_fullMapPath, FileMode.Open, FileAccess.Read);
-                using var reader = new BinaryReader(fsMap, Encoding.UTF8, true);
-                _map.DeserializeFrom(reader);
+                lock (_mapSyncLock)
+                {
+                    using var fsMap = new FileStream(_fullMapPath, FileMode.Open, FileAccess.Read);
+                    using var reader = new BinaryReader(fsMap, Encoding.UTF8, true);
+                    _map.DeserializeFrom(reader);
 
-                _nextId = _map.Pointers.Count == 0 ? 1 : _map.Pointers[^1].Id + 1;
+                    _lastId = _map.Pointers.Count == 0 ? 0 : _map.Pointers[^1].Id;
+                }
             }
+
+            _fileSyncTimer = new Timer(new TimerCallback(this.Flush), null, (1000 * 250), Timeout.Infinite); //5 seconds...
         }
         #endregion
 
@@ -125,7 +120,7 @@ namespace HatTrick.MemDb
             bool mapExists = File.Exists(_fullMapPath);
 
             //if the db already existed, but the map file does NOT, we got a BAD problem
-            if (!dbExists && !mapExists)
+            if (dbExists && !mapExists)
                 throw new InvalidOperationException($"No map file exists for database file: {Path.GetFileName(_fullDbPath)}");
 
             //if the map already existed, but the db file does NOT, we got a BAD problem
@@ -190,8 +185,10 @@ namespace HatTrick.MemDb
                         }
                         else
                         {
-                            MemDbRecord<T> record = _serializer.Deserialize(reader);
-                            record.MapIndex = i;
+                            T value = _serializer.Deserialize(reader);//T value
+                            var record = new MemDbRecord<T>(value, pointer.Id, false, pointer.IsEncrypted, i, i);
+                            record.SetMapIndex(i);
+                            record.SetCacheIndex(i);
                             records[i] = record;
                         }
                     }
@@ -207,7 +204,7 @@ namespace HatTrick.MemDb
         {
             lock (_idSyncLock)
             {
-                return _nextId++;
+                return ++_lastId;
             }
         }
         #endregion
@@ -218,7 +215,7 @@ namespace HatTrick.MemDb
             if (_mode == AccessMode.Read)
                 throw new InvalidOperationException($"MemDb instance for dataset name '{_datasetName}' is running in '{_mode}' mode...Records cannot be inserted.");
 
-            record.Id = this.GetNextId();
+            record.SetId(this.GetNextId());
             lock (_insertSyncLock)
             {
                 _insertQueue.Enqueue(record);
@@ -303,27 +300,34 @@ namespace HatTrick.MemDb
 
                             if (rec.IsEncrypted)
                             {
-                                using var msClear = new MemoryStream();
-                                using var localWriter = new BinaryWriter(msClear, Encoding.UTF8, true);
-                                using var msEncrypted = new MemoryStream();
+                                //TODO:
+                                //using var msClear = new MemoryStream();
+                                //using var localWriter = new BinaryWriter(msClear, Encoding.UTF8, true);
+                                //using var msEncrypted = new MemoryStream();
 
-                                _serializer.Serialize(rec, localWriter);
-                                msClear.Position = 0;
-                                _encrypter.Encrypt(msClear, msEncrypted, rec.Id.ToString("0000000000"));
-                                msEncrypted.CopyTo(fsDb);
+                                //MemDbRecordSerializer.Serialize(rec, localWriter);//MemDbRecord interface
+                                //_serializer.Serialize(rec.Value, localWriter);//T value
+                                //msClear.Position = 0;
+                                //_encrypter.Encrypt(msClear, msEncrypted, rec.Id.ToString("0000000000"));
+                                //msEncrypted.CopyTo(fsDb);
                             }
                             else
                             {
-                                _serializer.Serialize(rec, dbWriter);
+                                //MemDbRecordSerializer.Serialize(rec, dbWriter);//MemDbRecord interfce
+                                _serializer.Serialize(rec.Value, dbWriter);//T value
                             }
 
                             length = (int)(fsDb.Position - initialPosition);
                             MemDbPointer pointer = new MemDbPointer(rec.Id, false, rec.IsEncrypted, initialPosition, length);
+                            rec.SetMapIndex(_map.Pointers.Count);
                             _map.AddPointer(pointer);
                             pointer.SerializeTo(mapWriter);
-                            rec.MapIndex = (_map.Pointers.Count - 1);
 
                         } while (this.TryPopInsertRecord(out rec));
+
+                        //overwrite the map pointer count header.
+                        fsMap.Position = 0;
+                        mapWriter.Write(_map.Pointers.Count);
                     }
                 }
             }

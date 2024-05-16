@@ -12,7 +12,7 @@ namespace HatTrick.MemDb
         #endregion
 
         #region interface
-        internal int ByteLength => _pointers.Count * MemDbPointer.Size;
+        //internal int ByteLength => _pointers.Count * MemDbPointer.Size;
 
         internal List<MemDbPointer> Pointers => _pointers;
         #endregion

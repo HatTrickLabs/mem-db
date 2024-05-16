@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
 
 namespace HatTrick.MemDb
@@ -18,7 +14,7 @@ namespace HatTrick.MemDb
         #endregion
 
         #region interface
-        internal static readonly int Size = 14;
+        internal static readonly int Size = sizeof(int) + sizeof(bool) + sizeof(bool) + sizeof(long) + sizeof(int);
 
         internal int Id => _id;
         internal bool IsStale => _isStale;
@@ -49,11 +45,11 @@ namespace HatTrick.MemDb
         #region serialization
         internal void SerializeTo(BinaryWriter writer)
         {
-            writer.Write(this.Id);
-            writer.Write(this.IsStale);
-            writer.Write(this.IsEncrypted);
-            writer.Write(this.Position);
-            writer.Write(this.Length);
+            writer.Write(_id);
+            writer.Write(_isStale);
+            writer.Write(_isEncrypted);
+            writer.Write(_position);
+            writer.Write(_length);
         }
 
         internal static MemDbPointer DeserializeFrom(BinaryReader reader)
@@ -61,7 +57,7 @@ namespace HatTrick.MemDb
             int id = reader.ReadInt32();
             bool isStale = reader.ReadBoolean();
             bool isEncrypted = reader.ReadBoolean();
-            int position = reader.ReadInt32();
+            long position = reader.ReadInt64();
             int length = reader.ReadInt32();
             return new MemDbPointer(id, isStale, isEncrypted, position, length);
         }

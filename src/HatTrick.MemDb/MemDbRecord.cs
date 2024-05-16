@@ -10,38 +10,68 @@ namespace HatTrick.MemDb
     internal abstract class MemDbRecord
     {
         #region read only
-        internal static readonly int Size = 14;
+        internal static readonly int Size = sizeof(int) + sizeof(bool) + sizeof(bool) + sizeof(int) + sizeof(int);
+        #endregion
+
+        #region internals
+        private int _id;
+        private bool _isStale;
+        private bool _isEncrypted;
+        private int _cacheIndex;
+        private int _mapIndex;
         #endregion
 
         #region interface
-        internal int Id { get; set; }
-        internal bool IsStale { get; set; }
-        internal bool IsEncrypted { get; set; }
-        internal int Index { get; set; }
-        internal int MapIndex { get; set; }
+        internal int Id => _id;
+        internal bool IsStale => _isStale;
+        internal bool IsEncrypted => _isEncrypted;
+        internal int Index => _cacheIndex;
+        internal int MapIndex => _mapIndex;
         #endregion
 
-        //#region serialize to
-        //internal virtual void SerializeTo(BinaryWriter buffer)
-        //{
-        //    buffer.Write(this.Id);
-        //    buffer.Write(this.IsStale);
-        //    buffer.Write(this.IsEncrypted);
-        //    buffer.Write(this.Index);
-        //    buffer.Write(this.MapIndex);
-        //}
-        //#endregion
+        #region constructors
+        internal MemDbRecord(bool isEncrypted)
+        {
+            _isEncrypted = isEncrypted;
+        }
 
-        //#region deserialize from
-        //internal virtual void DeserializeFrom(BinaryReader buffer)
-        //{
-        //    this.Id = buffer.ReadInt32();
-        //    this.IsStale = buffer.ReadBoolean();
-        //    this.IsEncrypted = buffer.ReadBoolean();
-        //    this.Index = buffer.ReadInt32();
-        //    this.MapIndex = buffer.ReadInt32();
-        //}
-        //#endregion
+        internal MemDbRecord(int id, bool isStale, bool isEncrypted, int cacheIndex, int mapIndex)
+        {
+            _id = id;
+            _isStale = isStale;
+            _isEncrypted = isEncrypted;
+            _cacheIndex = cacheIndex;
+            _mapIndex = mapIndex;
+        }
+        #endregion
+
+        #region set id
+        internal void SetId(int id)
+        {
+            _id = id;
+        }
+        #endregion
+
+        #region mark stale
+        internal void MarkStale()
+        {
+            _isStale = true;
+        }
+        #endregion
+
+        #region set cache index
+        internal void SetCacheIndex(int cacheIndex)
+        {
+            _cacheIndex = cacheIndex;
+        }
+        #endregion
+
+        #region set map index
+        internal void SetMapIndex(int mapIndex)
+        {
+            _mapIndex = mapIndex;
+        }
+        #endregion
     }
 
     internal class MemDbRecord<T> : MemDbRecord where T: class, new()
@@ -61,7 +91,7 @@ namespace HatTrick.MemDb
         #endregion
 
         #region constructors
-        internal MemDbRecord(T value, bool isEncrypted)
+        internal MemDbRecord(T value, bool isEncrypted) : base(isEncrypted)
         {
             if (value == null)
                 throw new ArgumentNullException(nameof(value));
@@ -69,8 +99,13 @@ namespace HatTrick.MemDb
             _value = value;
         }
 
-        internal MemDbRecord()
+        internal MemDbRecord(T value, int id, bool isStale, bool isEncrypted, int cacheIndex, int mapIndex) 
+            : base(id, isStale, isEncrypted, cacheIndex, mapIndex)
         {
+            if (value is null)
+                throw new ArgumentNullException(nameof(value));
+
+            _value = value;
         }
         #endregion
     }

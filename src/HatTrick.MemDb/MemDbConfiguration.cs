@@ -2,6 +2,7 @@
 
 namespace HatTrick.MemDb
 {
+    #region [class] mem db configuration
     public class MemDbConfiguration
     {
         #region internals
@@ -41,7 +42,9 @@ namespace HatTrick.MemDb
         }
         #endregion
     }
+    #endregion
 
+    #region [class] mem db configuration of T
     public class MemDbConfiguration<T> : MemDbConfiguration where T : class, new()
     {
         #region internals
@@ -51,8 +54,8 @@ namespace HatTrick.MemDb
         private Func<IMemDbCloner<T>> _clonerProvider;
         private Func<IMemDbEncrypter<T>> _encrypterProvider;
 
-        private MemDbBinarySerializer<T> _serializer;
-        private MemDbCloner<T> _cloner;
+        private IMemDbSerializer<T> _serializer;
+        private IMemDbCloner<T> _cloner;
         private IMemDbEncrypter<T> _encrypter;
         private IMemDbCacher<T> _cache;
         private IMemDbPersister<T> _persister;
@@ -67,12 +70,13 @@ namespace HatTrick.MemDb
         {
             _registerCallback = registerCallback ?? throw new ArgumentNullException(nameof(registerCallback));
 
-            //defaults
-            //TODO: need impl of all default providers.
-            _serializerProvider = () => null;
-            _clonerProvider = () => null;
-            _encrypterProvider = () => null;
+            //default mode should be read/write
             _mode = AccessMode.ReadWrite;
+
+            //set all the default providers
+            _serializerProvider = () => new MemDbJsonSerializer<T>();
+            _clonerProvider = () => new MemDbSerializationCloner<T>(_serializer);
+            _encrypterProvider = () => null;//TODO:
         }
         #endregion
 
@@ -95,7 +99,7 @@ namespace HatTrick.MemDb
         #region encrypt with
         public MemDbConfiguration<T> EncryptWith(Func<IMemDbEncrypter<T>> encrypterProvider)
         {
-            _encrypterProvider = _encrypterProvider ?? throw new ArgumentNullException(nameof(encrypterProvider));
+            _encrypterProvider = encrypterProvider;//can be null...
             return this;
         }
         #endregion
@@ -114,10 +118,9 @@ namespace HatTrick.MemDb
             if (_isInitialized)
                 return;
 
-            IMemDbSerializer<T> serializerOfT = _serializerProvider.Invoke();
-            _serializer = new MemDbBinarySerializer<T>(serializerOfT);
-            _cloner = new MemDbCloner<T>(serializerOfT);
-            _encrypter = _encrypterProvider?.Invoke();
+            _serializer = _serializerProvider();//MUST BE FIRST...clone povider passes this as arg on internal ctor
+            _cloner = _clonerProvider();
+            _encrypter = _encrypterProvider();
             _persister = new MemDbMappedFile<T>(base.DatasetName, base.Path, _mode, _serializer);
             _cache = new MemDbCache<T>(_cloner, _persister);
 
@@ -136,7 +139,7 @@ namespace HatTrick.MemDb
         #endregion
 
         #region get serializer
-        internal MemDbBinarySerializer<T> GetSerializer()
+        internal IMemDbSerializer<T> GetSerializer()
         {
             this.EnsureInitalized();
             return _serializer;
@@ -175,4 +178,5 @@ namespace HatTrick.MemDb
         }
         #endregion
     }
+    #endregion
 }

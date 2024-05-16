@@ -7,39 +7,39 @@ using System.Threading.Tasks;
 
 namespace HatTrick.MemDb
 {
-    #region memd db  record cloner of T
-    internal class MemDbCloner<T> where T : class, new()
+    #region memd db serialization cloner
+    internal class MemDbSerializationCloner<T> : IMemDbCloner<T> where T : class, new()
     {
         #region internals
         private IMemDbSerializer<T> _serializer;
         #endregion
 
         #region constructors
-        internal MemDbCloner(IMemDbSerializer<T> serializer)
+        internal MemDbSerializationCloner(IMemDbSerializer<T> serializer)
         {
             _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
         }
         #endregion
 
-        #region deep copy value
-        internal T DeepCopyOf(T value)
+        #region deep copy
+        public T DeepCopy(T value)
         {
             T rec = default(T);
             using MemoryStream ms = new MemoryStream();
             using (BinaryWriter writer = new BinaryWriter(ms, Encoding.UTF8, true))
             {
-                _serializer.SerializeTo(value, writer);
+                _serializer.Serialize(value, writer);
             }
             int length = (int)ms.Position;
             ms.Position = 0;
             using (BinaryReader reader = new BinaryReader(ms, Encoding.UTF8, true))
             {
-                rec = _serializer.DeserializeFrom(reader);
+                rec = _serializer.Deserialize(reader);
             }
             return rec;
         }
 
-        internal T[] DeepCopyOf(IList<T> values)
+        public T[] DeepCopy(IList<T> values)
         {
             T[] newValues = new T[values.Count];
             using MemoryStream ms = new MemoryStream();
@@ -47,10 +47,10 @@ namespace HatTrick.MemDb
             using BinaryReader reader = new BinaryReader(ms, Encoding.UTF8, true);
             for (int i = 0; i < values.Count; i++)
             {
-                _serializer.SerializeTo(values[i], writer);
+                _serializer.Serialize(values[i], writer);
                 int length = (int)ms.Position;
                 ms.Position = 0;
-                newValues[i] = _serializer.DeserializeFrom(reader);
+                newValues[i] = _serializer.Deserialize(reader);
                 ms.Position = 0;
             }
             return newValues;

@@ -26,7 +26,18 @@ namespace HatTrick.MemDb
             _cloner = cloner;
             _persister = persister; 
             _recSyncLock = new();
-            _records = new List<MemDbRecord<T>>();//TODO: accurate capacity
+
+            this.Initialize();
+        }
+        #endregion
+
+        #region initialize
+        private void Initialize()
+        {
+            int recCount = _persister.RecordCount;
+            int capacity = _persister.Mode == AccessMode.Read ? recCount : (int)(recCount * 1.1);
+            _records = new List<MemDbRecord<T>>(capacity);
+            _records.AddRange(_persister.ReadAll());
         }
         #endregion
 
@@ -129,7 +140,7 @@ namespace HatTrick.MemDb
                     }
                 }
             }
-            return rec is null ? null : MemDbRecord<T>.DeepCopyOf(rec.Value);
+            return rec is null ? null : _cloner.DeepCopy(rec.Value);
         }
         #endregion
 
@@ -142,7 +153,7 @@ namespace HatTrick.MemDb
                 matches = _records.Where(r => r.IsStale == false && where(r.Value)).Select(r => r.Value).ToArray();
             }
 
-            T[] set = MemDbRecord<T>.DeepCopyOf(matches);
+            T[] set = _cloner.DeepCopy(matches);
 
             return set;
         }
@@ -184,7 +195,7 @@ namespace HatTrick.MemDb
 
 
                     if (deepCopy)
-                        copies = MemDbRecord<T>.DeepCopyOf(matches);
+                        copies = _cloner.DeepCopy(matches);
 
                     else
                         copies = matches.ToArray();
@@ -198,12 +209,12 @@ namespace HatTrick.MemDb
         #region insert
         public void Insert(T record, bool encrypt = false)
         {
-            MemDbRecord<T> rec = new MemDbRecord<T>(MemDbRecord<T>.DeepCopyOf(record), encrypt);
+            MemDbRecord<T> rec = new MemDbRecord<T>(_cloner.DeepCopy(record), encrypt);
 
             lock (_recSyncLock)
             {
+                rec.SetMapIndex(_records.Count);
                 _records.Add(rec);
-                rec.Index = (_records.Count - 1);
             }
 
             _persister.Insert(rec);
@@ -231,14 +242,15 @@ namespace HatTrick.MemDb
             for (int i = 0; i < matches.Count; i++)
             {
                 var oldRec = matches[i];
-                var newRec = new MemDbRecord<T>(MemDbRecord<T>.DeepCopyOf(oldRec.Value), oldRec.IsEncrypted);
-                matches[i].IsStale = true;
+                var newRec = new MemDbRecord<T>(_cloner.DeepCopy(oldRec.Value), oldRec.IsEncrypted);
+                matches[i].MarkStale();
                 apply(newRec.Value);
 
                 lock (_recSyncLock)
                 {
+                    newRec.SetCacheIndex(_records.Count);
                     _records.Add(newRec);
-                    newRec.Index = _records.Count - 1;
+                    
                 }
 
                 _persister.Insert(newRec);
@@ -261,7 +273,7 @@ namespace HatTrick.MemDb
                 var set = _records.Where(r => r.IsStale == false && where(r.Value));
                 foreach (var r in set)
                 {
-                    r.IsStale = true;
+                    r.MarkStale();
                     matches.Add(r);
                 }
             }

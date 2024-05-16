@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
 using System.Threading;
 using System.Diagnostics;
 using HatTrick.MemDb;
-using System.Collections.Generic;
 
 namespace TestHarness
 {
@@ -19,9 +16,6 @@ namespace TestHarness
 
         static void Main(string[] args)
         {
-            _sw = new Stopwatch();
-            _sw.Start();
-
             //var defrag = new MemDbDefragmenter(DbRoot, "books");
             //defrag.Defrag();
 
@@ -31,6 +25,8 @@ namespace TestHarness
                 //.CloneWith(null)
                 .Register();
 
+            _sw = new Stopwatch();
+            _sw.Start();
 
             using (_db = MemDb<BookTextRecord>.Open("books"))
             {
@@ -39,9 +35,9 @@ namespace TestHarness
                 _sw.Start();
 
                 //Book text is included in the project but NOT copied to the output dir...
-                //ImportBooks(@"D:\git\HatTrickLabs\mem-db\src\HatTrick.MemDb.TestHarness\BookText");
+                ImportBooks(@"D:\git\HatTrickLabs\mem-db\src\HatTrick.MemDb.TestHarness\BookText");
 
-                //RunQueries();
+                RunQueries();
                 //ExecuteUpdates("Lord Of The Flies");
                 //RunQueries();
                 //SearchText();
