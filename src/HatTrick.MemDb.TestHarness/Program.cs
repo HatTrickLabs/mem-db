@@ -26,7 +26,7 @@ namespace TestHarness
             //defrag.Defrag();
 
             MemDb.ConfigureFor<BookTextRecord>(datasetName, DbRoot)
-                .SerializeWith(BookTextRecordSerializer.GetInstance())
+                .SerializeWith(BookTextRecordSerializer.GetInstance)
                 //.EncryptWith(null)
                 //.CloneWith(null)
                 .Register();

@@ -31,8 +31,8 @@ namespace HatTrick.MemDb
             if (!(configuration is MemDbConfiguration<T> configOfT))
             {
                 string dsn = configuration.DatasetName;
-                string req = typeof(T).Name;
-                string reg = configuration.GetType().GetGenericTypeDefinition().Name;
+                string req = typeof(T).Name;//requested
+                string reg = configuration.GetType().GetGenericArguments()[0].Name;//registered
                 string msg = $"Registered configuration for dataset name '{dsn}' is registered for type '{reg}'...attempted open on type '{req}'";
                 throw new MemDbConfigurationException(msg);
             }
@@ -50,16 +50,13 @@ namespace HatTrick.MemDb
         private Func<IMemDbSerializer<T>> _serializerProvider;
         private Func<IMemDbCloner<T>> _clonerProvider;
         private Func<IMemDbEncrypter<T>> _encrypterProvider;
-        private Func<IMemDbPersister<T>, IMemDbCacher<T>> _cacheProvider;
-        private Func<string, string, IMemDbSerializer<T>, IMemDbPersister<T>> _persisterProvider;
-        private Func<string, string, IMemDbDefragmenter<T>> _defragmenterProvider;
 
-        private IMemDbSerializer<T> _serializer;
-        private IMemDbCloner<T> _cloner;
+        private MemDbBinarySerializer<T> _serializer;
+        private MemDbCloner<T> _cloner;
         private IMemDbEncrypter<T> _encrypter;
         private IMemDbCacher<T> _cache;
         private IMemDbPersister<T> _persister;
-        private IMemDbDefragmenter<T> _defragmenter;
+        private AccessMode _mode;
 
         private bool _isInitialized;
         #endregion
@@ -69,13 +66,20 @@ namespace HatTrick.MemDb
             : base(datasetName, path)
         {
             _registerCallback = registerCallback ?? throw new ArgumentNullException(nameof(registerCallback));
+
+            //defaults
+            //TODO: need impl of all default providers.
+            _serializerProvider = () => null;
+            _clonerProvider = () => null;
+            _encrypterProvider = () => null;
+            _mode = AccessMode.ReadWrite;
         }
         #endregion
 
         #region serialize with
-        public MemDbConfiguration<T> SerializeWith(IMemDbSerializer<T> serializer)
+        public MemDbConfiguration<T> SerializeWith(Func<IMemDbSerializer<T>> serializerProvider)
         {
-            _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
+            _serializerProvider = serializerProvider ?? throw new ArgumentNullException(nameof(serializerProvider));
             return this;
         }
         #endregion
@@ -89,9 +93,9 @@ namespace HatTrick.MemDb
         #endregion
 
         #region encrypt with
-        public MemDbConfiguration<T> EncryptWith(IMemDbEncrypter<T> encrypter)
+        public MemDbConfiguration<T> EncryptWith(Func<IMemDbEncrypter<T>> encrypterProvider)
         {
-            _encrypter = encrypter ?? throw new ArgumentNullException(nameof(encrypter));
+            _encrypterProvider = _encrypterProvider ?? throw new ArgumentNullException(nameof(encrypterProvider));
             return this;
         }
         #endregion
@@ -110,12 +114,12 @@ namespace HatTrick.MemDb
             if (_isInitialized)
                 return;
 
-            _serializer = _serializerProvider();
-            _cloner = _clonerProvider();
-            _encrypter = _encrypterProvider();
-            _persister = _persisterProvider(base.Path, base.DatasetName, _serializer);
-            _cache = _cacheProvider(_persister);
-            _defragmenter = _defragmenterProvider(base.Path, base.DatasetName);
+            IMemDbSerializer<T> serializerOfT = _serializerProvider.Invoke();
+            _serializer = new MemDbBinarySerializer<T>(serializerOfT);
+            _cloner = new MemDbCloner<T>(serializerOfT);
+            _encrypter = _encrypterProvider?.Invoke();
+            _persister = new MemDbMappedFile<T>(base.DatasetName, base.Path, _mode, _serializer);
+            _cache = new MemDbCache<T>(_cloner, _persister);
 
             _isInitialized = true;
         }
@@ -132,7 +136,7 @@ namespace HatTrick.MemDb
         #endregion
 
         #region get serializer
-        internal IMemDbSerializer<T> GetSerializer()
+        internal MemDbBinarySerializer<T> GetSerializer()
         {
             this.EnsureInitalized();
             return _serializer;
@@ -168,14 +172,6 @@ namespace HatTrick.MemDb
         {
             this.EnsureInitalized();
             return _persister;
-        }
-        #endregion
-
-        #region get defragmenter
-        internal IMemDbDefragmenter<T> GetDefragmenter()
-        {
-            this.EnsureInitalized();
-            return _defragmenter;
         }
         #endregion
     }

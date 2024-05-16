@@ -9,7 +9,7 @@ using System.IO;
 namespace HatTrick.MemDb
 {
     #region [class] memdb
-    public abstract class MemDb : IDisposable
+    public abstract class MemDb
     {
         #region static internals
         private static List<MemDbConfiguration> _configurations;
@@ -29,23 +29,17 @@ namespace HatTrick.MemDb
         #region configure for
         public static MemDbConfiguration<T> ConfigureFor<T>(string datasetName, string path) where T : class, new()
         {
-            return new MemDbConfiguration<T>(datasetName, path, MemDb.Register);
+            return new MemDbConfiguration<T>(datasetName, path, MemDb.RegisterConfiguration);
         }
         #endregion
 
         #region register
-        private static void Register<T>(MemDbConfiguration<T> configuration) where T : class, new()
+        private static void RegisterConfiguration<T>(MemDbConfiguration<T> configuration) where T : class, new()
         {
             if (_configurations.Exists(c => string.Compare(c.DatasetName, configuration.DatasetName, true) == 0))
                 throw new MemDbConfigurationException("Cannot register configuration with duplicate dataset name of existing configuration: " + configuration.DatasetName);
 
             _configurations.Add(configuration);
-        }
-        #endregion
-
-        #region dispose
-        public void Dispose()
-        {
         }
         #endregion
     }
@@ -68,8 +62,11 @@ namespace HatTrick.MemDb
             if (string.IsNullOrEmpty(datasetName))
                 throw new ArgumentException("arg must have a value.", nameof(datasetName));
 
-            if (string.IsNullOrWhiteSpace(path))
+            if (string.IsNullOrEmpty(path))
                 throw new ArgumentException("arg must have a value.", nameof(path));
+
+            if (cacher is null)
+                throw new ArgumentNullException(nameof(cacher));
         }
         #endregion
 
@@ -191,6 +188,13 @@ namespace HatTrick.MemDb
         }
         #endregion
 
+        #region close
+        private void Close(bool isFinalizer = false)
+        {
+            _cache.Dispose();
+        }
+        #endregion
+
         #region dispose
         public void Dispose()
         {
@@ -208,13 +212,6 @@ namespace HatTrick.MemDb
             {
                 this.Close(true); //emergency catch all to save un-synced records if process dies...
             }
-        }
-        #endregion
-
-        #region close
-        private void Close(bool isFinalizer = false)
-        {
-            throw new NotImplementedException();
         }
         #endregion
     }

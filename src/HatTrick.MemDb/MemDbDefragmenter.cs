@@ -23,13 +23,13 @@ namespace HatTrick.MemDb
         #endregion
 
         #region constructors
-        public MemDbDefragmenter(string path, string datasetName)
+        public MemDbDefragmenter(string datasetName, string path)
         {
-            if (string.IsNullOrWhiteSpace(path))
-                throw new ArgumentException("arg must have a value.", nameof(path));
-
             if (string.IsNullOrEmpty(datasetName))
                 throw new ArgumentException("arg must have a value.", nameof(datasetName));
+
+            if (string.IsNullOrWhiteSpace(path))
+                throw new ArgumentException("arg must have a value.", nameof(path));
 
             _path = path;
             _name = datasetName;

@@ -10,8 +10,9 @@ namespace HatTrick.MemDb
     internal sealed class MemDbMappedFile<T> : IMemDbPersister<T>, IDisposable where T : class, new()
     {
         #region internals
-        private string _path;
-        private string _name;
+        private readonly string _path;
+        private readonly string _datasetName;
+        private readonly AccessMode _mode;
 
         private string _fullMapPath;
         private string _fullDbPath;
@@ -30,7 +31,7 @@ namespace HatTrick.MemDb
         private int _nextId;
         private object _idSyncLock;
 
-        private IMemDbSerializer<T> _serializer;
+        private MemDbBinarySerializer<T> _serializer;
         private IMemDbCloner<T> _cloner;
         private IMemDbEncrypter<T> _encrypter;
         
@@ -44,30 +45,31 @@ namespace HatTrick.MemDb
         #endregion
 
         #region constructors
-        internal MemDbMappedFile(string path, string datasetName, IMemDbSerializer<T> serializer)
-            : this(path, datasetName, serializer, null)
+        internal MemDbMappedFile(string datasetName, string path, AccessMode mode,  MemDbBinarySerializer<T> serializer)
+            : this(datasetName, path, mode, serializer, null)
         {
 
         }
 
-        internal MemDbMappedFile(string path, string datasetName, IMemDbSerializer<T> serializer, IMemDbCloner<T> cloner)
-            : this(path, datasetName, serializer, cloner, null)
+        internal MemDbMappedFile(string datasetName, string path, AccessMode mode, MemDbBinarySerializer<T> serializer, IMemDbCloner<T> cloner)
+            : this(datasetName, path, mode, serializer, cloner, null)
         {
         }
 
-        public MemDbMappedFile(string path, string datasetName, IMemDbSerializer<T> serializer, IMemDbCloner<T> cloner, IMemDbEncrypter<T> encrypter)
+        public MemDbMappedFile(string datasetName, string path, AccessMode mode, MemDbBinarySerializer<T> serializer, IMemDbCloner<T> cloner, IMemDbEncrypter<T> encrypter)
         {
-            if (string.IsNullOrWhiteSpace(path))
-                throw new ArgumentException("arg must have a value.", nameof(path));
-
             if (string.IsNullOrEmpty(datasetName))
                 throw new ArgumentException("arg must have a value.", nameof(datasetName));
+
+            if (string.IsNullOrWhiteSpace(path))
+                throw new ArgumentException("arg must have a value.", nameof(path));
 
             if (serializer == null)
                 throw new ArgumentNullException(nameof(serializer));
 
             _path = path;
-            _name = datasetName;
+            _datasetName = datasetName;
+            _mode = mode;
             _dbSyncLock = new();
 
             _serializer = serializer;
@@ -149,15 +151,22 @@ namespace HatTrick.MemDb
         #endregion
 
         #region read all
-        public IEnumerable<MemDbRecord<T>> ReadAll()
+        public MemDbRecord<T>[] ReadAll()
         {
+            if (_mode == AccessMode.Write)
+                throw new InvalidOperationException($"MemDb instance for dataset name '{_datasetName}' is running in '{_mode}' mode...Records cannot be read.");
+
             int encrypted = 0;
+            MemDbRecord<T>[] records = null;
             lock (_mapSyncLock)
             {
                 lock (_dbSyncLock)
                 {
+                    this.Flush(null);
+                    records = new MemDbRecord<T>[_map.Pointers.Count];
                     using var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read);
                     using var reader = new BinaryReader(fsDb, Encoding.UTF8, true);
+
                     MemDbPointer pointer;
                     for (int i = 0; i < _map.Pointers.Count; i++)
                     {
@@ -181,15 +190,15 @@ namespace HatTrick.MemDb
                         }
                         else
                         {
-                            MemDbRecord<T> rec = new MemDbRecord<T>();
-                            rec.DeserializeFrom(reader);
-                            rec.MapIndex = i;
-                            yield return rec;
+                            MemDbRecord<T> record = _serializer.Deserialize(reader);
+                            record.MapIndex = i;
+                            records[i] = record;
                         }
                     }
                 }
             }
             _cryptoRecordCount = encrypted;
+            return records;
         }
         #endregion
 
@@ -206,6 +215,9 @@ namespace HatTrick.MemDb
         #region insert
         public void Insert(MemDbRecord<T> record)
         {
+            if (_mode == AccessMode.Read)
+                throw new InvalidOperationException($"MemDb instance for dataset name '{_datasetName}' is running in '{_mode}' mode...Records cannot be inserted.");
+
             record.Id = this.GetNextId();
             lock (_insertSyncLock)
             {
@@ -217,6 +229,9 @@ namespace HatTrick.MemDb
         #region mark stale
         public void MarkStale(MemDbRecord<T> record)
         {
+            if (_mode == AccessMode.Read)
+                throw new InvalidOperationException($"MemDb instance for dataset name '{_datasetName}' is running in '{_mode}' mode...Records cannot be marked stale.");
+
             lock (_staleStateSyncLock)
             {
                 _staleStateQueue.Enqueue(record);
@@ -292,14 +307,14 @@ namespace HatTrick.MemDb
                                 using var localWriter = new BinaryWriter(msClear, Encoding.UTF8, true);
                                 using var msEncrypted = new MemoryStream();
 
-                                rec.SerializeTo(localWriter);
+                                _serializer.Serialize(rec, localWriter);
                                 msClear.Position = 0;
                                 _encrypter.Encrypt(msClear, msEncrypted, rec.Id.ToString("0000000000"));
                                 msEncrypted.CopyTo(fsDb);
                             }
                             else
                             {
-                                rec.SerializeTo(dbWriter);
+                                _serializer.Serialize(rec, dbWriter);
                             }
 
                             length = (int)(fsDb.Position - initialPosition);

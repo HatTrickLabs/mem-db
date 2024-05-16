@@ -4,7 +4,7 @@ using System.Text.Json;
 
 namespace HatTrick.MemDb
 {
-    internal class JsonSerializer<T> : IMemDbSerializer<T> where T : class, new()
+    internal class MemDbJsonSerializer<T> : IMemDbSerializer<T> where T : class, new()
     {
         public T DeserializeFrom(BinaryReader from)
         {

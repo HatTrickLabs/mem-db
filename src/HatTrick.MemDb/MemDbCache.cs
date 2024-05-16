@@ -4,21 +4,26 @@ using System.Collections.Generic;
 
 namespace HatTrick.MemDb
 {
-    internal class MemDbCache<T> : IMemDbCacher<T> where T : class, new()
+    internal class MemDbCache<T> : IMemDbCacher<T>, IDisposable where T : class, new()
     {
         #region internals
         private List<MemDbRecord<T>> _records;
         private object _recSyncLock;
 
+        private IMemDbCloner<T> _cloner;
         private IMemDbPersister<T> _persister;
         #endregion
 
         #region constructors
-        public MemDbCache(IMemDbPersister<T> persister)
+        public MemDbCache(IMemDbCloner<T> cloner, IMemDbPersister<T> persister)
         {
             if (persister is null)
                 throw new ArgumentNullException(nameof(persister));
 
+            if (cloner is null)
+                throw new ArgumentNullException(nameof(cloner));
+
+            _cloner = cloner;
             _persister = persister; 
             _recSyncLock = new();
             _records = new List<MemDbRecord<T>>();//TODO: accurate capacity
@@ -278,6 +283,13 @@ namespace HatTrick.MemDb
         public void Flush()
         {
             _persister.Flush(true);
+        }
+        #endregion
+
+        #region dispose
+        public void Dispose()
+        {
+            _persister.Dispose();
         }
         #endregion
     }
