@@ -104,7 +104,7 @@ namespace HatTrick.MemDb
                 }
             }
 
-            _fileSyncTimer = new Timer(new TimerCallback(this.Flush), null, (1000 * 250), Timeout.Infinite); //5 seconds...
+            _fileSyncTimer = new Timer(new TimerCallback(this.Flush), null, (1000 * 5), Timeout.Infinite); //5 seconds...
         }
         #endregion
 
