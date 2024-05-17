@@ -8,8 +8,7 @@ namespace HatTrick.MemDb
         internal AccessMode Mode { get; }
         internal int RecordCount { get; }
         internal bool IsEncryptionReady { get; }
-        //internal IEnumerable<MemDbRecord<T>> ReadAll();
-        internal MemDbRecord<T>[] ReadAll();
+        internal IList<MemDbRecord<T>> ReadAll();
         internal void Insert(MemDbRecord<T> record);
         internal void MarkStale(MemDbRecord<T> record);
         internal void Flush(object state);

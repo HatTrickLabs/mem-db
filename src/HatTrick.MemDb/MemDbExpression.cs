@@ -79,7 +79,11 @@ namespace HatTrick.MemDb
         #region sum
         public int Sum(Func<T, int> selector)
         {
-            int val = _executionFunc(this, false).Sum(selector);
+            T[] set = _executionFunc(this, false);
+            if (set.Length == 0)
+                return 0;
+
+            int val = set.Sum(selector);
             return val;
         }
 

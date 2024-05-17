@@ -111,22 +111,22 @@ namespace HatTrick.MemDb
         }
         #endregion
 
-        #region get max fresh records size
+        #region get max stale records size
         private int GetMaxStaleRecordSize()
         {
             lock (_syncLock)
             {
-                return _pointers.Where(p => p.IsStale == true).Max(p => p.Length);
+                return _pointers.Where(p => p.IsStale == true).Select(p => p.Length).DefaultIfEmpty().Max();
             }
         }
         #endregion
 
-        #region get max fresh records size
+        #region get max stale records size
         private int GetMinStaleRecordSize()
         {
             lock (_syncLock)
             {
-                return _pointers.Where(p => p.IsStale == true).Min(p => p.Length);
+                return _pointers.Where(p => p.IsStale == true).Select(p => p.Length).DefaultIfEmpty().Min();
             }
         }
         #endregion
@@ -140,11 +140,13 @@ namespace HatTrick.MemDb
         #endregion
 
         #region add
-        internal void Add(MemDbPointer pointer)
+        internal int Add(MemDbPointer pointer)
         {
             lock (_syncLock)
             {
+                int idx = _pointers.Count;
                 _pointers.Add(pointer);
+                return idx;
             }
         }
         #endregion

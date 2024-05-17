@@ -16,7 +16,7 @@ namespace TestHarness
 
         static void Main(string[] args)
         {
-            //var defrag = new MemDbDefragmenter(DbRoot, "books");
+            //var defrag = new MemDbDefragmenter<BookTextRecord>(datasetName, DbRoot);
             //defrag.Defrag();
 
             MemDb.ConfigureFor<BookTextRecord>(datasetName, DbRoot)
@@ -66,6 +66,8 @@ namespace TestHarness
             {
                 FileInfo fi = new FileInfo(file);
                 string bookName = fi.Name.Replace("_", " ").Replace(".txt", string.Empty);
+                if (bookName != "Lord Of The Flies")
+                    continue;
                 using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read))
                 {
                     using (StreamReader sr = new StreamReader(fs))

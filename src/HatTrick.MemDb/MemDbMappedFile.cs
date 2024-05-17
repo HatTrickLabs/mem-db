@@ -146,19 +146,19 @@ namespace HatTrick.MemDb
         #endregion
 
         #region read all
-        public MemDbRecord<T>[] ReadAll()
+        public IList<MemDbRecord<T>> ReadAll()
         {
             if (_mode == AccessMode.Write)
                 throw new InvalidOperationException($"MemDb instance for dataset name '{_datasetName}' is running in '{_mode}' mode...Records cannot be read.");
 
             int encrypted = 0;
-            MemDbRecord<T>[] records = null;
+            List<MemDbRecord<T>> records = null;
             lock (_mapSyncLock)
             {
                 lock (_dbSyncLock)
                 {
                     this.Flush(null);
-                    records = new MemDbRecord<T>[_map.Count];
+                    records = new List<MemDbRecord<T>>(_map.Count);
                     using var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read);
                     using var reader = new BinaryReader(fsDb, Encoding.UTF8, true);
 
@@ -189,7 +189,7 @@ namespace HatTrick.MemDb
                             var record = new MemDbRecord<T>(value, pointer.Id, false, pointer.IsEncrypted, i, i);
                             record.SetMapIndex(i);
                             record.SetCacheIndex(i);
-                            records[i] = record;
+                            records.Add(record);
                         }
                     }
                 }
@@ -319,8 +319,7 @@ namespace HatTrick.MemDb
 
                             length = (int)(fsDb.Position - startPos);
                             MemDbPointer pointer = new MemDbPointer(rec.Id, false, rec.IsEncrypted, startPos, length);
-                            rec.SetMapIndex(_map.Count);
-                            _map.Add(pointer);
+                            rec.SetMapIndex(_map.Add(pointer));
                             pointer.SerializeTo(mapWriter);
 
                         } while (this.TryPopInsertRecord(out rec));
@@ -347,7 +346,8 @@ namespace HatTrick.MemDb
                 do
                 {
                     MemDbPointer p = _map[rec.MapIndex].MarkStale();
-                    fsMap.Position = p.Position + sizeof(int);//position + size of Id gets us to the IsStale boolean
+                    //header count + (idx * size) + id
+                    fsMap.Position = sizeof(int) + (rec.MapIndex * MemDbPointer.Size) + sizeof(int);
                     fsMap.WriteByte(1);//1 == true (IsStale = true)
 
                 } while (this.TryPopStaleRecord(out rec));
