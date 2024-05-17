@@ -42,7 +42,7 @@ namespace HatTrick.MemDb
         #region interface
         public AccessMode Mode => _mode;
 
-        public int RecordCount => _map.Pointers.Count(p => p.IsStale == false);
+        public int RecordCount => _map.FreshCount;
 
         public bool IsEncryptionReady => _encrypter is not null;
         #endregion
@@ -100,7 +100,7 @@ namespace HatTrick.MemDb
                     using var reader = new BinaryReader(fsMap, Encoding.UTF8, true);
                     _map.DeserializeFrom(reader);
 
-                    _lastId = _map.Pointers.Count == 0 ? 0 : _map.Pointers[^1].Id;
+                    _lastId = _map.Count == 0 ? 0 : _map[^1].Id;
                 }
             }
 
@@ -158,14 +158,14 @@ namespace HatTrick.MemDb
                 lock (_dbSyncLock)
                 {
                     this.Flush(null);
-                    records = new MemDbRecord<T>[_map.Pointers.Count];
+                    records = new MemDbRecord<T>[_map.Count];
                     using var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read);
                     using var reader = new BinaryReader(fsDb, Encoding.UTF8, true);
 
                     MemDbPointer pointer;
-                    for (int i = 0; i < _map.Pointers.Count; i++)
+                    for (int i = 0; i < _map.Count; i++)
                     {
-                        pointer = _map.Pointers[i];
+                        pointer = _map[i];
 
                         if (pointer.IsStale)
                         {
@@ -319,15 +319,15 @@ namespace HatTrick.MemDb
 
                             length = (int)(fsDb.Position - startPos);
                             MemDbPointer pointer = new MemDbPointer(rec.Id, false, rec.IsEncrypted, startPos, length);
-                            rec.SetMapIndex(_map.Pointers.Count);
-                            _map.AddPointer(pointer);
+                            rec.SetMapIndex(_map.Count);
+                            _map.Add(pointer);
                             pointer.SerializeTo(mapWriter);
 
                         } while (this.TryPopInsertRecord(out rec));
 
                         //overwrite the map pointer count header.
                         fsMap.Position = 0;
-                        mapWriter.Write(_map.Pointers.Count);
+                        mapWriter.Write(_map.Count);
                     }
                 }
             }
@@ -346,7 +346,7 @@ namespace HatTrick.MemDb
                 using var fsMap = new FileStream(_fullMapPath, FileMode.Open, FileAccess.ReadWrite);
                 do
                 {
-                    MemDbPointer p = _map.Pointers[rec.MapIndex].MarkStale();
+                    MemDbPointer p = _map[rec.MapIndex].MarkStale();
                     fsMap.Position = p.Position + sizeof(int);//position + size of Id gets us to the IsStale boolean
                     fsMap.WriteByte(1);//1 == true (IsStale = true)
 

@@ -58,7 +58,7 @@ namespace HatTrick.MemDb
             //read into memory the fragmented map
             this.ReadFragmentedMap();
 
-            if (_map.Pointers.Any(p => p.IsStale) == false)
+            if (_map.StaleCount == 0)
                 return;//0 fragmentation, nothing can be cleaned up
 
             //ensure enough drive space exists to perform the defrag operation
@@ -87,20 +87,20 @@ namespace HatTrick.MemDb
             using var reader = new BinaryReader(fsMap, Encoding.UTF8, true);
 
             _map.DeserializeFrom(reader);
-            _staleCount = _map.Pointers.Count(p => p.IsStale);
+            _staleCount = _map.StaleCount;
         }
         #endregion
 
         #region ensure available drive space
         private void EnsureAvailableDriveSpace()
         {
-            //get file length of the non-stale map pointers (needed for the defragged map)
+            //get file size of the non-stale map pointers (needed for the defragged map)
             //(non-stalePointerCount * PointerByteSize) + sizeof(int)
             //the sizeof(int) is to account for the 32 bit int at the very beginning of the file (total pointer count)
-            long mapLength = ((_map.Pointers.Count - _staleCount) * MemDbPointer.Size) + 4;
+            long mapSize = ((_map.Count - _staleCount) * MemDbPointer.Size) + 4;
 
-            //get file length of the non-stale db records
-            long dbLengh = _map.Pointers.Where(p => p.IsStale == false).Sum(p => p.Length);
+            //get file size of the non-stale db records
+            long dbSize = _map.FreshSize;
 
             //get available drive space 
             var directory = new DirectoryInfo(_path);
@@ -108,7 +108,7 @@ namespace HatTrick.MemDb
             long spaceAvailable = drive.AvailableFreeSpace;
 
             //conservative when assuming standard block size of 4096 bytes.
-            long spaceNeeded = dbLengh + mapLength + (4096 * 2);
+            long spaceNeeded = dbSize + mapSize + (4096 * 2);
 
             if (spaceAvailable < spaceNeeded)
             {
@@ -138,9 +138,9 @@ namespace HatTrick.MemDb
         private void WriteDefragmentedTempFiles()
         {
             MemDbMap originalMap = _map;
-            List<MemDbPointer> pointers = new List<MemDbPointer>(_map.Pointers.Count - _staleCount);
+            List<MemDbPointer> pointers = new List<MemDbPointer>(_map.Count - _staleCount);
 
-            int maxRecLength = originalMap.Pointers.Where(p => p.IsStale == false).Max(p => p.Length);
+            int maxRecLength = originalMap.MaxFreshRecordSize;
 
             byte[] buffer = new byte[maxRecLength];
 
@@ -148,9 +148,9 @@ namespace HatTrick.MemDb
             using var oldDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read);
             using var newDb = new FileStream(_fullTempDbPath, FileMode.Open, FileAccess.Write);
 
-            for (int i = 0; i < originalMap.Pointers.Count; i++)
+            for (int i = 0; i < originalMap.Count; i++)
             {
-                MemDbPointer oPtr = originalMap.Pointers[i];
+                MemDbPointer oPtr = originalMap[i];
 
                 if (oPtr.IsStale)
                     continue;

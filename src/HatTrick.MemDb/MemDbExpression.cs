@@ -85,13 +85,21 @@ namespace HatTrick.MemDb
 
         public double Sum(Func<T, double> selector)
         {
-            double val = _executionFunc(this, false).Sum(selector);
+            T[] set = _executionFunc(this, false);
+            if (set.Length == 0)
+                return 0;
+
+            double val = set.Sum(selector);
             return val;
         }
 
         public decimal Sum(Func<T, decimal> selector)
         {
-            decimal val = _executionFunc(this, false).Sum(selector);
+            T[] set = _executionFunc(this, false);
+            if (set.Length == 0)
+                return 0;
+
+            decimal val = set.Sum(selector);
             return val;
         }
         #endregion
@@ -99,8 +107,12 @@ namespace HatTrick.MemDb
         #region max
         public Y Max<Y>(Func<T, Y> func)
         {
+            T[] set = _executionFunc(this, false);
+            if (set.Length == 0)
+                return default(Y);
+
             Y max = default(Y);
-            max = _executionFunc(this, false).Max<T, Y>(func);
+            max = set.Max<T, Y>(func);
             return max;
         }
         #endregion
@@ -108,8 +120,12 @@ namespace HatTrick.MemDb
         #region min
         public Y Min<Y>(Func<T, Y> func)
         {
+            T[] set = _executionFunc(this, false);
+            if (set.Length == 0)
+                return default(Y);
+
             Y min = default(Y);
-            min = _executionFunc(this, false).Min<T, Y>(func);
+            min = set.Min<T, Y>(func);
             return min;
         }
         #endregion
@@ -117,25 +133,41 @@ namespace HatTrick.MemDb
         #region avg
         public double Avg(Func<T, int> selector)
         {
-            double val = _executionFunc(this, false).Average(selector);
+            T[] set = _executionFunc(this, false);
+            if (set.Length == 0)
+                return 0;
+
+            double val = set.Average(selector);
             return val;
         }
 
         public double Avg(Func<T, long> selector)
         {
-            double val = _executionFunc(this, false).Average(selector);
+            T[] set = _executionFunc(this, false);
+            if (set.Length == 0)
+                return 0;
+
+            double val = set.Average(selector);
             return val;
         }
 
         public double Avg(Func<T, double> selector)
         {
-            double val = _executionFunc(this, false).Average(selector);
+            T[] set = _executionFunc(this, false);
+            if (set.Length == 0)
+                return 0;
+
+            double val = set.Average(selector);
             return val;
         }
 
         public decimal Avg(Func<T, decimal> selector)
         {
-            decimal val = _executionFunc(this, false).Average(selector);
+            T[] set = _executionFunc(this, false);
+            if (set.Length == 0)
+                return 0;
+
+            decimal val = set.Average(selector);
             return val;
         }
         #endregion
