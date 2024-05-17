@@ -158,7 +158,7 @@ namespace HatTrick.MemDb
                 oldDb.Position = oPtr.Position;
                 oldDb.ReadExactly(buffer, 0, oPtr.Length);
 
-                var nPtr = new MemDbPointer(oPtr.Id, false, oPtr.IsEncrypted, (int)newDb.Position, oPtr.Length);
+                var nPtr = new MemDbPointer(oPtr.Id, false, oPtr.IsEncrypted, (uint)newDb.Position, oPtr.Length);
                 pointers.Add(nPtr);
 
                 newDb.Write(buffer, 0, oPtr.Length);

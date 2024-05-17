@@ -295,7 +295,7 @@ namespace HatTrick.MemDb
                         fsDb.Position = fsDb.Length;
                         do
                         {
-                            long initialPosition = fsDb.Position;
+                            uint startPos = (uint)fsDb.Position;
                             int length;
 
                             if (rec.IsEncrypted)
@@ -317,8 +317,8 @@ namespace HatTrick.MemDb
                                 _serializer.Serialize(rec.Value, dbWriter);//T value
                             }
 
-                            length = (int)(fsDb.Position - initialPosition);
-                            MemDbPointer pointer = new MemDbPointer(rec.Id, false, rec.IsEncrypted, initialPosition, length);
+                            length = (int)(fsDb.Position - startPos);
+                            MemDbPointer pointer = new MemDbPointer(rec.Id, false, rec.IsEncrypted, startPos, length);
                             rec.SetMapIndex(_map.Pointers.Count);
                             _map.AddPointer(pointer);
                             pointer.SerializeTo(mapWriter);
