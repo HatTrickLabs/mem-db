@@ -1,9 +1,9 @@
 TODO:
 ----------
-- IMemDbCloneProvider<T>: option to provide a clone provider for DeepCopy<T> that is more efficient than
+x IMemDbCloneProvider<T>: option to provide a clone provider for DeepCopy<T> that is more efficient than
   ISerializationProvider<T> ... optional with fallback to the serialization option.
-- Refactor into layer MemDb Engine:
-  - IMemDbAccessor: Implement all access methods (Find, FindAll, Exists, Sum, etc...).
-  - IMemDbCacheProvider: : Implement the thread safe internal cached list of objects.
-  - IMemDbPersistenceProvider: Implement of persistence (Disk).
-- Eliminate the 'Pointers' interface propery on MemDbMap...Make it all internal
+x Refactor into layer MemDb Engine:
+  x IMemDbAccessor: Implement all access methods (Find, FindAll, Exists, Sum, etc...).
+  x IMemDbCacheProvider: : Implement the thread safe internal cached list of objects.
+  x IMemDbPersistenceProvider: Implement of persistence (Disk).
+x Eliminate the 'Pointers' interface propery on MemDbMap...Make it all internal

@@ -37,10 +37,10 @@ namespace TestHarness
                 //Book text is included in the project but NOT copied to the output dir...
                 //ImportBooks(@"D:\git\HatTrickLabs\mem-db\src\HatTrick.MemDb.TestHarness\BookText");
 
-                RunQueries();
+                //RunQueries();
                 //ExecuteUpdates("Lord Of The Flies");
                 //RunQueries();
-                //SearchText();
+                SearchText();
                 //DefragDB();
                 //MultiThreadImport();
                 //MultiThreadedUpdate();
@@ -66,8 +66,6 @@ namespace TestHarness
             {
                 FileInfo fi = new FileInfo(file);
                 string bookName = fi.Name.Replace("_", " ").Replace(".txt", string.Empty);
-                if (bookName != "Lord Of The Flies")
-                    continue;
                 using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read))
                 {
                     using (StreamReader sr = new StreamReader(fs))
@@ -227,14 +225,16 @@ namespace TestHarness
         {
             Thread t1 = new Thread(new ParameterizedThreadStart(ImportBooks)); //23,241 records
             Thread t2 = new Thread(new ParameterizedThreadStart(ImportBooks)); //23,241 records
+            Thread t3 = new Thread(new ParameterizedThreadStart(ImportBooks)); //23,241 records
 
-            string path = @"C:\target\BookText";
+            string path = @"D:\git\HatTrickLabs\mem-db\src\HatTrick.MemDb.TestHarness\BookText";
             t1.Start(path);
             t2.Start(path);
+            t3.Start(path);
 
             t1.Join();
             t2.Join();
-
+            t3.Join();
             //should have 46,482 records...
         }
         #endregion
