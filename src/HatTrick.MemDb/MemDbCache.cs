@@ -4,28 +4,37 @@ using System.Collections.Generic;
 
 namespace HatTrick.MemDb
 {
-    internal class MemDbCache<T> : IMemDbCacher<T>, IDisposable where T : class, new()
+    internal sealed class MemDbCache<T> : IMemDbCacher<T>, IDisposable where T : class, new()
     {
         #region internals
+        private string _datasetName;
         private List<MemDbRecord<T>> _records;
         private object _recSyncLock;
 
         private IMemDbCloner<T> _cloner;
         private IMemDbPersister<T> _persister;
+
+        private AccessMode _mode;
         #endregion
 
         #region constructors
-        public MemDbCache(IMemDbCloner<T> cloner, IMemDbPersister<T> persister)
+        internal MemDbCache(string datasetName, IMemDbCloner<T> cloner, IMemDbPersister<T> persister)
         {
+            if (datasetName is null)
+                throw new ArgumentNullException(nameof(datasetName));
+
             if (persister is null)
                 throw new ArgumentNullException(nameof(persister));
 
             if (cloner is null)
                 throw new ArgumentNullException(nameof(cloner));
 
+            _datasetName = datasetName;
             _cloner = cloner;
             _persister = persister; 
             _recSyncLock = new();
+
+            _mode = _persister.Mode;
 
             this.Initialize();
         }
@@ -34,16 +43,37 @@ namespace HatTrick.MemDb
         #region initialize
         private void Initialize()
         {
+            if (_mode == AccessMode.AppendOnly)
+                return;
+            
             int recCount = _persister.RecordCount;
-            int capacity = _persister.Mode == AccessMode.Read ? recCount : (int)(recCount * 1.1);
+            int capacity = _mode == AccessMode.ReadOnly ? recCount : (int)(recCount * 1.1);
             _records = new List<MemDbRecord<T>>(capacity);
             _records.AddRange(_persister.ReadAll());
+        }
+        #endregion
+
+        #region ensure mode
+        private void EnsureReadMode(string targetSite)
+        {
+            this.EnsureMode(AccessMode.ReadWrite | AccessMode.ReadOnly, targetSite);
+        }
+
+        private void EnsureMode(AccessMode isMode, string targetSite)
+        {
+            if ((_mode & isMode) == _mode)
+                return;
+
+            string msg = $"MemDb instance for dataset '{_datasetName}' is running in '{_mode}' mode...'{targetSite}' accessor is disabled.";
+            throw new InvalidOperationException(msg);
         }
         #endregion
 
         #region count
         public int Count()
         {
+            this.EnsureReadMode(nameof(Count));
+
             lock (_recSyncLock)
             {
                 return _records.Count(r => r.IsStale == false);
@@ -52,6 +82,8 @@ namespace HatTrick.MemDb
 
         public int Count(Func<T, bool> selector)
         {
+            this.EnsureReadMode(nameof(Count));
+
             lock (_recSyncLock)
             {
                 return _records.Count(r => r.IsStale == false && selector(r.Value));
@@ -62,6 +94,8 @@ namespace HatTrick.MemDb
         #region max
         public Y Max<Y>(Func<T, Y> selector)
         {
+            this.EnsureReadMode(nameof(Max));
+
             Y max = default(Y);
             lock (_recSyncLock)
             {
@@ -77,6 +111,8 @@ namespace HatTrick.MemDb
         #region min
         public Y Min<Y>(Func<T, Y> selector)
         {
+            this.EnsureReadMode(nameof(Min));
+
             Y min = default(Y);
             lock (_recSyncLock)
             {
@@ -92,6 +128,8 @@ namespace HatTrick.MemDb
         #region sum
         public int Sum(Func<T, int> selector)
         {
+            this.EnsureReadMode(nameof(Sum));
+
             lock (_recSyncLock)
             {
                 return _records.Where(r => r.IsStale == false).Sum((r) => selector(r.Value));
@@ -100,6 +138,8 @@ namespace HatTrick.MemDb
 
         public double Sum(Func<T, double> selector)
         {
+            this.EnsureReadMode(nameof(Sum));
+
             lock (_recSyncLock)
             {
                 return _records.Where(r => r.IsStale == false).Sum((r) => selector(r.Value));
@@ -108,6 +148,8 @@ namespace HatTrick.MemDb
 
         public decimal Sum(Func<T, decimal> selector)
         {
+            this.EnsureReadMode(nameof(Sum));
+
             lock (_recSyncLock)
             {
                 return _records.Where(r => r.IsStale == false).Sum((r) => selector(r.Value));
@@ -118,6 +160,8 @@ namespace HatTrick.MemDb
         #region find distinct
         public Y[] FindDistinct<Y>(Converter<T, Y> converter) where Y : IConvertible
         {
+            this.EnsureReadMode(nameof(FindDistinct));
+
             lock (_recSyncLock)
             {
                 return _records.Where(r => r.IsStale == false).Select((r) => converter(r.Value)).Distinct().ToArray();
@@ -128,6 +172,8 @@ namespace HatTrick.MemDb
         #region find
         public T Find(Func<T, bool> where)
         {
+            this.EnsureReadMode(nameof(Find));
+
             MemDbRecord<T> rec = null;
             lock (_recSyncLock)
             {
@@ -147,6 +193,8 @@ namespace HatTrick.MemDb
         #region find all
         public T[] FindAll(Func<T, bool> where)
         {
+            this.EnsureReadMode(nameof(FindAll));
+
             T[] matches;
             lock (_recSyncLock)
             {
@@ -162,6 +210,8 @@ namespace HatTrick.MemDb
         #region query
         public MemDbExpression<T> Query()
         {
+            this.EnsureReadMode(nameof(Query));
+
             return new MemDbExpression<T>(this.ExecuteQuery);
         }
         #endregion
@@ -207,6 +257,8 @@ namespace HatTrick.MemDb
         #region insert
         public void Insert(T record, bool encrypt = false)
         {
+            this.EnsureMode(AccessMode.ReadWrite | AccessMode.AppendOnly, nameof(Insert));
+
             MemDbRecord<T> rec = new MemDbRecord<T>(_cloner.DeepCopy(record), encrypt);
 
             lock (_recSyncLock)
@@ -222,6 +274,8 @@ namespace HatTrick.MemDb
         #region update
         public int Update(Action<T> apply, Func<T, bool> where)
         {
+            this.EnsureMode(AccessMode.ReadWrite, nameof(Update));
+
             if (apply == null)
                 throw new ArgumentNullException(nameof(apply));
 
@@ -262,6 +316,8 @@ namespace HatTrick.MemDb
         #region delete
         public int Delete(Func<T, bool> where)
         {
+            this.EnsureMode(AccessMode.ReadWrite, nameof(Delete));
+
             if (where == null)
                 throw new ArgumentNullException(nameof(where));
 

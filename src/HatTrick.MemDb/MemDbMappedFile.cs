@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Collections.Generic;
 using System.Threading;
+using System.Runtime.CompilerServices;
 
 namespace HatTrick.MemDb
 {
@@ -145,11 +146,21 @@ namespace HatTrick.MemDb
         }
         #endregion
 
+        #region ensure mode
+        private void EnsureMode(AccessMode isMode, string targetSite)
+        {
+            if ((_mode & isMode) == _mode)
+                return;
+
+            string msg = $"MemDb instance for dataset '{_datasetName}' is running in '{_mode}' mode...{targetSite} disabled.";
+            throw new InvalidOperationException(msg);
+        }
+        #endregion
+
         #region read all
         public IList<MemDbRecord<T>> ReadAll()
         {
-            if (_mode == AccessMode.Write)
-                throw new InvalidOperationException($"MemDb instance for dataset name '{_datasetName}' is running in '{_mode}' mode...Records cannot be read.");
+            this.EnsureMode(AccessMode.ReadOnly | AccessMode.ReadWrite, nameof(ReadAll));
 
             int encrypted = 0;
             List<MemDbRecord<T>> records = null;
@@ -212,8 +223,7 @@ namespace HatTrick.MemDb
         #region insert
         public void Insert(MemDbRecord<T> record)
         {
-            if (_mode == AccessMode.Read)
-                throw new InvalidOperationException($"MemDb instance for dataset name '{_datasetName}' is running in '{_mode}' mode...Records cannot be inserted.");
+            this.EnsureMode(AccessMode.AppendOnly | AccessMode.ReadWrite, nameof(Insert));
 
             record.SetId(this.GetNextId());
             lock (_insertSyncLock)
@@ -226,8 +236,7 @@ namespace HatTrick.MemDb
         #region mark stale
         public void MarkStale(MemDbRecord<T> record)
         {
-            if (_mode == AccessMode.Read)
-                throw new InvalidOperationException($"MemDb instance for dataset name '{_datasetName}' is running in '{_mode}' mode...Records cannot be marked stale.");
+            this.EnsureMode(AccessMode.ReadWrite, nameof(MarkStale));
 
             lock (_staleStateSyncLock)
             {

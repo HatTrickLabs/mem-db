@@ -80,6 +80,22 @@ namespace HatTrick.MemDb
         }
         #endregion
 
+        #region read only
+        public MemDbConfiguration<T> ReadOnly()
+        {
+            _mode = AccessMode.ReadOnly;
+            return this;
+        }
+        #endregion
+
+        #region append only
+        public MemDbConfiguration<T> AppendOnly()
+        {
+            _mode = AccessMode.AppendOnly;
+            return this;
+        }
+        #endregion
+
         #region serialize with
         public MemDbConfiguration<T> SerializeWith(Func<IMemDbSerializer<T>> serializerProvider)
         {
@@ -122,7 +138,7 @@ namespace HatTrick.MemDb
             _cloner = _clonerProvider();
             _encrypter = _encrypterProvider();
             _persister = new MemDbMappedFile<T>(base.DatasetName, base.Path, _mode, _serializer);
-            _cache = new MemDbCache<T>(_cloner, _persister);
+            _cache = new MemDbCache<T>(base.DatasetName, _cloner, _persister);
 
             _isInitialized = true;
         }
