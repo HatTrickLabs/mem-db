@@ -72,11 +72,13 @@ namespace HatTrick.MemDb
         #region count
         public int Count()
         {
-            this.EnsureReadMode(nameof(Count));
-
+            //this count should be available in ANY AccessMode
             lock (_recSyncLock)
             {
-                return _records.Count(r => r.IsStale == false);
+                //need to defer down into the persister for simple fresh record count...
+                //this allows for a count to be accessed even when running in AppendOnly mode...
+                //the count is pulled out of the always initialized MemDbMap
+                return _persister.RecordCount;
             }
         }
 
@@ -257,16 +259,23 @@ namespace HatTrick.MemDb
         #region insert
         public void Insert(T record, bool encrypt = false)
         {
+            this.Insert(record, null, encrypt);
+        }
+
+        public void Insert(T record, Action<uint> idCallback, bool encrypt = false)
+        {
             this.EnsureMode(AccessMode.ReadWrite | AccessMode.AppendOnly, nameof(Insert));
 
-            MemDbRecord<T> rec = new MemDbRecord<T>(_cloner.DeepCopy(record), encrypt);
+            uint id = _persister.GetNextId();
+            idCallback?.Invoke(id);
+
+            MemDbRecord<T> rec = new MemDbRecord<T>(id, _cloner.DeepCopy(record), encrypt);
 
             lock (_recSyncLock)
             {
                 rec.SetMapIndex(_records.Count);
                 _records.Add(rec);
             }
-
             _persister.Insert(rec);
         }
         #endregion
@@ -294,7 +303,7 @@ namespace HatTrick.MemDb
             for (int i = 0; i < matches.Count; i++)
             {
                 var oldRec = matches[i];
-                var newRec = new MemDbRecord<T>(_cloner.DeepCopy(oldRec.Value), oldRec.IsEncrypted);
+                var newRec = new MemDbRecord<T>(oldRec.Id, _cloner.DeepCopy(oldRec.Value), oldRec.IsEncrypted);
                 matches[i].MarkStale();
                 apply(newRec.Value);
 

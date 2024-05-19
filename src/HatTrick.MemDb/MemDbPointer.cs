@@ -6,7 +6,7 @@ namespace HatTrick.MemDb
     internal class MemDbPointer
     {
         #region internals
-        private int _id;
+        private uint _id;
         private bool _isStale;
         private bool _isEncrypted;
         private uint _position;
@@ -16,7 +16,7 @@ namespace HatTrick.MemDb
         #region interface
         internal static readonly int Size = sizeof(int) + sizeof(bool) + sizeof(bool) + sizeof(uint) + sizeof(int);
 
-        internal int Id => _id;
+        internal uint Id => _id;
         internal bool IsStale => _isStale;
         internal bool IsEncrypted => _isEncrypted;
         internal uint Position => _position;
@@ -24,7 +24,7 @@ namespace HatTrick.MemDb
         #endregion
 
         #region constructor
-        internal MemDbPointer(int id, bool isStale, bool isEncrypted, uint startPosition, int length)
+        internal MemDbPointer(uint id, bool isStale, bool isEncrypted, uint startPosition, int length)
         {
             _id = id;
             _isStale = isStale;
@@ -54,7 +54,7 @@ namespace HatTrick.MemDb
 
         internal static MemDbPointer DeserializeFrom(BinaryReader reader)
         {
-            int id = reader.ReadInt32();
+            uint id = reader.ReadUInt32();
             bool isStale = reader.ReadBoolean();
             bool isEncrypted = reader.ReadBoolean();
             uint position = reader.ReadUInt32();

@@ -96,6 +96,14 @@ namespace HatTrick.MemDb
         }
         #endregion
 
+        #region read write
+        public MemDbConfiguration<T> ReadWrite()
+        {
+            _mode = AccessMode.ReadWrite;
+            return this;
+        }
+        #endregion
+
         #region serialize with
         public MemDbConfiguration<T> SerializeWith(Func<IMemDbSerializer<T>> serializerProvider)
         {

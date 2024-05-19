@@ -165,7 +165,12 @@ namespace HatTrick.MemDb
         #region insert
         public void Insert(T record, bool encrypt = false)
         {
-            _cache.Insert(record, encrypt);
+            this.Insert(record, null, encrypt);
+        }
+
+        public void Insert(T record, Action<uint> idCallback, bool encrypt = false)
+        {
+            _cache.Insert(record, idCallback, encrypt);
         }
         #endregion
 

@@ -28,7 +28,7 @@ namespace TestHarness
         public BookTextRecord Deserialize(BinaryReader buffer)
         {
             var record = new BookTextRecord();
-            record.Id = buffer.ReadInt32();
+            record.Id = buffer.ReadUInt32();
             record.Text = buffer.ReadString();
             record.BookName = buffer.ReadString();
             record.WordCount = buffer.ReadInt32();

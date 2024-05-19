@@ -9,6 +9,7 @@ namespace HatTrick.MemDb
         internal int RecordCount { get; }
         internal bool IsEncryptionReady { get; }
         internal IList<MemDbRecord<T>> ReadAll();
+        internal uint GetNextId();
         internal void Insert(MemDbRecord<T> record);
         internal void MarkStale(MemDbRecord<T> record);
         internal void Flush(object state);

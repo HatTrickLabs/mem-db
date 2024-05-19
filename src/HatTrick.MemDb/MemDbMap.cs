@@ -10,13 +10,18 @@ namespace HatTrick.MemDb
     {
         #region internals
         private List<MemDbPointer> _pointers;
-        private object _syncLock;
+        private object _ptrSyncLock;
+
+        private uint _lastId;
+        private object _idSyncLock;
         #endregion
 
         #region interface
         internal MemDbPointer this[Index index] => _pointers[index];
 
         internal int Count => _pointers.Count;
+
+        internal uint LastId => _lastId;
         
         internal int FreshCount => this.GetFreshCount();
         internal int StaleCount => this.GetStaleCount();
@@ -35,26 +40,33 @@ namespace HatTrick.MemDb
         internal MemDbMap()
         {
             _pointers = new List<MemDbPointer>();
-            _syncLock = new();
+            _ptrSyncLock = new();
+            _idSyncLock = new();
         }
 
-        internal MemDbMap(int capacity)
+        private MemDbMap(uint lastId, List<MemDbPointer> pointers)
         {
-            _pointers = new List<MemDbPointer>(capacity);
-            _syncLock = new();
-        }
-
-        private MemDbMap(List<MemDbPointer> pointers)
-        {
+            _lastId = lastId;
             _pointers = pointers;
-            _syncLock = new();
+            _ptrSyncLock = new();
+            _idSyncLock = new();
+        }
+        #endregion
+
+        #region get next id
+        internal uint GetNextId()
+        {
+            lock (_idSyncLock)
+            {
+                return ++_lastId;
+            }
         }
         #endregion
 
         #region get fresh count
         private int GetFreshCount()
         {
-            lock (_syncLock)
+            lock (_ptrSyncLock)
             {
                 return _pointers.Count(p => p.IsStale == false);
             }
@@ -64,7 +76,7 @@ namespace HatTrick.MemDb
         #region get stale count
         private int GetStaleCount()
         {
-            lock (_syncLock)
+            lock (_ptrSyncLock)
             {
                 return _pointers.Count(p => p.IsStale);
             }
@@ -74,7 +86,7 @@ namespace HatTrick.MemDb
         #region get fresh size
         private int GetFreshSize()
         {
-            lock (_syncLock)
+            lock (_ptrSyncLock)
             {
                 return _pointers.Where(p => p.IsStale == false).Sum(p => p.Length);
             }
@@ -84,7 +96,7 @@ namespace HatTrick.MemDb
         #region get stale size
         private int GetStaleSize()
         {
-            lock (_syncLock)
+            lock (_ptrSyncLock)
             {
                 return _pointers.Where(p => p.IsStale == true).Sum(p => p.Length);
             }
@@ -94,7 +106,7 @@ namespace HatTrick.MemDb
         #region get max fresh records size
         private int GetMaxFreshRecordsSize()
         {
-            lock (_syncLock)
+            lock (_ptrSyncLock)
             {
                 return _pointers.Where(p => p.IsStale == false).Max(p => p.Length);
             }
@@ -104,7 +116,7 @@ namespace HatTrick.MemDb
         #region get max fresh records size
         private int GetMinFreshRecordSize()
         {
-            lock (_syncLock)
+            lock (_ptrSyncLock)
             {
                 return _pointers.Where(p => p.IsStale == false).Min(p => p.Length);
             }
@@ -114,7 +126,7 @@ namespace HatTrick.MemDb
         #region get max stale records size
         private int GetMaxStaleRecordSize()
         {
-            lock (_syncLock)
+            lock (_ptrSyncLock)
             {
                 return _pointers.Where(p => p.IsStale == true).Select(p => p.Length).DefaultIfEmpty().Max();
             }
@@ -124,7 +136,7 @@ namespace HatTrick.MemDb
         #region get max stale records size
         private int GetMinStaleRecordSize()
         {
-            lock (_syncLock)
+            lock (_ptrSyncLock)
             {
                 return _pointers.Where(p => p.IsStale == true).Select(p => p.Length).DefaultIfEmpty().Min();
             }
@@ -132,9 +144,9 @@ namespace HatTrick.MemDb
         #endregion
 
         #region create
-        internal static MemDbMap Create(List<MemDbPointer> pointers)
+        internal static MemDbMap Create(uint lastId, List<MemDbPointer> pointers)
         {
-            MemDbMap map = new MemDbMap(pointers);
+            MemDbMap map = new MemDbMap(lastId, pointers);
             return map;
         }
         #endregion
@@ -142,7 +154,7 @@ namespace HatTrick.MemDb
         #region add
         internal int Add(MemDbPointer pointer)
         {
-            lock (_syncLock)
+            lock (_ptrSyncLock)
             {
                 int idx = _pointers.Count;
                 _pointers.Add(pointer);
@@ -154,7 +166,7 @@ namespace HatTrick.MemDb
         #region serialization
         internal void SerializeTo(Stream stream)
         {
-            lock (_syncLock)
+            lock (_ptrSyncLock)
             {
                 using (BinaryWriter writer = new BinaryWriter(stream, Encoding.UTF8, true))
                 {
@@ -165,28 +177,36 @@ namespace HatTrick.MemDb
 
         internal void SerializeTo(BinaryWriter writer)
         {
-            lock (_syncLock)
+            lock (_ptrSyncLock)
             {
-                writer.Write(_pointers.Count);
-
-                foreach (MemDbPointer p in _pointers)
+                lock (_idSyncLock)
                 {
-                    p.SerializeTo(writer);
+                    writer.Write(_pointers.Count);
+                    writer.Write(_lastId);
+
+                    foreach (MemDbPointer p in _pointers)
+                    {
+                        p.SerializeTo(writer);
+                    }
                 }
             }
         }
 
         internal void DeserializeFrom(BinaryReader reader)
         {
-            lock (_syncLock)
+            lock (_ptrSyncLock)
             {
-                int count = reader.ReadInt32();
-
-                _pointers = new List<MemDbPointer>(count);
-
-                for (int i = 0; i < count; i++)
+                lock (_idSyncLock)
                 {
-                    _pointers.Add(MemDbPointer.DeserializeFrom(reader));
+                    int count = reader.ReadInt32();
+                    _lastId = reader.ReadUInt32();
+
+                    _pointers = new List<MemDbPointer>((int)(count * 1.1));
+
+                    for (int i = 0; i < count; i++)
+                    {
+                        _pointers.Add(MemDbPointer.DeserializeFrom(reader));
+                    }
                 }
             }
         }

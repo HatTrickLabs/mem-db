@@ -10,7 +10,7 @@ namespace TestHarness
 {
     public class BookTextRecord
     {
-        public int Id { get; set; }
+        public uint Id { get; set; }
         public string Text { get; set; }
         public string BookName { get; set; }
         public int WordCount { get; set; }

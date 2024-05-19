@@ -31,6 +31,8 @@ namespace HatTrick.MemDb
 
         public void Insert(T rec, bool encrypt = false);
 
+        public void Insert(T rec, Action<uint> idCallback, bool encrypt = false);
+
         public int Update(Action<T> apply, Func<T, bool> where);
 
         public int Delete(Func<T, bool> where);

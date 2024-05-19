@@ -37,10 +37,10 @@ namespace TestHarness
                 //Book text is included in the project but NOT copied to the output dir...
                 //ImportBooks(@"D:\git\HatTrickLabs\mem-db\src\HatTrick.MemDb.TestHarness\BookText");
 
-                RunQueries();
+                //RunQueries();
                 //ExecuteUpdates("Lord Of The Flies");
                 //RunQueries();
-                //SearchText();
+                SearchText();
                 //DefragDB();
                 //MultiThreadImport();
                 //MultiThreadedUpdate();
@@ -59,8 +59,7 @@ namespace TestHarness
         #region import books
         private static void ImportBooks(object path)
         {
-            int id = _db.Max(r => r.Id);
-            int origId = id;
+            int cnt = 0;
             string[] files = Directory.GetFiles((string)path);
             foreach (string file in files)
             {
@@ -75,16 +74,16 @@ namespace TestHarness
                         {
                             line = sr.ReadLine();
                             BookTextRecord rec = new BookTextRecord();
-                            rec.Id = ++id;
+                            cnt += 1;
                             rec.Text = line;
                             rec.WordCount = line.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).Length;
                             rec.BookName = bookName;
-                            _db.Insert(rec);
+                            _db.Insert(rec, (id) => rec.Id = id);
                         } while (!sr.EndOfStream);
                     }
                 }
             }
-            Console.WriteLine(string.Format("imported {0} lines of text", id - origId));
+            Console.WriteLine($"imported {cnt} lines of text");
         }
         #endregion
 

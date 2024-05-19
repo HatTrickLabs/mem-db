@@ -29,9 +29,6 @@ namespace HatTrick.MemDb
         private MemDbMap _map;
         private object _mapSyncLock;
 
-        private int _lastId;
-        private object _idSyncLock;
-
         private IMemDbSerializer<T> _serializer;
         private IMemDbEncrypter<T> _encrypter;
         
@@ -77,8 +74,6 @@ namespace HatTrick.MemDb
             _mapSyncLock = new();
             _map = new MemDbMap();
 
-            _idSyncLock = new();
-
             _insertQueue = new Queue<MemDbRecord<T>>(256);
             _insertSyncLock = new();
             _staleStateQueue = new Queue<MemDbRecord<T>>(256);
@@ -100,8 +95,6 @@ namespace HatTrick.MemDb
                     using var fsMap = new FileStream(_fullMapPath, FileMode.Open, FileAccess.Read);
                     using var reader = new BinaryReader(fsMap, Encoding.UTF8, true);
                     _map.DeserializeFrom(reader);
-
-                    _lastId = _map.Count == 0 ? 0 : _map[^1].Id;
                 }
             }
 
@@ -197,7 +190,7 @@ namespace HatTrick.MemDb
                         else
                         {
                             T value = _serializer.Deserialize(reader);//T value
-                            var record = new MemDbRecord<T>(value, pointer.Id, false, pointer.IsEncrypted, i, i);
+                            var record = new MemDbRecord<T>(pointer.Id, value, false, pointer.IsEncrypted, i, i);
                             record.SetMapIndex(i);
                             record.SetCacheIndex(i);
                             records.Add(record);
@@ -211,12 +204,9 @@ namespace HatTrick.MemDb
         #endregion
 
         #region get next id
-        private int GetNextId()
+        public uint GetNextId()
         {
-            lock (_idSyncLock)
-            {
-                return ++_lastId;
-            }
+            return _map.GetNextId();
         }
         #endregion
 
@@ -225,7 +215,8 @@ namespace HatTrick.MemDb
         {
             this.EnsureMode(AccessMode.AppendOnly | AccessMode.ReadWrite, nameof(Insert));
 
-            record.SetId(this.GetNextId());
+            //TODO: We should probably ENSURE that the cache layer actualy set the requird Id
+            //this may be happening in the MemDbRecord<T> constructor...
             lock (_insertSyncLock)
             {
                 _insertQueue.Enqueue(record);

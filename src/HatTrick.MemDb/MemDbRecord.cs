@@ -14,7 +14,7 @@ namespace HatTrick.MemDb
         #endregion
 
         #region internals
-        private int _id;
+        private uint _id;
         private bool _isStale;
         private bool _isEncrypted;
         private int _cacheIndex;
@@ -22,7 +22,7 @@ namespace HatTrick.MemDb
         #endregion
 
         #region interface
-        internal int Id => _id;
+        internal uint Id => _id;
         internal bool IsStale => _isStale;
         internal bool IsEncrypted => _isEncrypted;
         internal int Index => _cacheIndex;
@@ -30,25 +30,19 @@ namespace HatTrick.MemDb
         #endregion
 
         #region constructors
-        internal MemDbRecord(bool isEncrypted)
+        internal MemDbRecord(uint id, bool isEncrypted)
         {
+            _id = id;
             _isEncrypted = isEncrypted;
         }
 
-        internal MemDbRecord(int id, bool isStale, bool isEncrypted, int cacheIndex, int mapIndex)
+        internal MemDbRecord(uint id, bool isStale, bool isEncrypted, int cacheIndex, int mapIndex)
         {
             _id = id;
             _isStale = isStale;
             _isEncrypted = isEncrypted;
             _cacheIndex = cacheIndex;
             _mapIndex = mapIndex;
-        }
-        #endregion
-
-        #region set id
-        internal void SetId(int id)
-        {
-            _id = id;
         }
         #endregion
 
@@ -78,7 +72,6 @@ namespace HatTrick.MemDb
     {
         #region internals
         private static IMemDbSerializer<T> _serializer;
-
         private T _value;
         #endregion
 
@@ -91,7 +84,7 @@ namespace HatTrick.MemDb
         #endregion
 
         #region constructors
-        internal MemDbRecord(T value, bool isEncrypted) : base(isEncrypted)
+        internal MemDbRecord(uint id, T value, bool isEncrypted) : base(id, isEncrypted)
         {
             if (value == null)
                 throw new ArgumentNullException(nameof(value));
@@ -99,7 +92,7 @@ namespace HatTrick.MemDb
             _value = value;
         }
 
-        internal MemDbRecord(T value, int id, bool isStale, bool isEncrypted, int cacheIndex, int mapIndex) 
+        internal MemDbRecord(uint id,  T value, bool isStale, bool isEncrypted, int cacheIndex, int mapIndex) 
             : base(id, isStale, isEncrypted, cacheIndex, mapIndex)
         {
             if (value is null)

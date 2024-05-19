@@ -165,7 +165,7 @@ namespace HatTrick.MemDb
             }
 
             //write the defragged map file
-            var defraggedMap = MemDbMap.Create(pointers);
+            var defraggedMap = MemDbMap.Create(_map.LastId, pointers);
             using var fs = new FileStream(_fullTempMapPath, FileMode.Open, FileAccess.Write);
             using var writer = new BinaryWriter(fs, Encoding.UTF8, true);
             defraggedMap.SerializeTo(writer);
