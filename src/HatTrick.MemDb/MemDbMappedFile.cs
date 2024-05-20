@@ -23,7 +23,7 @@ namespace HatTrick.MemDb
         private Queue<MemDbRecord<T>> _insertQueue;
         private object _insertSyncLock;
 
-        private Queue<MemDbRecord<T>> _staleStateQueue;
+        private Queue<MemDbRecord> _staleStateQueue;
         private object _staleStateSyncLock;
 
         private MemDbMap _map;
@@ -72,11 +72,11 @@ namespace HatTrick.MemDb
             _fullDbPath = Path.Combine(path, $"htl.{datasetName}.db");
             _fullMapPath = Path.Combine(path, $"htl.{datasetName}.map");
             _mapSyncLock = new();
-            _map = new MemDbMap();
+            _map = new MemDbMap(_fullMapPath);
 
             _insertQueue = new Queue<MemDbRecord<T>>(256);
             _insertSyncLock = new();
-            _staleStateQueue = new Queue<MemDbRecord<T>>(256);
+            _staleStateQueue = new Queue<MemDbRecord>(256);
             _staleStateSyncLock = new();
 
             this.Initialize();
@@ -88,14 +88,9 @@ namespace HatTrick.MemDb
         {
             this.EnsureFiles(out bool dbCreated);
 
-            if (!dbCreated)//if the db is NOT brand new, read int the record map file
+            if (!dbCreated)//if the db is NOT brand new, read in the record map file
             {
-                lock (_mapSyncLock)
-                {
-                    using var fsMap = new FileStream(_fullMapPath, FileMode.Open, FileAccess.Read);
-                    using var reader = new BinaryReader(fsMap, Encoding.UTF8, true);
-                    _map.DeserializeFrom(reader);
-                }
+                _map.InitializeExisting();
             }
 
             _fileSyncTimer = new Timer(new TimerCallback(this.Flush), null, (1000 * 5), Timeout.Infinite); //5 seconds...
@@ -130,11 +125,7 @@ namespace HatTrick.MemDb
                     using var fs = new FileStream(_fullDbPath, FileMode.CreateNew);
                 }
 
-                lock (_mapSyncLock)
-                {
-                    using var fs = new FileStream(_fullMapPath, FileMode.CreateNew);
-                    _map.SerializeTo(fs);
-                }
+                _map.InitializeNew();
             }
         }
         #endregion
@@ -190,9 +181,7 @@ namespace HatTrick.MemDb
                         else
                         {
                             T value = _serializer.Deserialize(reader);//T value
-                            var record = new MemDbRecord<T>(pointer.Id, value, false, pointer.IsEncrypted, i, i);
-                            record.SetMapIndex(i);
-                            record.SetCacheIndex(i);
+                            var record = new MemDbRecord<T>(pointer.Id, value, false, pointer.IsEncrypted, records.Count, i);
                             records.Add(record);
                         }
                     }
@@ -215,8 +204,6 @@ namespace HatTrick.MemDb
         {
             this.EnsureMode(AccessMode.AppendOnly | AccessMode.ReadWrite, nameof(Insert));
 
-            //TODO: We should probably ENSURE that the cache layer actualy set the requird Id
-            //this may be happening in the MemDbRecord<T> constructor...
             lock (_insertSyncLock)
             {
                 _insertQueue.Enqueue(record);
@@ -249,7 +236,7 @@ namespace HatTrick.MemDb
         #endregion
 
         #region try pop stale record
-        private bool TryPopStaleRecord(out MemDbRecord<T> record)
+        private bool TryPopStaleRecord(out MemDbRecord record)
         {
             bool found = false;
             lock (_staleStateSyncLock)
@@ -286,12 +273,9 @@ namespace HatTrick.MemDb
                     MemDbRecord<T> rec = null;
                     if (this.TryPopInsertRecord(out rec))
                     {
-                        using var fsMap = new FileStream(_fullMapPath, FileMode.Open, FileAccess.ReadWrite);
-                        using var mapWriter = new BinaryWriter(fsMap, Encoding.UTF8, true);
                         using var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.ReadWrite);
                         using var dbWriter = new BinaryWriter(fsDb, Encoding.UTF8, true);
 
-                        fsMap.Position = fsMap.Length;
                         fsDb.Position = fsDb.Length;
                         do
                         {
@@ -300,33 +284,19 @@ namespace HatTrick.MemDb
 
                             if (rec.IsEncrypted)
                             {
-                                //TODO:
-                                //using var msClear = new MemoryStream();
-                                //using var localWriter = new BinaryWriter(msClear, Encoding.UTF8, true);
-                                //using var msEncrypted = new MemoryStream();
-
-                                //MemDbRecordSerializer.Serialize(rec, localWriter);//MemDbRecord interface
-                                //_serializer.Serialize(rec.Value, localWriter);//T value
-                                //msClear.Position = 0;
-                                //_encrypter.Encrypt(msClear, msEncrypted, rec.Id.ToString("0000000000"));
-                                //msEncrypted.CopyTo(fsDb);
+                                //TODO: handle encrypted records...
                             }
                             else
                             {
-                                //MemDbRecordSerializer.Serialize(rec, dbWriter);//MemDbRecord interfce
                                 _serializer.Serialize(rec.Value, dbWriter);//T value
                             }
 
                             length = (int)(fsDb.Position - startPos);
                             MemDbPointer pointer = new MemDbPointer(rec.Id, false, rec.IsEncrypted, startPos, length);
                             rec.SetMapIndex(_map.Add(pointer));
-                            pointer.SerializeTo(mapWriter);
 
                         } while (this.TryPopInsertRecord(out rec));
-
-                        //overwrite the map pointer count header.
-                        fsMap.Position = 0;
-                        mapWriter.Write(_map.Count);
+                        _map.Flush();
                     }
                 }
             }
@@ -336,22 +306,7 @@ namespace HatTrick.MemDb
         #region mark stale items
         private void MarkStaleItems()
         {
-            lock (_mapSyncLock)
-            {
-                MemDbRecord<T> rec = null;
-                if (!this.TryPopStaleRecord(out rec))
-                    return;
-
-                using var fsMap = new FileStream(_fullMapPath, FileMode.Open, FileAccess.ReadWrite);
-                do
-                {
-                    MemDbPointer p = _map[rec.MapIndex].MarkStale();
-                    //header count + (idx * size) + id
-                    fsMap.Position = sizeof(int) + (rec.MapIndex * MemDbPointer.Size) + sizeof(int);
-                    fsMap.WriteByte(1);//1 == true (IsStale = true)
-
-                } while (this.TryPopStaleRecord(out rec));
-            }
+            _map.MarkStalePointers(this.TryPopStaleRecord);
         }
         #endregion
 

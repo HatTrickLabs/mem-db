@@ -11,6 +11,9 @@ namespace HatTrick.MemDb
         private bool _isEncrypted;
         private uint _position;
         private int _length;
+
+        //not serialized
+        private bool _flushed;
         #endregion
 
         #region interface
@@ -21,16 +24,19 @@ namespace HatTrick.MemDb
         internal bool IsEncrypted => _isEncrypted;
         internal uint Position => _position;
         internal int Length => _length;
+
+        internal bool Flushed => _flushed;
         #endregion
 
         #region constructor
-        internal MemDbPointer(uint id, bool isStale, bool isEncrypted, uint startPosition, int length)
+        internal MemDbPointer(uint id, bool isStale, bool isEncrypted, uint startPosition, int length, bool flushed = false)
         {
             _id = id;
             _isStale = isStale;
             _isEncrypted = isEncrypted;
             _position = startPosition;
             _length = length;
+            _flushed = flushed;
         }
         #endregion
 
@@ -42,7 +48,7 @@ namespace HatTrick.MemDb
         }
         #endregion
 
-        #region serialization
+        #region serialize to
         internal void SerializeTo(BinaryWriter writer)
         {
             writer.Write(_id);
@@ -50,8 +56,12 @@ namespace HatTrick.MemDb
             writer.Write(_isEncrypted);
             writer.Write(_position);
             writer.Write(_length);
-        }
 
+            _flushed = true;
+        }
+        #endregion
+
+        #region deserializer from
         internal static MemDbPointer DeserializeFrom(BinaryReader reader)
         {
             uint id = reader.ReadUInt32();
@@ -59,7 +69,7 @@ namespace HatTrick.MemDb
             bool isEncrypted = reader.ReadBoolean();
             uint position = reader.ReadUInt32();
             int length = reader.ReadInt32();
-            return new MemDbPointer(id, isStale, isEncrypted, position, length);
+            return new MemDbPointer(id, isStale, isEncrypted, position, length, true);
         }
         #endregion
     }

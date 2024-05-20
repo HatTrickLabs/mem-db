@@ -18,11 +18,13 @@ namespace TestHarness
         {
             //var defrag = new MemDbDefragmenter<BookTextRecord>(datasetName, DbRoot);
             //defrag.Defrag();
+            //return;
 
             MemDb.ConfigureFor<BookTextRecord>(datasetName, DbRoot)
                 .SerializeWith(BookTextRecordSerializer.GetInstance)
                 //.EncryptWith(null)
                 .CloneWith(() => new BookTextCloner())
+                .ReadWrite()
                 .Register();
 
             _sw = new Stopwatch();
@@ -37,10 +39,10 @@ namespace TestHarness
                 //Book text is included in the project but NOT copied to the output dir...
                 //ImportBooks(@"D:\git\HatTrickLabs\mem-db\src\HatTrick.MemDb.TestHarness\BookText");
 
-                //RunQueries();
+                RunQueries();
                 //ExecuteUpdates("Lord Of The Flies");
                 //RunQueries();
-                SearchText();
+                //SearchText();
                 //DefragDB();
                 //MultiThreadImport();
                 //MultiThreadedUpdate();
@@ -171,7 +173,7 @@ namespace TestHarness
             sw.Restart();
             //Query 16
             BookTextRecord[] xxxxx = _db.Query()
-                .Where(r => r.Text.EndsWith("xxx"))
+                .Where(r => r.Text.EndsWith("@@@"))
                 .OrderBy((a, b) => a.WordCount.CompareTo(b.WordCount))
                 .Skip(10).Limit(10)
                 .FindAll();
@@ -192,13 +194,17 @@ namespace TestHarness
                 rec.Text = rec.Text + " @@@";
                 rec.WordCount += 1;
             };
+            Func<BookTextRecord, bool> updateWhere = (r) => r.BookName == bookName && !r.Text.EndsWith("@@@");
+
             Action<BookTextRecord> reverse = (rec) =>
             {
                 rec.Text = rec.Text.Replace(" @@@", string.Empty);
                 rec.WordCount -= 1;
             };
+            Func<BookTextRecord, bool> reverseWhere = (r) => r.BookName == bookName && r.Text.EndsWith("@@@");
+
             sw.Start();
-            cnt = _db.Update(update, r => r.BookName == bookName);
+            cnt = _db.Update(reverse, reverseWhere);
             sw.Stop();
             Console.WriteLine("updated " + cnt + " records in " + sw.ElapsedMilliseconds + " milliseconds");
 
@@ -222,19 +228,40 @@ namespace TestHarness
         #region multi thread import
         static void MultiThreadImport()
         {
+            Thread t0 = new Thread(new ParameterizedThreadStart(ImportBooks)); //23,241 records
             Thread t1 = new Thread(new ParameterizedThreadStart(ImportBooks)); //23,241 records
             Thread t2 = new Thread(new ParameterizedThreadStart(ImportBooks)); //23,241 records
             Thread t3 = new Thread(new ParameterizedThreadStart(ImportBooks)); //23,241 records
+            Thread t4 = new Thread(new ParameterizedThreadStart(ImportBooks)); //23,241 records
+            Thread t5 = new Thread(new ParameterizedThreadStart(ImportBooks)); //23,241 records
+            Thread t6 = new Thread(new ParameterizedThreadStart(ImportBooks)); //23,241 records
+            Thread t7 = new Thread(new ParameterizedThreadStart(ImportBooks)); //23,241 records
+            Thread t8 = new Thread(new ParameterizedThreadStart(ImportBooks)); //23,241 records
+            Thread t9 = new Thread(new ParameterizedThreadStart(ImportBooks)); //23,241 records
 
             string path = @"D:\git\HatTrickLabs\mem-db\src\HatTrick.MemDb.TestHarness\BookText";
+            t0.Start(path);
             t1.Start(path);
             t2.Start(path);
             t3.Start(path);
+            t4.Start(path);
+            t5.Start(path);
+            t6.Start(path);
+            t7.Start(path);
+            t8.Start(path);
+            t9.Start(path);
 
+            t0.Join();
             t1.Join();
             t2.Join();
             t3.Join();
-            //should have 46,482 records...
+            t4.Join();
+            t5.Join();
+            t6.Join();
+            t7.Join();
+            t8.Join();
+            t9.Join();
+            //should have 232,410 records...
         }
         #endregion
 

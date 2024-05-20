@@ -81,12 +81,8 @@ namespace HatTrick.MemDb
         #region read fragmented map
         private void ReadFragmentedMap()
         {
-            _map = new MemDbMap();
-
-            using var fsMap = new FileStream(_fullMapPath, FileMode.Open, FileAccess.Read);
-            using var reader = new BinaryReader(fsMap, Encoding.UTF8, true);
-
-            _map.DeserializeFrom(reader);
+            _map = new MemDbMap(_fullMapPath);
+            _map.InitializeExisting();
             _staleCount = _map.StaleCount;
         }
         #endregion
@@ -165,7 +161,7 @@ namespace HatTrick.MemDb
             }
 
             //write the defragged map file
-            var defraggedMap = MemDbMap.Create(_map.LastId, pointers);
+            var defraggedMap = MemDbMap.Create(_fullMapPath, _map.LastId, pointers);
             using var fs = new FileStream(_fullTempMapPath, FileMode.Open, FileAccess.Write);
             using var writer = new BinaryWriter(fs, Encoding.UTF8, true);
             defraggedMap.SerializeTo(writer);

@@ -25,7 +25,7 @@ namespace HatTrick.MemDb
         internal uint Id => _id;
         internal bool IsStale => _isStale;
         internal bool IsEncrypted => _isEncrypted;
-        internal int Index => _cacheIndex;
+        internal int CacheIndex => _cacheIndex;
         internal int MapIndex => _mapIndex;
         #endregion
 
@@ -34,6 +34,7 @@ namespace HatTrick.MemDb
         {
             _id = id;
             _isEncrypted = isEncrypted;
+            _mapIndex = -1;//TODO: Lets catch that elusive (You've got an update being applied before the INSERT finalized theory).
         }
 
         internal MemDbRecord(uint id, bool isStale, bool isEncrypted, int cacheIndex, int mapIndex)

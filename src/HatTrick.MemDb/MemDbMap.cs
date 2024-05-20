@@ -8,9 +8,14 @@ namespace HatTrick.MemDb
 {
     internal sealed class MemDbMap
     {
+        #region delegates
+        internal delegate bool StaleRecordQueue(out MemDbRecord record);
+        #endregion
+
         #region internals
+        private string _path;
         private List<MemDbPointer> _pointers;
-        private object _ptrSyncLock;
+        private object _syncLock;
 
         private uint _lastId;
         private object _idSyncLock;
@@ -37,19 +42,37 @@ namespace HatTrick.MemDb
         #endregion
 
         #region constructors
-        internal MemDbMap()
+        internal MemDbMap(string path) : this(path, 0, null)
+        { }
+
+        private MemDbMap(string path, uint lastId, List<MemDbPointer> pointers)
         {
-            _pointers = new List<MemDbPointer>();
-            _ptrSyncLock = new();
+            _path = path ?? throw new ArgumentNullException(nameof(path));
+            _lastId = lastId;
+            _pointers = pointers ?? new List<MemDbPointer>();//TODO: this alloc necessary ???
+            _syncLock = new();
             _idSyncLock = new();
         }
+        #endregion
 
-        private MemDbMap(uint lastId, List<MemDbPointer> pointers)
+        #region initialize existing
+        internal void InitializeNew()
         {
-            _lastId = lastId;
-            _pointers = pointers;
-            _ptrSyncLock = new();
-            _idSyncLock = new();
+            lock (_syncLock)
+            {
+                using var fs = new FileStream(_path, FileMode.CreateNew);
+                this.SerializeTo(fs);
+            }
+        }
+
+        internal void InitializeExisting()
+        {
+            lock (_syncLock)
+            {
+                using var fsMap = new FileStream(_path, FileMode.Open, FileAccess.Read); ;
+                using var reader = new BinaryReader(fsMap, Encoding.UTF8, true);
+                this.DeserializeFrom(reader);
+            }
         }
         #endregion
 
@@ -66,7 +89,7 @@ namespace HatTrick.MemDb
         #region get fresh count
         private int GetFreshCount()
         {
-            lock (_ptrSyncLock)
+            lock (_syncLock)
             {
                 return _pointers.Count(p => p.IsStale == false);
             }
@@ -76,7 +99,7 @@ namespace HatTrick.MemDb
         #region get stale count
         private int GetStaleCount()
         {
-            lock (_ptrSyncLock)
+            lock (_syncLock)
             {
                 return _pointers.Count(p => p.IsStale);
             }
@@ -86,9 +109,9 @@ namespace HatTrick.MemDb
         #region get fresh size
         private int GetFreshSize()
         {
-            lock (_ptrSyncLock)
+            lock (_syncLock)
             {
-                return _pointers.Where(p => p.IsStale == false).Sum(p => p.Length);
+                return _pointers.Where(p => p.IsStale == false).Select(p => p.Length).DefaultIfEmpty().Sum();
             }
         }
         #endregion
@@ -96,9 +119,9 @@ namespace HatTrick.MemDb
         #region get stale size
         private int GetStaleSize()
         {
-            lock (_ptrSyncLock)
+            lock (_syncLock)
             {
-                return _pointers.Where(p => p.IsStale == true).Sum(p => p.Length);
+                return _pointers.Where(p => p.IsStale == true).Select(p => p.Length).DefaultIfEmpty().Sum();
             }
         }
         #endregion
@@ -106,9 +129,9 @@ namespace HatTrick.MemDb
         #region get max fresh records size
         private int GetMaxFreshRecordsSize()
         {
-            lock (_ptrSyncLock)
+            lock (_syncLock)
             {
-                return _pointers.Where(p => p.IsStale == false).Max(p => p.Length);
+                return _pointers.Where(p => p.IsStale == false).Select(p => p.Length).DefaultIfEmpty().Max();
             }
         }
         #endregion
@@ -116,9 +139,9 @@ namespace HatTrick.MemDb
         #region get max fresh records size
         private int GetMinFreshRecordSize()
         {
-            lock (_ptrSyncLock)
+            lock (_syncLock)
             {
-                return _pointers.Where(p => p.IsStale == false).Min(p => p.Length);
+                return _pointers.Where(p => p.IsStale == false).Select(p => p.Length).DefaultIfEmpty().Min();
             }
         }
         #endregion
@@ -126,17 +149,17 @@ namespace HatTrick.MemDb
         #region get max stale records size
         private int GetMaxStaleRecordSize()
         {
-            lock (_ptrSyncLock)
+            lock (_syncLock)
             {
                 return _pointers.Where(p => p.IsStale == true).Select(p => p.Length).DefaultIfEmpty().Max();
             }
         }
         #endregion
 
-        #region get max stale records size
+        #region get min stale records size
         private int GetMinStaleRecordSize()
         {
-            lock (_ptrSyncLock)
+            lock (_syncLock)
             {
                 return _pointers.Where(p => p.IsStale == true).Select(p => p.Length).DefaultIfEmpty().Min();
             }
@@ -144,9 +167,9 @@ namespace HatTrick.MemDb
         #endregion
 
         #region create
-        internal static MemDbMap Create(uint lastId, List<MemDbPointer> pointers)
+        internal static MemDbMap Create(string path, uint lastId, List<MemDbPointer> pointers)
         {
-            MemDbMap map = new MemDbMap(lastId, pointers);
+            MemDbMap map = new MemDbMap(path, lastId, pointers);
             return map;
         }
         #endregion
@@ -154,7 +177,7 @@ namespace HatTrick.MemDb
         #region add
         internal int Add(MemDbPointer pointer)
         {
-            lock (_ptrSyncLock)
+            lock (_syncLock)
             {
                 int idx = _pointers.Count;
                 _pointers.Add(pointer);
@@ -163,10 +186,54 @@ namespace HatTrick.MemDb
         }
         #endregion
 
-        #region serialization
+        #region mark stale pointers
+        public void MarkStalePointers(StaleRecordQueue tryGetStaleRecord)
+        {
+            lock (_syncLock)
+            {
+                MemDbRecord record = null;
+                if (!tryGetStaleRecord(out record))
+                    return;
+
+                using var fsMap = new FileStream(_path, FileMode.Open, FileAccess.ReadWrite);
+                do
+                {
+                    _ = _pointers[record.MapIndex].MarkStale();
+                    //sizeof(pointercount) + sizeof(lastId) + (idx * size) + sizeof(id)
+                    fsMap.Position = sizeof(int) + sizeof(uint) + (record.MapIndex * MemDbPointer.Size) + sizeof(int);
+                    fsMap.WriteByte(1);//1 == true (IsStale = true)
+
+                } while (tryGetStaleRecord(out record));
+            }
+        }
+        #endregion
+
+        #region flush
+        internal void Flush()
+        {
+            lock (_syncLock)
+            {
+                using var fsMap = new FileStream(_path, FileMode.Open, FileAccess.ReadWrite);
+                using var mapWriter = new BinaryWriter(fsMap, Encoding.UTF8, true);
+                fsMap.Position = fsMap.Length;
+                for (int i = 0; i < _pointers.Count; i++)//TODO: refact to start this for loop at the next index after prev flush
+                {
+                    var p = _pointers[i];
+                    if (!p.Flushed)
+                        p.SerializeTo(mapWriter);
+                }
+                fsMap.Position = 0;
+                mapWriter.Write(_pointers.Count);
+                //pull this id from the known serialized pointer...NOT _lastId
+                mapWriter.Write(_pointers[^1].Id);
+            }
+        }
+        #endregion
+
+        #region serialize to
         internal void SerializeTo(Stream stream)
         {
-            lock (_ptrSyncLock)
+            lock (_syncLock)
             {
                 using (BinaryWriter writer = new BinaryWriter(stream, Encoding.UTF8, true))
                 {
@@ -177,36 +244,32 @@ namespace HatTrick.MemDb
 
         internal void SerializeTo(BinaryWriter writer)
         {
-            lock (_ptrSyncLock)
+            lock (_syncLock)
             {
-                lock (_idSyncLock)
-                {
-                    writer.Write(_pointers.Count);
-                    writer.Write(_lastId);
+                writer.Write(_pointers.Count);
+                writer.Write(_lastId);
 
-                    foreach (MemDbPointer p in _pointers)
-                    {
-                        p.SerializeTo(writer);
-                    }
+                foreach (MemDbPointer p in _pointers)
+                {
+                    p.SerializeTo(writer);
                 }
             }
         }
+        #endregion
 
+        #region deserializer from
         internal void DeserializeFrom(BinaryReader reader)
         {
-            lock (_ptrSyncLock)
+            lock (_syncLock)
             {
-                lock (_idSyncLock)
+                int count = reader.ReadInt32();
+                _lastId = reader.ReadUInt32();
+
+                _pointers = new List<MemDbPointer>((int)(count * 1.1));
+
+                for (int i = 0; i < count; i++)
                 {
-                    int count = reader.ReadInt32();
-                    _lastId = reader.ReadUInt32();
-
-                    _pointers = new List<MemDbPointer>((int)(count * 1.1));
-
-                    for (int i = 0; i < count; i++)
-                    {
-                        _pointers.Add(MemDbPointer.DeserializeFrom(reader));
-                    }
+                    _pointers.Add(MemDbPointer.DeserializeFrom(reader));
                 }
             }
         }
