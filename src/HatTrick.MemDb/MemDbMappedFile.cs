@@ -153,7 +153,7 @@ namespace HatTrick.MemDb
                 lock (_dbSyncLock)
                 {
                     this.Flush(null);
-                    records = new List<MemDbRecord<T>>(_map.Count);
+                    records = new List<MemDbRecord<T>>((int)(_map.FreshCount * 1.1));
                     using var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read);
                     using var reader = new BinaryReader(fsDb, Encoding.UTF8, true);
 
