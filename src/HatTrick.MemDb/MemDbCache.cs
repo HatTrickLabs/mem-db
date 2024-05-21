@@ -128,34 +128,82 @@ namespace HatTrick.MemDb
         #endregion
 
         #region sum
+        //TODO: why does sum have 5 distinct sigs instead of just one Sum(Func<T, Y> selector)
+        //Actually need 5 MORE for the nullable variants.
+        //Ask Microsoft
         public int Sum(Func<T, int> selector)
         {
             this.EnsureReadMode(nameof(Sum));
 
+            int sum = default(int);
             lock (_recSyncLock)
             {
-                return _records.Where(r => r.IsStale == false).Sum((r) => selector(r.Value));
+                if (_records.Count > 0)
+                {
+                    sum = _records.Where(r => r.IsStale == false).Sum((r) => selector(r.Value));
+                }
             }
+            return sum;
+        }
+
+        public long Sum(Func<T, long> selector)
+        {
+            this.EnsureReadMode(nameof(Sum));
+
+            long sum = default(long);
+            lock (_recSyncLock)
+            {
+                if (_records.Count > 0)
+                {
+                    sum = _records.Where(r => r.IsStale == false).Sum((r) => selector(r.Value));
+                }
+            }
+            return sum;
+        }
+
+        public float Sum(Func<T, float> selector)
+        {
+            this.EnsureReadMode(nameof(Sum));
+
+            float sum = default(float);
+            lock (_recSyncLock)
+            {
+                if (_records.Count > 0)
+                {
+                    sum = _records.Where(r => r.IsStale == false).Sum((r) => selector(r.Value));
+                }
+            }
+            return sum;
         }
 
         public double Sum(Func<T, double> selector)
         {
             this.EnsureReadMode(nameof(Sum));
 
+            double sum = default(double);
             lock (_recSyncLock)
             {
-                return _records.Where(r => r.IsStale == false).Sum((r) => selector(r.Value));
+                if (_records.Count > 0)
+                {
+                    sum = _records.Where(r => r.IsStale == false).Sum((r) => selector(r.Value));
+                }
             }
+            return sum;
         }
 
         public decimal Sum(Func<T, decimal> selector)
         {
             this.EnsureReadMode(nameof(Sum));
 
+            decimal sum = default(decimal);
             lock (_recSyncLock)
             {
-                return _records.Where(r => r.IsStale == false).Sum((r) => selector(r.Value));
+                if (_records.Count > 0)
+                {
+                    sum = _records.Where(r => r.IsStale == false).Sum((r) => selector(r.Value));
+                }
             }
+            return sum;
         }
         #endregion
 

@@ -19,6 +19,10 @@ namespace HatTrick.MemDb
 
         public int Sum(Func<T, int> selector);
 
+        public long Sum(Func<T, long> selector);
+
+        public float Sum(Func<T, float> selector);
+
         public double Sum(Func<T, double> selector);
 
         public decimal Sum(Func<T, decimal> selector);

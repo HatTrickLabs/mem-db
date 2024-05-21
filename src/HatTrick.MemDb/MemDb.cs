@@ -130,6 +130,16 @@ namespace HatTrick.MemDb
             return _cache.Sum(selector);
         }
 
+        public long Sum(Func<T, long> selector)
+        {
+            return _cache.Sum(selector);
+        }
+
+        public float Sum(Func<T, float> selector)
+        {
+            return _cache.Sum(selector);
+        }
+
         public double Sum(Func<T, double> selector)
         {
             return _cache.Sum(selector);
