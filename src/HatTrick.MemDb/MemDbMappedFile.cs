@@ -165,8 +165,10 @@ namespace HatTrick.MemDb
                         if (pointer.State != RecordState.Fresh)
                         {
                             fsDb.Position += pointer.Length;
+                            continue;
                         }
-                        else if (pointer.IsEncrypted)
+
+                        if (pointer.IsEncrypted)
                         {
                             encrypted += 1;
                             if (!this.IsEncryptionReady)
