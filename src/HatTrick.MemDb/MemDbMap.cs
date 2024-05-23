@@ -28,17 +28,22 @@ namespace HatTrick.MemDb
 
         internal uint LastId => _lastId;
         
-        internal int FreshCount => this.GetFreshCount();
-        internal int StaleCount => this.GetStaleCount();
+        //TODO: account for stale and deleted counts...
+        internal int FreshCount => this.GetCount(RecordState.Fresh);
+        internal int StaleCount => this.GetCount(RecordState.Stale);
+        internal int DeletedCount => this.GetCount(RecordState.Deleted);
 
-        internal long FreshSize => this.GetFreshSize();
-        internal long StaleSize => this.GetStaleSize();
+        internal long TotalFreshSize => this.GetTotalSize(RecordState.Fresh);
+        internal long TotalStaleSize => this.GetTotalSize(RecordState.Stale);
+        internal long TotalDeletedSize => this.GetTotalSize(RecordState.Stale);
 
-        internal int MaxFreshRecordSize => this.GetMaxFreshRecordsSize();
-        internal int MinFreshRecordSize => this.GetMinFreshRecordSize();
+        internal int MaxFreshRecordSize => this.GetMaxRecordSize(RecordState.Fresh);
+        internal int MaxStaleRecordSize => this.GetMaxRecordSize(RecordState.Stale);
+        internal int MaxDeletedRecordSize => this.GetMaxRecordSize(RecordState.Deleted);
 
-        internal int MaxStaleRecordSize => this.GetMaxStaleRecordSize();
-        internal int MinStaleRecordSize => this.GetMinStaleRecordSize();
+        internal int MinFreshRecordSize => this.GetMinRecordSize(RecordState.Fresh);
+        internal int MinStaleRecordSize => this.GetMinRecordSize(RecordState.Stale);
+        internal int MinDeletedRecordSize => this.GetMinRecordSize(RecordState.Deleted);
         #endregion
 
         #region constructors
@@ -86,82 +91,42 @@ namespace HatTrick.MemDb
         }
         #endregion
 
-        #region get fresh count
-        private int GetFreshCount()
+        #region get count
+        private int GetCount(RecordState state)
         {
             lock (_syncLock)
             {
-                return _pointers.Count(p => p.IsStale == false);
+                return _pointers.Count(p => p.State == state);
             }
         }
         #endregion
 
-        #region get stale count
-        private int GetStaleCount()
+        #region get size
+        private long GetTotalSize(RecordState state)
         {
             lock (_syncLock)
             {
-                return _pointers.Count(p => p.IsStale);
+                return _pointers.Where(p => p.State == state).Select(p => (long)p.Length).DefaultIfEmpty().Sum();
             }
         }
         #endregion
 
-        #region get fresh size
-        private int GetFreshSize()
+        #region get max records size
+        private int GetMaxRecordSize(RecordState state)
         {
             lock (_syncLock)
             {
-                return _pointers.Where(p => p.IsStale == false).Select(p => p.Length).DefaultIfEmpty().Sum();
+                return _pointers.Where(p => p.State == state).Select(p => p.Length).DefaultIfEmpty().Max();
             }
         }
         #endregion
 
-        #region get stale size
-        private int GetStaleSize()
+        #region get min records size
+        private int GetMinRecordSize(RecordState state)
         {
             lock (_syncLock)
             {
-                return _pointers.Where(p => p.IsStale == true).Select(p => p.Length).DefaultIfEmpty().Sum();
-            }
-        }
-        #endregion
-
-        #region get max fresh records size
-        private int GetMaxFreshRecordsSize()
-        {
-            lock (_syncLock)
-            {
-                return _pointers.Where(p => p.IsStale == false).Select(p => p.Length).DefaultIfEmpty().Max();
-            }
-        }
-        #endregion
-
-        #region get max fresh records size
-        private int GetMinFreshRecordSize()
-        {
-            lock (_syncLock)
-            {
-                return _pointers.Where(p => p.IsStale == false).Select(p => p.Length).DefaultIfEmpty().Min();
-            }
-        }
-        #endregion
-
-        #region get max stale records size
-        private int GetMaxStaleRecordSize()
-        {
-            lock (_syncLock)
-            {
-                return _pointers.Where(p => p.IsStale == true).Select(p => p.Length).DefaultIfEmpty().Max();
-            }
-        }
-        #endregion
-
-        #region get min stale records size
-        private int GetMinStaleRecordSize()
-        {
-            lock (_syncLock)
-            {
-                return _pointers.Where(p => p.IsStale == true).Select(p => p.Length).DefaultIfEmpty().Min();
+                return _pointers.Where(p => p.State == state).Select(p => p.Length).DefaultIfEmpty().Min();
             }
         }
         #endregion
@@ -186,8 +151,8 @@ namespace HatTrick.MemDb
         }
         #endregion
 
-        #region mark stale pointers
-        public void MarkStalePointers(StaleRecordQueue tryGetStaleRecord)
+        #region update pointer state
+        public void UpdatePointerState(StaleRecordQueue tryGetStaleRecord)
         {
             lock (_syncLock)
             {
@@ -201,7 +166,7 @@ namespace HatTrick.MemDb
                     _ = _pointers[record.MapIndex].MarkStale();
                     //sizeof(pointercount) + sizeof(lastId) + (idx * size) + sizeof(id)
                     fsMap.Position = sizeof(int) + sizeof(uint) + (record.MapIndex * MemDbPointer.Size) + sizeof(int);
-                    fsMap.WriteByte(1);//1 == true (IsStale = true)
+                    fsMap.WriteByte((byte)record.State);
 
                 } while (tryGetStaleRecord(out record));
             }
@@ -215,6 +180,11 @@ namespace HatTrick.MemDb
             {
                 using var fsMap = new FileStream(_path, FileMode.Open, FileAccess.ReadWrite);
                 using var mapWriter = new BinaryWriter(fsMap, Encoding.UTF8, true);
+
+                //overwrite count and last id at the beginning
+                mapWriter.Write(_pointers.Count);
+                mapWriter.Write(_lastId);
+
                 fsMap.Position = fsMap.Length;
                 for (int i = 0; i < _pointers.Count; i++)//TODO: refact to start this for loop at the next index after prev flush
                 {
@@ -222,10 +192,6 @@ namespace HatTrick.MemDb
                     if (!p.Flushed)
                         p.SerializeTo(mapWriter);
                 }
-                fsMap.Position = 0;
-                mapWriter.Write(_pointers.Count);
-                //pull this id from the known serialized pointer...NOT _lastId
-                mapWriter.Write(_pointers[^1].Id);
             }
         }
         #endregion

@@ -88,7 +88,7 @@ namespace HatTrick.MemDb
 
             lock (_recSyncLock)
             {
-                return _records.Count(r => r.IsStale == false && selector(r.Value));
+                return _records.Count(r => r.State == RecordState.Fresh && selector(r.Value));
             }
         }
         #endregion
@@ -103,7 +103,7 @@ namespace HatTrick.MemDb
             {
                 if (_records.Count > 0)
                 {
-                    max = _records.Where(r => r.IsStale == false).Max<MemDbRecord<T>, Y>((r) => selector(r.Value));
+                    max = _records.Where(r => r.State == RecordState.Fresh).Max<MemDbRecord<T>, Y>((r) => selector(r.Value));
                 }
             }
             return max;
@@ -120,7 +120,7 @@ namespace HatTrick.MemDb
             {
                 if (_records.Count > 0)
                 {
-                    min = _records.Where(r => r.IsStale == false).Min<MemDbRecord<T>, Y>((r) => selector(r.Value));
+                    min = _records.Where(r => r.State == RecordState.Fresh).Min<MemDbRecord<T>, Y>((r) => selector(r.Value));
                 }
             }
             return min;
@@ -140,7 +140,7 @@ namespace HatTrick.MemDb
             {
                 if (_records.Count > 0)
                 {
-                    sum = _records.Where(r => r.IsStale == false).Sum((r) => selector(r.Value));
+                    sum = _records.Where(r => r.State == RecordState.Fresh).Sum((r) => selector(r.Value));
                 }
             }
             return sum;
@@ -155,7 +155,7 @@ namespace HatTrick.MemDb
             {
                 if (_records.Count > 0)
                 {
-                    sum = _records.Where(r => r.IsStale == false).Sum((r) => selector(r.Value));
+                    sum = _records.Where(r => r.State == RecordState.Fresh).Sum((r) => selector(r.Value));
                 }
             }
             return sum;
@@ -170,7 +170,7 @@ namespace HatTrick.MemDb
             {
                 if (_records.Count > 0)
                 {
-                    sum = _records.Where(r => r.IsStale == false).Sum((r) => selector(r.Value));
+                    sum = _records.Where(r => r.State == RecordState.Fresh).Sum((r) => selector(r.Value));
                 }
             }
             return sum;
@@ -185,7 +185,7 @@ namespace HatTrick.MemDb
             {
                 if (_records.Count > 0)
                 {
-                    sum = _records.Where(r => r.IsStale == false).Sum((r) => selector(r.Value));
+                    sum = _records.Where(r => r.State == RecordState.Fresh).Sum((r) => selector(r.Value));
                 }
             }
             return sum;
@@ -200,7 +200,7 @@ namespace HatTrick.MemDb
             {
                 if (_records.Count > 0)
                 {
-                    sum = _records.Where(r => r.IsStale == false).Sum((r) => selector(r.Value));
+                    sum = _records.Where(r => r.State == RecordState.Fresh).Sum((r) => selector(r.Value));
                 }
             }
             return sum;
@@ -214,7 +214,7 @@ namespace HatTrick.MemDb
 
             lock (_recSyncLock)
             {
-                return _records.Where(r => r.IsStale == false).Select((r) => converter(r.Value)).Distinct().ToArray();
+                return _records.Where(r => r.State == RecordState.Fresh).Select((r) => converter(r.Value)).Distinct().ToArray();
             }
         }
         #endregion
@@ -229,7 +229,7 @@ namespace HatTrick.MemDb
             {
                 for (int i = 0; i < _records.Count; i++)
                 {
-                    if (_records[i].IsStale == false && where(_records[i].Value))
+                    if (_records[i].State == RecordState.Fresh && where(_records[i].Value))
                     {
                         rec = _records[i];
                         break;
@@ -248,7 +248,7 @@ namespace HatTrick.MemDb
             T[] matches;
             lock (_recSyncLock)
             {
-                matches = _records.Where(r => r.IsStale == false && where(r.Value)).Select(r => r.Value).ToArray();
+                matches = _records.Where(r => r.State == RecordState.Fresh && where(r.Value)).Select(r => r.Value).ToArray();
             }
 
             T[] set = _cloner.DeepCopy(matches);
@@ -270,8 +270,8 @@ namespace HatTrick.MemDb
         private T[] ExecuteQuery(MemDbExpression<T> expression, bool deepCopy = true)
         {
             Func<MemDbRecord<T>, bool> filter = expression.HasFilter
-                ? (r) => r.IsStale == false && expression.Filter(r.Value)
-                : (r) => r.IsStale == false;
+                ? (r) => r.State == RecordState.Fresh && expression.Filter(r.Value)
+                : (r) => r.State == RecordState.Fresh;
 
             lock (_recSyncLock)
             {
@@ -348,7 +348,11 @@ namespace HatTrick.MemDb
             List<MemDbRecord<T>> matches = null;
             lock (_recSyncLock)
             {
-                matches = _records.FindAll(r => r.IsStale == false && where(r.Value));
+                //TODO: i'm thinking MarkStale() needs to happen inside this rec sync lock???
+                matches = _records.FindAll(r => r.State == RecordState.Fresh && where(r.Value));
+                //TODO: the entire func from here down may need to happen within the sync lock
+                //the only guarantee we have on order of execution is the queues we have implemented
+                //within the persister...lock() does not guarantee first thread in first thread out.
             }
 
             if (matches.Count == 0)
@@ -387,10 +391,10 @@ namespace HatTrick.MemDb
             List<MemDbRecord<T>> matches = new List<MemDbRecord<T>>(8);
             lock (_recSyncLock)
             {
-                var set = _records.Where(r => r.IsStale == false && where(r.Value));
+                var set = _records.Where(r => r.State == RecordState.Fresh && where(r.Value));
                 foreach (var r in set)
                 {
-                    r.MarkStale();
+                    r.MarkDeleted();
                     matches.Add(r);
                 }
             }

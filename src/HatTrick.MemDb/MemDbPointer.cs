@@ -7,7 +7,7 @@ namespace HatTrick.MemDb
     {
         #region internals
         private uint _id;
-        private bool _isStale;
+        private RecordState _state;
         private bool _isEncrypted;
         private uint _position;
         private int _length;
@@ -17,10 +17,14 @@ namespace HatTrick.MemDb
         #endregion
 
         #region interface
-        internal static readonly int Size = sizeof(int) + sizeof(bool) + sizeof(bool) + sizeof(uint) + sizeof(int);
+        internal static readonly int Size = sizeof(int) //Id
+                                          + sizeof(RecordState)//State
+                                          + sizeof(bool)//IsEncrypted
+                                          + sizeof(uint)//Position
+                                          + sizeof(int);//Length
 
         internal uint Id => _id;
-        internal bool IsStale => _isStale;
+        internal RecordState State => _state;
         internal bool IsEncrypted => _isEncrypted;
         internal uint Position => _position;
         internal int Length => _length;
@@ -29,10 +33,10 @@ namespace HatTrick.MemDb
         #endregion
 
         #region constructor
-        internal MemDbPointer(uint id, bool isStale, bool isEncrypted, uint startPosition, int length, bool flushed = false)
+        internal MemDbPointer(uint id, RecordState state, bool isEncrypted, uint startPosition, int length, bool flushed = false)
         {
             _id = id;
-            _isStale = isStale;
+            _state = state;
             _isEncrypted = isEncrypted;
             _position = startPosition;
             _length = length;
@@ -43,7 +47,7 @@ namespace HatTrick.MemDb
         #region mark stale
         internal MemDbPointer MarkStale()
         {
-            _isStale = true;
+            _state = RecordState.Stale;
             return this;
         }
         #endregion
@@ -52,7 +56,7 @@ namespace HatTrick.MemDb
         internal void SerializeTo(BinaryWriter writer)
         {
             writer.Write(_id);
-            writer.Write(_isStale);
+            writer.Write((byte)_state);
             writer.Write(_isEncrypted);
             writer.Write(_position);
             writer.Write(_length);
@@ -65,11 +69,11 @@ namespace HatTrick.MemDb
         internal static MemDbPointer DeserializeFrom(BinaryReader reader)
         {
             uint id = reader.ReadUInt32();
-            bool isStale = reader.ReadBoolean();
+            RecordState state = (RecordState)reader.ReadByte();
             bool isEncrypted = reader.ReadBoolean();
             uint position = reader.ReadUInt32();
             int length = reader.ReadInt32();
-            return new MemDbPointer(id, isStale, isEncrypted, position, length, true);
+            return new MemDbPointer(id, state, isEncrypted, position, length, true);
         }
         #endregion
     }

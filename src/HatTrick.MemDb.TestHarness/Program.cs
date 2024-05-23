@@ -36,23 +36,20 @@ namespace TestHarness
                 Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
                 _sw.Start();
 
-                string[] books = _db.FindDistinct<string>(r => r.BookName);
-                Console.WriteLine(string.Join(", ", books));
+                //Thread t = new Thread(new ThreadStart(() =>
+                //{
+                //    int deleted = _db.Delete((r) => r.BookName == "The Adventures Of Tom Sawyer");
+                //    Console.WriteLine($"Deleted {deleted} records for Tom Sawyer.");
+                //}));
+                //t.Start();
 
-                foreach (string book in books)
-                {
-                    Console.WriteLine($"{book} max word count: {_db.Max(r => r.BookName == book ? r.WordCount : 0)}");
-                    Console.WriteLine($"{book} word count: {_db.Count(r => r.BookName == book)}");
-                }
-
-                Console.WriteLine($"xxx max word count: {_db.Max(r => r.BookName == "xxx" ? r.WordCount : 0)}");
-                Console.WriteLine($"xxx word count: {_db.Count(r => r.BookName == "xxx")}");
                 //Book text is included in the project but NOT copied to the output dir...
                 //ImportBooks(@"D:\git\HatTrickLabs\mem-db\src\HatTrick.MemDb.TestHarness\BookText");
 
                 //RunQueries();
                 //ExecuteUpdates("Lord Of The Flies");
-                //RunQueries();
+
+                RunQueries();
                 //SearchText();
                 //DefragDB();
                 //MultiThreadImport();
@@ -61,6 +58,7 @@ namespace TestHarness
                 //MultiThreadRunQueries();
                 //MultiThreadChaos();
                 //ConfirmUpdates();
+                //t.Join();
             }
 
             _sw.Stop();
@@ -215,7 +213,7 @@ namespace TestHarness
             Func<BookTextRecord, bool> reverseWhere = (r) => r.BookName == bookName && r.Text.EndsWith("@@@");
 
             sw.Start();
-            cnt = _db.Update(reverse, reverseWhere);
+            cnt = _db.Update(update, updateWhere);
             sw.Stop();
             Console.WriteLine("updated " + cnt + " records in " + sw.ElapsedMilliseconds + " milliseconds");
 

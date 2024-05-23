@@ -91,12 +91,13 @@ namespace HatTrick.MemDb
         private void EnsureAvailableDriveSpace()
         {
             //get file size of the non-stale map pointers (needed for the defragged map)
-            //(non-stalePointerCount * PointerByteSize) + sizeof(int)
+            //sizeof(int) + sizeof(uint) + (non-stalePointerCount * PointerByteSize)
             //the sizeof(int) is to account for the 32 bit int at the very beginning of the file (total pointer count)
-            long mapSize = ((_map.Count - _staleCount) * MemDbPointer.Size) + 4;
+            //the sizeof(uint) is to account for the 32 bit unsigned int at the beginning of the file (Last Identity)
+            long mapSize = sizeof(int) + sizeof(uint) + ((_map.Count - _staleCount) * MemDbPointer.Size);
 
             //get file size of the non-stale db records
-            long dbSize = _map.FreshSize;
+            long dbSize = _map.TotalFreshSize;
 
             //get available drive space 
             var directory = new DirectoryInfo(_path);
@@ -148,13 +149,13 @@ namespace HatTrick.MemDb
             {
                 MemDbPointer oPtr = originalMap[i];
 
-                if (oPtr.IsStale)
+                if (oPtr.State != RecordState.Fresh)
                     continue;
 
                 oldDb.Position = oPtr.Position;
                 oldDb.ReadExactly(buffer, 0, oPtr.Length);
 
-                var nPtr = new MemDbPointer(oPtr.Id, false, oPtr.IsEncrypted, (uint)newDb.Position, oPtr.Length);
+                var nPtr = new MemDbPointer(oPtr.Id, RecordState.Fresh, oPtr.IsEncrypted, (uint)newDb.Position, oPtr.Length);
                 pointers.Add(nPtr);
 
                 newDb.Write(buffer, 0, oPtr.Length);

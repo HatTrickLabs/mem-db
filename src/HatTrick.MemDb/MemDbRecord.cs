@@ -10,12 +10,12 @@ namespace HatTrick.MemDb
     internal abstract class MemDbRecord
     {
         #region read only
-        internal static readonly int Size = sizeof(int) + sizeof(bool) + sizeof(bool) + sizeof(int) + sizeof(int);
+        internal static readonly int Size = sizeof(uint) + sizeof(RecordState) + sizeof(bool) + sizeof(int) + sizeof(int);
         #endregion
 
         #region internals
         private uint _id;
-        private bool _isStale;
+        private RecordState _state;
         private bool _isEncrypted;
         private int _cacheIndex;
         private int _mapIndex;
@@ -23,7 +23,7 @@ namespace HatTrick.MemDb
 
         #region interface
         internal uint Id => _id;
-        internal bool IsStale => _isStale;
+        internal RecordState State => _state;
         internal bool IsEncrypted => _isEncrypted;
         internal int CacheIndex => _cacheIndex;
         internal int MapIndex => _mapIndex;
@@ -37,10 +37,10 @@ namespace HatTrick.MemDb
             _mapIndex = -1;//TODO: Lets catch that elusive (You've got an update being applied before the INSERT finalized theory).
         }
 
-        internal MemDbRecord(uint id, bool isStale, bool isEncrypted, int cacheIndex, int mapIndex)
+        internal MemDbRecord(uint id, RecordState state, bool isEncrypted, int cacheIndex, int mapIndex)
         {
             _id = id;
-            _isStale = isStale;
+            _state = state;
             _isEncrypted = isEncrypted;
             _cacheIndex = cacheIndex;
             _mapIndex = mapIndex;
@@ -50,7 +50,14 @@ namespace HatTrick.MemDb
         #region mark stale
         internal void MarkStale()
         {
-            _isStale = true;
+            _state = RecordState.Stale;
+        }
+        #endregion
+
+        #region mark deleted
+        internal void MarkDeleted()
+        {
+            _state = RecordState.Deleted;
         }
         #endregion
 
@@ -93,8 +100,8 @@ namespace HatTrick.MemDb
             _value = value;
         }
 
-        internal MemDbRecord(uint id,  T value, bool isStale, bool isEncrypted, int cacheIndex, int mapIndex) 
-            : base(id, isStale, isEncrypted, cacheIndex, mapIndex)
+        internal MemDbRecord(uint id,  T value, RecordState state, bool isEncrypted, int cacheIndex, int mapIndex) 
+            : base(id, state, isEncrypted, cacheIndex, mapIndex)
         {
             if (value is null)
                 throw new ArgumentNullException(nameof(value));

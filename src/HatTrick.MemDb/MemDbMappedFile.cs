@@ -23,8 +23,8 @@ namespace HatTrick.MemDb
         private Queue<MemDbRecord<T>> _insertQueue;
         private object _insertSyncLock;
 
-        private Queue<MemDbRecord> _staleStateQueue;
-        private object _staleStateSyncLock;
+        private Queue<MemDbRecord> _updateStateQueue;
+        private object _updateStateSyncLock;
 
         private MemDbMap _map;
         private object _mapSyncLock;
@@ -76,8 +76,8 @@ namespace HatTrick.MemDb
 
             _insertQueue = new Queue<MemDbRecord<T>>(256);
             _insertSyncLock = new();
-            _staleStateQueue = new Queue<MemDbRecord>(256);
-            _staleStateSyncLock = new();
+            _updateStateQueue = new Queue<MemDbRecord>(256);
+            _updateStateSyncLock = new();
 
             this.Initialize();
         }
@@ -162,7 +162,7 @@ namespace HatTrick.MemDb
                     {
                         pointer = _map[i];
 
-                        if (pointer.IsStale)
+                        if (pointer.State != RecordState.Fresh)
                         {
                             fsDb.Position += pointer.Length;
                         }
@@ -181,7 +181,7 @@ namespace HatTrick.MemDb
                         else
                         {
                             T value = _serializer.Deserialize(reader);//T value
-                            var record = new MemDbRecord<T>(pointer.Id, value, false, pointer.IsEncrypted, records.Count, i);
+                            var record = new MemDbRecord<T>(pointer.Id, value, RecordState.Fresh, pointer.IsEncrypted, records.Count, i);
                             records.Add(record);
                         }
                     }
@@ -216,9 +216,21 @@ namespace HatTrick.MemDb
         {
             this.EnsureMode(AccessMode.ReadWrite, nameof(MarkStale));
 
-            lock (_staleStateSyncLock)
+            lock (_updateStateSyncLock)
             {
-                _staleStateQueue.Enqueue(record);
+                _updateStateQueue.Enqueue(record);
+            }
+        }
+        #endregion
+
+        #region mark deleted
+        public void MarkDeleted(MemDbRecord<T> record)
+        {
+            this.EnsureMode(AccessMode.ReadWrite, nameof(MarkDeleted));
+
+            lock (_updateStateSyncLock)
+            {
+                _updateStateQueue.Enqueue(record);
             }
         }
         #endregion
@@ -239,9 +251,9 @@ namespace HatTrick.MemDb
         private bool TryPopStaleRecord(out MemDbRecord record)
         {
             bool found = false;
-            lock (_staleStateSyncLock)
+            lock (_updateStateSyncLock)
             {
-                found = _staleStateQueue.TryDequeue(out record);
+                found = _updateStateQueue.TryDequeue(out record);
             }
             return found;
         }
@@ -254,7 +266,7 @@ namespace HatTrick.MemDb
                 return;
 
             this.AppendInsertedItems();
-            this.MarkStaleItems();
+            this.UpdateItemStates();
 
             if (!_isClosed)
             {
@@ -292,7 +304,7 @@ namespace HatTrick.MemDb
                             }
 
                             length = (int)(fsDb.Position - startPos);
-                            MemDbPointer pointer = new MemDbPointer(rec.Id, false, rec.IsEncrypted, startPos, length);
+                            MemDbPointer pointer = new MemDbPointer(rec.Id, RecordState.Fresh, rec.IsEncrypted, startPos, length);
                             rec.SetMapIndex(_map.Add(pointer));
 
                         } while (this.TryPopInsertRecord(out rec));
@@ -303,10 +315,10 @@ namespace HatTrick.MemDb
         }
         #endregion
 
-        #region mark stale items
-        private void MarkStaleItems()
+        #region update item state
+        private void UpdateItemStates()
         {
-            _map.MarkStalePointers(this.TryPopStaleRecord);
+            _map.UpdatePointerState(this.TryPopStaleRecord);
         }
         #endregion
 
