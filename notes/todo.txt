@@ -1,10 +1,10 @@
 TODO:
 ----------
-- Multi state marker...Enhance IsStale (bool) to Enum...Fresh,Stale,Deleted.
+x Multi state marker...Enhance IsStale (bool) to Enum...Fresh,Stale,Deleted.
 - Implement default json serializer.
 - Implement default AES 256 bit record level encryption.
 x Add missing Sum sig varients (long, float)
-- Add Avg accessor.
+x Add Avg accessor.
 x IMemDbCloneProvider<T>: option to provide a clone provider for DeepCopy<T> that is more efficient than
   ISerializationProvider<T> ... optional with fallback to the serialization option.
 x Refactor into layer MemDb Engine:
