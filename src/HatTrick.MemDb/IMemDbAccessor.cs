@@ -27,6 +27,16 @@ namespace HatTrick.MemDb
 
         public decimal Sum(Func<T, decimal> selector);
 
+        public double Avg(Func<T, int> selector);
+
+        public double Avg(Func<T, long> selector);
+
+        public float Avg(Func<T, float> selector);
+
+        public double Avg(Func<T, double> selector);
+
+        public decimal Avg(Func<T, decimal> selector);
+
         public Y[] FindDistinct<Y>(Converter<T, Y> converter) where Y : IConvertible;
 
         public T Find(Func<T, bool> where);

@@ -207,6 +207,83 @@ namespace HatTrick.MemDb
         }
         #endregion
 
+        #region avg
+        public double Avg(Func<T, int> selector)
+        {
+            this.EnsureReadMode(nameof(Avg));
+
+            double avg = default(double);
+            lock (_recSyncLock)
+            {
+                if (_records.Count > 0)
+                {
+                    avg = _records.Where(r => r.State == RecordState.Fresh).Average((r) => selector(r.Value));
+                }
+            }
+            return avg;
+        }
+
+        public double Avg(Func<T, long> selector)
+        {
+            this.EnsureReadMode(nameof(Avg));
+
+            double avg = default(double);
+            lock (_recSyncLock)
+            {
+                if (_records.Count > 0)
+                {
+                    avg = _records.Where(r => r.State == RecordState.Fresh).Average((r) => selector(r.Value));
+                }
+            }
+            return avg;
+        }
+
+        public float Avg(Func<T, float> selector)
+        {
+            this.EnsureReadMode(nameof(Avg));
+
+            float avg = default(float);
+            lock (_recSyncLock)
+            {
+                if (_records.Count > 0)
+                {
+                    avg = _records.Where(r => r.State == RecordState.Fresh).Average((r) => selector(r.Value));
+                }
+            }
+            return avg;
+        }
+
+        public double Avg(Func<T, double> selector)
+        {
+            this.EnsureReadMode(nameof(Avg));
+
+            double avg = default(double);
+            lock (_recSyncLock)
+            {
+                if (_records.Count > 0)
+                {
+                    avg = _records.Where(r => r.State == RecordState.Fresh).Average((r) => selector(r.Value));
+                }
+            }
+            return avg;
+        }
+
+        public decimal Avg(Func<T, decimal> selector)
+        {
+            this.EnsureReadMode(nameof(Avg));
+
+            decimal avg = default(decimal);
+            lock (_recSyncLock)
+            {
+                if (_records.Count > 0)
+                {
+                    avg = _records.Where(r => r.State == RecordState.Fresh).Average((r) => selector(r.Value));
+                }
+            }
+            return avg;
+        }
+        #endregion
+
         #region find distinct
         public Y[] FindDistinct<Y>(Converter<T, Y> converter) where Y : IConvertible
         {

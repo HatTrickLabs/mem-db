@@ -151,6 +151,33 @@ namespace HatTrick.MemDb
         }
         #endregion
 
+        #region avg
+        public double Avg(Func<T, int> selector)
+        {
+            return _cache.Avg(selector);
+        }
+
+        public double Avg(Func<T, long> selector)
+        {
+            return _cache.Avg(selector);
+        }
+
+        public float Avg(Func<T, float> selector)
+        {
+            return _cache.Avg(selector);
+        }
+
+        public double Avg(Func<T, double> selector)
+        {
+            return _cache.Avg(selector);
+        }
+
+        public decimal Avg(Func<T, decimal> selector)
+        {
+            return _cache.Avg(selector);
+        }
+        #endregion
+
         #region find distinct
         public Y[] FindDistinct<Y>(Converter<T, Y> converter) where Y : IConvertible
         {

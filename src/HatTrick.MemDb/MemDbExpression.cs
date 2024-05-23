@@ -87,6 +87,26 @@ namespace HatTrick.MemDb
             return val;
         }
 
+        public long Sum(Func<T, long> selector)
+        {
+            T[] set = _executionFunc(this, false);
+            if (set.Length == 0)
+                return 0;
+
+            long val = set.Sum(selector);
+            return val;
+        }
+
+        public float Sum(Func<T, float> selector)
+        {
+            T[] set = _executionFunc(this, false);
+            if (set.Length == 0)
+                return 0;
+
+            float val = set.Sum(selector);
+            return val;
+        }
+
         public double Sum(Func<T, double> selector)
         {
             T[] set = _executionFunc(this, false);
@@ -152,6 +172,16 @@ namespace HatTrick.MemDb
                 return 0;
 
             double val = set.Average(selector);
+            return val;
+        }
+
+        public float Avg(Func<T, float> selector)
+        {
+            T[] set = _executionFunc(this, false);
+            if (set.Length == 0)
+                return 0;
+
+            float val = set.Average(selector);
             return val;
         }
 
