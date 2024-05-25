@@ -11,7 +11,7 @@ namespace TestHarness
     {
         static Stopwatch _sw;
         static MemDb<BookTextRecord> _db;
-        static string datasetName = "books";
+        static string datasetName = "books-b";
         static string DbRoot = @"d:\tmp\mem-db\books";
 
         static void Main(string[] args)
@@ -30,7 +30,7 @@ namespace TestHarness
             _sw = new Stopwatch();
             _sw.Start();
 
-            using (_db = MemDb<BookTextRecord>.Open("books"))
+            using (_db = MemDb<BookTextRecord>.Open(datasetName))
             {
                 _sw.Stop();
                 Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");

@@ -25,13 +25,13 @@ namespace TestHarness
             buffer.Write(record.WordCount);
         }
 
-        public BookTextRecord Deserialize(BinaryReader buffer)
+        public BookTextRecord Deserialize(BinaryReader from, int length)
         {
             var record = new BookTextRecord();
-            record.Id = buffer.ReadUInt32();
-            record.Text = buffer.ReadString();
-            record.BookName = buffer.ReadString();
-            record.WordCount = buffer.ReadInt32();
+            record.Id = from.ReadUInt32();
+            record.Text = from.ReadString();
+            record.BookName = from.ReadString();
+            record.WordCount = from.ReadInt32();
             return record;
         }
     }

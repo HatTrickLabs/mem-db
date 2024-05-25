@@ -74,7 +74,7 @@ namespace HatTrick.MemDb
             _mode = AccessMode.ReadWrite;
 
             //set all the default providers
-            _serializerProvider = () => new MemDbJsonSerializer<T>();
+            _serializerProvider = () => MemDbJsonSerializer<T>.CreateInstance();
             _clonerProvider = () => new MemDbSerializationCloner<T>(_serializer);
             _encrypterProvider = () => null;//TODO:
         }

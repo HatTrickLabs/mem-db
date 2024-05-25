@@ -7,6 +7,6 @@ namespace HatTrick.MemDb
     {
         void Serialize(T record, BinaryWriter to);
 
-        T Deserialize(BinaryReader from);
+        T Deserialize(BinaryReader from, int length);
     }
 }

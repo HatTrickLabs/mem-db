@@ -182,7 +182,7 @@ namespace HatTrick.MemDb
                         }
                         else
                         {
-                            T value = _serializer.Deserialize(reader);//T value
+                            T value = _serializer.Deserialize(reader, pointer.Length);//T value
                             var record = new MemDbRecord<T>(pointer.Id, value, RecordState.Fresh, pointer.IsEncrypted, records.Count, i);
                             records.Add(record);
                         }

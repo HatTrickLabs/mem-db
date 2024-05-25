@@ -28,7 +28,6 @@ namespace HatTrick.MemDb
 
         internal uint LastId => _lastId;
         
-        //TODO: account for stale and deleted counts...
         internal int FreshCount => this.GetCount(RecordState.Fresh);
         internal int StaleCount => this.GetCount(RecordState.Stale);
         internal int DeletedCount => this.GetCount(RecordState.Deleted);
@@ -186,7 +185,9 @@ namespace HatTrick.MemDb
                 mapWriter.Write(_lastId);
 
                 fsMap.Position = fsMap.Length;
-                for (int i = 0; i < _pointers.Count; i++)//TODO: refact to start this for loop at the next index after prev flush
+                //TODO: refactor to start this for loop at the next index after prev flush
+                //we are only flushing additions
+                for (int i = 0; i < _pointers.Count; i++)
                 {
                     var p = _pointers[i];
                     if (!p.Flushed)

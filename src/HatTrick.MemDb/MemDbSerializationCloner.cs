@@ -33,7 +33,7 @@ namespace HatTrick.MemDb
             ms.Position = 0;
             using (BinaryReader reader = new BinaryReader(ms, Encoding.UTF8, true))
             {
-                rec = _serializer.Deserialize(reader);
+                rec = _serializer.Deserialize(reader, length);
             }
             return rec;
         }
@@ -49,7 +49,7 @@ namespace HatTrick.MemDb
                 _serializer.Serialize(values[i], writer);
                 int length = (int)ms.Position;
                 ms.Position = 0;
-                newValues[i] = _serializer.Deserialize(reader);
+                newValues[i] = _serializer.Deserialize(reader, length);
                 ms.Position = 0;
             }
             return newValues;
