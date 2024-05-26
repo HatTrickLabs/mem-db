@@ -24,7 +24,7 @@ namespace HatTrick.MemDb
         {
             var ops = new JsonSerializerOptions();
             ops.PropertyNameCaseInsensitive = false;
-            ops.MaxDepth = 16;
+            ops.MaxDepth = 32;
             ops.IncludeFields = false;
             ops.IgnoreReadOnlyProperties = true;
             ops.IgnoreReadOnlyFields = true;
@@ -54,7 +54,7 @@ namespace HatTrick.MemDb
         #region deserialize
         public T Deserialize(BinaryReader from, int length)
         {
-            Span<byte> raw = stackalloc byte[length];
+            Span<byte> raw = length <= 2048 ? stackalloc byte[length] : new byte[length];
             _ = from.Read(raw);
             T val = JsonSerializer.Deserialize<T>(raw, _options);
             return val;
