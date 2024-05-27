@@ -11,7 +11,7 @@ namespace TestHarness
     {
         static Stopwatch _sw;
         static MemDb<BookTextRecord> _db;
-        static string datasetName = "books-b";
+        static string datasetName = "books";
         static string DbRoot = @"d:\tmp\mem-db\books";
 
         static void Main(string[] args)

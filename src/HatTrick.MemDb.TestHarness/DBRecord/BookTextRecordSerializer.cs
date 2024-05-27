@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 using System.IO;
 using HatTrick.MemDb;
 
@@ -17,12 +18,12 @@ namespace TestHarness
             return _instance ?? (_instance = new BookTextRecordSerializer());
         }
 
-        public void Serialize(BookTextRecord record, BinaryWriter buffer)
+        public void Serialize(BookTextRecord record, BinaryWriter to)
         {
-            buffer.Write(record.Id);
-            buffer.Write(record.Text);
-            buffer.Write(record.BookName);
-            buffer.Write(record.WordCount);
+            to.Write(record.Id);
+            to.Write(record.Text);
+            to.Write(record.BookName);
+            to.Write(record.WordCount);
         }
 
         public BookTextRecord Deserialize(BinaryReader from, int length)

@@ -55,7 +55,7 @@ namespace HatTrick.MemDb
         public T Deserialize(BinaryReader from, int length)
         {
             Span<byte> raw = length <= 2048 ? stackalloc byte[length] : new byte[length];
-            _ = from.Read(raw);
+            _ = from.BaseStream.Read(raw);
             T val = JsonSerializer.Deserialize<T>(raw, _options);
             return val;
         }
