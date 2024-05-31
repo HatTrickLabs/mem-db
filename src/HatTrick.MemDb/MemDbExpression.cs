@@ -9,7 +9,7 @@ namespace HatTrick.MemDb
         private ExecuteQuery _queryExecutor;
         private ExecuteUpdate _updateExecutor;
         private ExecuteDelete _deleteExecutor;
-        private Predicate<T> _filter;
+        private Func<T, bool> _filter;
         private Comparison<T> _orderBy;
         private int? _skip;
         private int? _limit;
@@ -17,7 +17,7 @@ namespace HatTrick.MemDb
 
         #region interface
         internal bool HasFilter => _filter is not null;
-        internal Predicate<T> Filter => _filter ?? ((x) => true);
+        internal Func<T, bool> Filter => _filter ?? ((x) => true);
 
         internal bool HasOrderBy => _orderBy is not null;
         internal Comparison<T> OrderByComparison => _orderBy;
@@ -47,15 +47,9 @@ namespace HatTrick.MemDb
         #endregion
 
         #region where
-        //public MemDbExpression<T> Where(Func<T, bool> func)
-        //{
-        //    _filter = func;
-        //    return this;
-        //}
-
-        public MemDbExpression<T> Where(Predicate<T> predicate)
+        public MemDbExpression<T> Where(Func<T, bool> func)
         {
-            _filter = predicate;
+            _filter = func;
             return this;
         }
         #endregion
