@@ -339,45 +339,80 @@ namespace HatTrick.MemDb
         {
             this.EnsureReadMode(nameof(Query));
 
-            return new MemDbExpression<T>(this.ExecuteQuery);
+            return new MemDbExpression<T>(this.ExecuteQueryExpression, this.ExecuteUpdateExpression, this.ExecuteDeleteExpression);
         }
         #endregion
 
-        #region execute query
-        private T[] ExecuteQuery(MemDbExpression<T> expression, bool deepCopy = true)
+        #region execute query expression
+        private T[] ExecuteQueryExpression(MemDbExpression<T> expression, bool deepCopy = true)
         {
             Func<MemDbRecord<T>, bool> filter = expression.HasFilter
                 ? (r) => r.State == RecordState.Fresh && expression.Filter(r.Value)
                 : (r) => r.State == RecordState.Fresh;
 
+            T[] set = Array.Empty<T>();
             lock (_recSyncLock)
             {
-                List<T> matches = _records.Where(filter).Select(r => r.Value).ToList();
+                T[] matches = _records.Where(filter).Select(r => r.Value).ToArray();
 
-                if (matches.Count > 0)
+                if (matches.Length == 0 || (expression.HasSkip && expression.SkipCount >= matches.Length))
+                    goto EMPTY;
+
+                if (expression.HasOrderBy)
+                    Array.Sort<T>(matches, expression.OrderByComparison);
+
+                if (expression.HasSkip)
                 {
-                    if (expression.HasOrderBy)
-                        matches.Sort(expression.OrderByComparison);
+                    int len = expression.HasLimit 
+                        ? Math.Min(matches.Length - expression.SkipCount, expression.LimitCount)
+                        : matches.Length - expression.SkipCount;
 
-                    if (expression.HasSkip && expression.HasLimit)
-                        matches = matches.Skip(expression.SkipCount).Take(expression.LimitCount).ToList();
-
-                    else if (expression.HasSkip)
-                        matches = matches.Skip(expression.SkipCount).ToList();
-
-                    else if (expression.HasLimit)
-                        matches = matches.Take(expression.LimitCount).ToList();
-
-
-                    if (deepCopy)
-                        return _cloner.DeepCopy(matches);
-
-                    else
-                        return matches.ToArray();
+                    set = new T[len];
+                    Array.ConstrainedCopy(matches, expression.SkipCount, set, 0, len);
                 }
-            }
+                else if (expression.HasLimit && expression.LimitCount < matches.Length)
+                {
+                    set = new T[expression.LimitCount];
+                    Array.ConstrainedCopy(matches, 0, set, 0, expression.LimitCount);
+                }
+                else
+                {
+                    set = matches;
+                }
 
-            return Array.Empty<T>();
+                if (deepCopy)
+                    set = _cloner.DeepCopy(set);
+            }
+        EMPTY:
+            return set;
+        }
+        #endregion
+
+        #region execute update expression
+        private int ExecuteUpdateExpression(MemDbExpression<T> expression, Action<T> apply)
+        {
+            int cnt = 0;
+            //TODO: this works, but super inefficient...refactor this
+            lock (_recSyncLock)
+            {
+                T[] set = this.ExecuteQueryExpression(expression, false);
+                cnt = this.Update(apply, (r) => Array.IndexOf(set, r) > -1);
+            }
+            return cnt;
+        }
+        #endregion
+
+        #region execute delete expression
+        private int ExecuteDeleteExpression(MemDbExpression<T> expression)
+        {
+            int cnt = 0;
+            //TODO: this works, but super inefficient...refactor this
+            lock (_recSyncLock)
+            {
+                T[] set = this.ExecuteQueryExpression(expression, false);
+                cnt = this.Delete((r) => Array.IndexOf(set, r) > -1);
+            }
+            return cnt;
         }
         #endregion
 
@@ -391,7 +426,7 @@ namespace HatTrick.MemDb
         {
             this.EnsureMode(AccessMode.ReadWrite | AccessMode.AppendOnly, nameof(Insert));
 
-            //TODO: I don't think the MUST happen before DeepCopy...Kinda squirly.
+            //TODO: I don't think this MUST happen before DeepCopy...Kinda squirly.
             //YES it does, we don't even know if they want the Id, but if they do, it MUST be applied WHEREVER they want it BEFORE DeepCopy
             uint id = _persister.GetNextId();
             idCallback?.Invoke(id);
@@ -425,32 +460,24 @@ namespace HatTrick.MemDb
             List<MemDbRecord<T>> matches = null;
             lock (_recSyncLock)
             {
-                //TODO: i'm thinking MarkStale() needs to happen inside this rec sync lock???
                 matches = _records.FindAll(r => r.State == RecordState.Fresh && where(r.Value));
-                //TODO: the entire func from here down may need to happen within the sync lock
-                //the only guarantee we have on order of execution is the queues we have implemented
-                //within the persister...lock() does not guarantee first thread in first thread out.
-            }
 
-            if (matches.Count == 0)
-                return 0;
-
-            for (int i = 0; i < matches.Count; i++)
-            {
-                var oldRec = matches[i];
-                var newRec = new MemDbRecord<T>(oldRec.Id, _cloner.DeepCopy(oldRec.Value), oldRec.IsEncrypted);
-                matches[i].MarkStale();
-                apply(newRec.Value);
-
-                lock (_recSyncLock)
+                if (matches.Count > 0)
                 {
-                    newRec.SetCacheIndex(_records.Count);
-                    _records.Add(newRec);
-                    
-                }
+                    for (int i = 0; i < matches.Count; i++)
+                    {
+                        var oldRec = matches[i];
+                        var newRec = new MemDbRecord<T>(oldRec.Id, _cloner.DeepCopy(oldRec.Value), oldRec.IsEncrypted);
+                        oldRec.MarkStale();
+                        apply(newRec.Value);
 
-                _persister.Insert(newRec);
-                _persister.MarkStale(oldRec);
+                        newRec.SetCacheIndex(_records.Count);
+                        _records.Add(newRec);
+
+                        _persister.Insert(newRec);
+                        _persister.MarkStale(oldRec);
+                    }
+                }
             }
 
             return matches.Count;
@@ -465,27 +492,19 @@ namespace HatTrick.MemDb
             if (where == null)
                 throw new ArgumentNullException(nameof(where));
 
-            List<MemDbRecord<T>> matches = new List<MemDbRecord<T>>(8);
+            int cnt = 0;
             lock (_recSyncLock)
             {
                 var set = _records.Where(r => r.State == RecordState.Fresh && where(r.Value));
                 foreach (var r in set)
                 {
+                    cnt += 1;
                     r.MarkDeleted();
-                    matches.Add(r);
+                    _persister.MarkStale(r);
                 }
             }
 
-            if (matches.Count == 0)
-                return 0;
-
-            for (int i = 0; i < matches.Count; i++)
-            {
-                var oldRec = matches[i];
-                _persister.MarkStale(oldRec);
-            }
-
-            return matches.Count;
+            return cnt;
         }
         #endregion
 

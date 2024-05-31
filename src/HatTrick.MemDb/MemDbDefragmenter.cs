@@ -19,6 +19,7 @@ namespace HatTrick.MemDb
 
         private MemDbMap _map;
         private int _staleCount;
+        private int _deletedCount;
         #endregion
 
         #region constructors
@@ -57,7 +58,7 @@ namespace HatTrick.MemDb
             //read into memory the fragmented map
             this.ReadFragmentedMap();
 
-            if (_map.StaleCount == 0)
+            if ((_map.StaleCount + _map.DeletedCount) == 0)
                 return;//0 fragmentation, nothing can be cleaned up
 
             //ensure enough drive space exists to perform the defrag operation
@@ -83,6 +84,7 @@ namespace HatTrick.MemDb
             _map = new MemDbMap(_fullMapPath);
             _map.InitializeExisting();
             _staleCount = _map.StaleCount;
+            _deletedCount = _map.DeletedCount;
         }
         #endregion
 
@@ -93,9 +95,10 @@ namespace HatTrick.MemDb
             //sizeof(int) + sizeof(uint) + (non-stalePointerCount * PointerByteSize)
             //the sizeof(int) is to account for the 32 bit int at the very beginning of the file (total pointer count)
             //the sizeof(uint) is to account for the 32 bit unsigned int at the beginning of the file (Last Identity)
-            long mapSize = sizeof(int) + sizeof(uint) + ((_map.Count - _staleCount) * MemDbPointer.Size);
+            //TODO: these (outside of MemDbMap) size calcs are going to bite you in the ASS.
+            long mapSize = sizeof(int) + sizeof(uint) + ((_map.Count - (_staleCount + _deletedCount)) * MemDbPointer.Size);
 
-            //get file size of the non-stale db records
+            //get file size of the non-stale...non-deleted db records
             long dbSize = _map.TotalFreshSize;
 
             //get available drive space 
@@ -134,13 +137,13 @@ namespace HatTrick.MemDb
         private void WriteDefragmentedTempFiles()
         {
             MemDbMap originalMap = _map;
-            List<MemDbPointer> pointers = new List<MemDbPointer>(_map.Count - _staleCount);
+            List<MemDbPointer> pointers = new List<MemDbPointer>(_map.Count - (_staleCount + _deletedCount));
 
             int maxRecLength = originalMap.MaxFreshRecordSize;
 
             byte[] buffer = new byte[maxRecLength];
 
-            //rebuild the db and map bypassing all stale records
+            //rebuild the db and map bypassing all stale and deleted records
             using var oldDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read);
             using var newDb = new FileStream(_fullTempDbPath, FileMode.Open, FileAccess.Write);
 

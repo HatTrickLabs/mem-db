@@ -104,5 +104,12 @@ namespace HatTrick.MemDb
             _value = value;
         }
         #endregion
+
+        #region to string
+        public override string ToString()
+        {
+            return string.Concat(base.Id, "|", base.State, "|", _value.ToString());
+        }
+        #endregion
     }
 }

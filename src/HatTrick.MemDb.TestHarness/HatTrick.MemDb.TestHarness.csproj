@@ -10,15 +10,11 @@
     <FileVersion>1.0.0.0</FileVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Content Include="BookText\Adventures_Of_Huckleberry_Finn.txt" />
-    <Content Include="BookText\Lord_Of_The_Flies.txt" />
-    <Content Include="BookText\The_Adventures_Of_Tom_Sawyer.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\HatTrick.MemDb\HatTrick.MemDb.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="System.Data.DataSetExtensions" Version="4.5.0" />
+    <PackageReference Include="System.IO.Hashing" Version="9.0.0-preview.4.24266.19" />
   </ItemGroup>
 </Project>
