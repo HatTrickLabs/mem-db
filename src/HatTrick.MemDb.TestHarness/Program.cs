@@ -3,11 +3,10 @@ using System.Diagnostics;
 using HatTrick.MemDb;
 using System.IO.Hashing;
 using System.IO;
-using System.Collections.Generic;
-using System.Linq;
-using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace TestHarness
 {
@@ -27,7 +26,7 @@ namespace TestHarness
             MemDb.ConfigureFor<DigitalAsset>(datasetName, DbRoot)
                 .SerializeWith(() => new DigitalAssetSerializer())
                 .CloneWith(() => new DigitalAssetCloner())
-                //.EncryptWith(null)
+                .EncryptWithKey(() => new byte[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 })
                 .ReadWrite()
                 .Register();
 
@@ -40,20 +39,13 @@ namespace TestHarness
                 Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
                 _sw.Start();
 
-
-                DigitalAsset[] assets = _db.Query()
-                    .Where(a => a.Extension == ".jpg")
-                    .OrderBy((a, b) => b.Created.CompareTo(a.Created))
-                    .Skip(4).Limit(60)
-                    .ToArray();
-
                 //_db.Delete(a => true);
                 //Console.WriteLine(_db.Count(a => string.Compare(a.Extension, ".jpg", true)  == 0));
                 //Console.WriteLine(_db.Count(a => string.Compare(a.Extension, ".jpeg", true) == 0));
                 //Console.WriteLine(_db.Count(a => string.Compare(a.Extension, ".png", true)  == 0));
                 //Console.WriteLine(_db.Count(a => string.Compare(a.Extension, ".csv", true)  == 0));
 
-                //ImportAssets("d:\\tmp");
+                //ImportAssets(@"d:\tmp\resumes");
             }
 
             _sw.Stop();
@@ -77,7 +69,8 @@ namespace TestHarness
             Console.WriteLine("Starting import of " + files.Length + " digital assets.");
             XxHash64 xx64 = new XxHash64();
             int cnt = 0;
-            Parallel.ForEach(files, (file =>
+            //Parallel.ForEach(files, (file =>
+            foreach(var file in files)
             {
                 Interlocked.Increment(ref cnt);
                 using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read))
@@ -99,11 +92,46 @@ namespace TestHarness
                 asset.Imported = now;
                 asset.XXHash = hash;
 
-                _db.Insert(asset, (id) => asset.Id = id);
+                _db.Insert(asset, (id) => asset.Id = id, true);
 
                 if ((cnt % 100) == 0)
                     Console.Write(".");
-            }));
+            }//));
+        }
+
+        static void TestCrypto()
+        {
+            //cryptosize = inputsize + (blocksize - (inputsize % blocksize)) + ivsize;
+            int cryptoSize = 74 + (16 - (74 % 16)) + 16;
+
+            byte[] key = null;
+            using (SHA256 sha256 = SHA256.Create())
+            {
+                key = sha256.ComputeHash(Encoding.UTF8.GetBytes("Jerrod's super secure password."));
+            }
+
+            MemDbAESEncryptor aes = new MemDbAESEncryptor(key);
+
+            int cryptoSize2 = MemDbAESEncryptor.CalculateCryptoByteLength(74);
+
+            string text = "This is just a sample statement used for encrypt/decrypt testing purposes.";
+            byte[] encrypted = null;
+            ReadOnlySpan<byte> input = Encoding.UTF8.GetBytes(text);
+            using (var ms = new MemoryStream())
+            {
+                aes.Encrypt(input, ms);
+                encrypted = new byte[ms.Length];
+                ms.Position = 0;
+                ms.Read(encrypted, 0, encrypted.Length);
+            }
+
+
+            byte[] raw = null;
+            using (var ms = new MemoryStream(encrypted))
+            {
+                raw = aes.Decrypt(ms, input.Length);
+            }
+            string roundTripText = Encoding.UTF8.GetString(raw);
         }
     }
 }

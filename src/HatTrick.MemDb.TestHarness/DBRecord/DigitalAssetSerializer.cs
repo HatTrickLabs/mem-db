@@ -1,14 +1,18 @@
 ﻿using System;
 using System.IO;
+using System.Text;
 
 namespace HatTrick.MemDb
 {
     public class DigitalAssetSerializer : IMemDbSerializer<DigitalAsset>
     {
+        #region ctors
         public DigitalAssetSerializer()
         {
         }
+        #endregion
 
+        #region serialize
         public void Serialize(DigitalAsset record, BinaryWriter to)
         {
             to.Write(record.Id);
@@ -22,6 +26,25 @@ namespace HatTrick.MemDb
             to.Write(record.XXHash);
         }
 
+        public byte[] Serialize(DigitalAsset record)
+        {
+            int capacity = sizeof(uint) + (sizeof(long) * 6) + 255;
+            byte[] utf8 = null;
+            using (var ms = new MemoryStream(capacity))
+            {
+                using (var writer = new BinaryWriter(ms, Encoding.UTF8, true))
+                {
+                    this.Serialize(record, writer);
+                }
+                utf8 = new byte[ms.Length];
+                ms.Position = 0;
+                ms.Read(utf8, 0, utf8.Length);
+            }
+            return utf8;
+        }
+        #endregion
+
+        #region deserialize
         public DigitalAsset Deserialize(BinaryReader from, int length)
         {
             var record = new DigitalAsset();
@@ -37,5 +60,20 @@ namespace HatTrick.MemDb
 
             return record;
         }
+
+        public DigitalAsset Deserialize(ReadOnlySpan<byte> from)
+        {
+            //TODO: yuck, this is extremely inefficient...refactor to just smash each prop right out of the readonly span.
+            DigitalAsset record = null;
+            using (var ms = new MemoryStream(from.ToArray()))
+            {
+                using (var reader = new BinaryReader(ms))
+                {
+                    record = this.Deserialize(reader, from.Length);
+                }
+            }
+            return record;
+        }
+        #endregion
     }
 }

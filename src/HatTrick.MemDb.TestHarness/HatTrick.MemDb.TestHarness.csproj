@@ -13,8 +13,6 @@
     <ProjectReference Include="..\HatTrick.MemDb\HatTrick.MemDb.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-    <PackageReference Include="System.Data.DataSetExtensions" Version="4.5.0" />
     <PackageReference Include="System.IO.Hashing" Version="9.0.0-preview.4.24266.19" />
   </ItemGroup>
 </Project>

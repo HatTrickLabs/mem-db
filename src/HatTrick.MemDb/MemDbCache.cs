@@ -426,8 +426,9 @@ namespace HatTrick.MemDb
         {
             this.EnsureMode(AccessMode.ReadWrite | AccessMode.AppendOnly, nameof(Insert));
 
-            //TODO: I don't think this MUST happen before DeepCopy...Kinda squirly.
-            //YES it does, we don't even know if they want the Id, but if they do, it MUST be applied WHEREVER they want it BEFORE DeepCopy
+            //hint: this must happen before deep copy...
+            //we don't even know if they want the Id, but if they do...
+            //it MUST be applied WHEREVER they want it BEFORE DeepCopy
             uint id = _persister.GetNextId();
             idCallback?.Invoke(id);
 
@@ -437,7 +438,7 @@ namespace HatTrick.MemDb
             {
                 lock (_recSyncLock)
                 {
-                    rec.SetCacheIndex(_records.Count);//TODO: When in append mode, _records is null
+                    rec.SetCacheIndex(_records.Count);
                     _records.Add(rec);
                 }
             }

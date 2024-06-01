@@ -49,14 +49,26 @@ namespace HatTrick.MemDb
         {
             JsonSerializer.Serialize(to.BaseStream, record, _options);
         }
+
+        public byte[] Serialize(T record)
+        {
+            byte[] utf8 = JsonSerializer.SerializeToUtf8Bytes<T>(record, _options);
+            return utf8;
+        }
         #endregion
 
         #region deserialize
         public T Deserialize(BinaryReader from, int length)
         {
             Span<byte> raw = length <= 2048 ? stackalloc byte[length] : new byte[length];
-            _ = from.BaseStream.Read(raw);
-            T val = JsonSerializer.Deserialize<T>(raw, _options);
+            from.BaseStream.ReadExactly(raw);
+            T val = this.Deserialize(raw);
+            return val;
+        }
+
+        public T Deserialize(ReadOnlySpan<byte> from)
+        {
+            T val = JsonSerializer.Deserialize<T>(from, _options);
             return val;
         }
         #endregion        

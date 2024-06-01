@@ -7,6 +7,10 @@ namespace HatTrick.MemDb
     {
         void Serialize(T record, BinaryWriter to);
 
+        byte[] Serialize(T record);
+
         T Deserialize(BinaryReader from, int length);
+
+        T Deserialize(ReadOnlySpan<byte> from);
     }
 }
