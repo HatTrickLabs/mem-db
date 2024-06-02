@@ -100,12 +100,16 @@ namespace HatTrick.MemDb
         }
         #endregion
 
-        #region get size
+        #region get total size
         private long GetTotalSize(RecordState state)
         {
+            Func<MemDbPointer, long> selector = (p) => p.IsEncrypted 
+                ? (long)MemDbAESEncryptor.CalculateCryptoByteLength(p.Length) 
+                : (long)p.Length;
+
             lock (_syncLock)
             {
-                return _pointers.Where(p => p.State == state).Select(p => (long)p.Length).DefaultIfEmpty().Sum();
+                return _pointers.Where(p => p.State == state).Select(selector).DefaultIfEmpty().Sum();
             }
         }
         #endregion
@@ -113,9 +117,13 @@ namespace HatTrick.MemDb
         #region get max records size
         private int GetMaxRecordSize(RecordState state)
         {
+            Func<MemDbPointer, int> selector = (p) => p.IsEncrypted
+                ? MemDbAESEncryptor.CalculateCryptoByteLength(p.Length)
+                : p.Length;
+
             lock (_syncLock)
             {
-                return _pointers.Where(p => p.State == state).Select(p => p.Length).DefaultIfEmpty().Max();
+                return _pointers.Where(p => p.State == state).Select(selector).DefaultIfEmpty().Max();
             }
         }
         #endregion
@@ -123,9 +131,13 @@ namespace HatTrick.MemDb
         #region get min records size
         private int GetMinRecordSize(RecordState state)
         {
+            Func<MemDbPointer, int> selector = (p) => p.IsEncrypted
+                ? MemDbAESEncryptor.CalculateCryptoByteLength(p.Length)
+                : p.Length;
+
             lock (_syncLock)
             {
-                return _pointers.Where(p => p.State == state).Select(p => p.Length).DefaultIfEmpty().Min();
+                return _pointers.Where(p => p.State == state).Select(selector).DefaultIfEmpty().Min();
             }
         }
         #endregion
@@ -164,6 +176,7 @@ namespace HatTrick.MemDb
                 {
                     _ = _pointers[record.MapIndex].MarkStale();
                     //sizeof(pointercount) + sizeof(lastId) + (idx * size) + sizeof(id)
+                    //TODO: shift this calc inside MemDbMap somehow.
                     fsMap.Position = sizeof(int) + sizeof(uint) + (record.MapIndex * MemDbPointer.Size) + sizeof(int);
                     fsMap.WriteByte((byte)record.State);
 
@@ -185,8 +198,8 @@ namespace HatTrick.MemDb
                 mapWriter.Write(_lastId);
 
                 fsMap.Position = fsMap.Length;
-                //TODO: refactor to start this for loop at the next index after prev flush
-                //we are only flushing additions
+                //TODO: refactor to start this for loop at the next index after
+                //prev flush as we are only flushing additions
                 for (int i = 0; i < _pointers.Count; i++)
                 {
                     var p = _pointers[i];
