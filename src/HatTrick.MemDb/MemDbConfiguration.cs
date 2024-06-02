@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace HatTrick.MemDb
 {
@@ -123,7 +125,43 @@ namespace HatTrick.MemDb
         #region encrypt with key
         public MemDbConfiguration<T> EncryptWithKey(Func<byte[]> encryptionKeyProvider)
         {
+            if (_encryptionKeyProvider is not null)
+                throw new InvalidOperationException("Encryption key already provided.");
+
             _encryptionKeyProvider = encryptionKeyProvider ?? throw new ArgumentNullException(nameof(encryptionKeyProvider));
+            return this;
+        }
+        #endregion
+
+        #region encrypt with password
+        public MemDbConfiguration<T> EncryptWithPassword(Func<string> encryptionPasswordProvider)
+        {
+            if (_encryptionKeyProvider is not null)
+                throw new InvalidOperationException("Encryption key already provided...Use one of password or key for encryption.");
+
+            if (encryptionPasswordProvider is null)
+                throw new ArgumentNullException(nameof(encryptionPasswordProvider));
+
+            string pw = encryptionPasswordProvider();
+            if (pw is null)
+                throw new InvalidOperationException($"Password provided via {nameof(encryptionPasswordProvider)} is null.");
+
+            if (pw == string.Empty)
+                throw new InvalidOperationException($"Password provided via {nameof(encryptionPasswordProvider)} is empty.");
+
+            if (pw.Length < 10)
+                throw new InvalidOperationException($"Password provided via {nameof(encryptionPasswordProvider)} must be at least 10 chars long.");
+
+            byte[] hash = null;
+            using (var sha256 = SHA256.Create())
+            {
+                hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(pw));
+            }
+
+            {
+                _encryptionKeyProvider = () => hash;
+            }
+
             return this;
         }
         #endregion
