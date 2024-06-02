@@ -26,7 +26,7 @@ namespace TestHarness
             MemDb.ConfigureFor<DigitalAsset>(datasetName, DbRoot)
                 .SerializeWith(() => new DigitalAssetSerializer())
                 .CloneWith(() => new DigitalAssetCloner())
-                .EncryptWithKey(() => new byte[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 })
+                .EncryptWithKey(() => new byte[] { 198, 1, 6, 8, 12, 1, 1, 1, 1, 88, 1, 1, 1, 1, 1, 9, 9, 9, 1, 1, 99, 1, 1, 1, 1, 1, 1, 1, 33, 1, 1, 77})
                 .ReadWrite()
                 .Register();
 
@@ -39,13 +39,12 @@ namespace TestHarness
                 Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
                 _sw.Start();
 
-                //_db.Delete(a => true);
-                //Console.WriteLine(_db.Count(a => string.Compare(a.Extension, ".jpg", true)  == 0));
-                //Console.WriteLine(_db.Count(a => string.Compare(a.Extension, ".jpeg", true) == 0));
-                //Console.WriteLine(_db.Count(a => string.Compare(a.Extension, ".png", true)  == 0));
-                //Console.WriteLine(_db.Count(a => string.Compare(a.Extension, ".csv", true)  == 0));
+                Console.WriteLine(_db.Count(a => string.Compare(a.Extension, ".jpg", true)  == 0));
+                Console.WriteLine(_db.Count(a => string.Compare(a.Extension, ".jpeg", true) == 0));
+                Console.WriteLine(_db.Count(a => string.Compare(a.Extension, ".png", true)  == 0));
+                Console.WriteLine(_db.Count(a => string.Compare(a.Extension, ".csv", true)  == 0));
 
-                //ImportAssets(@"d:\tmp\resumes");
+                //ImportAssets(@"d:\abc");
             }
 
             _sw.Stop();
@@ -67,19 +66,19 @@ namespace TestHarness
 
             string[] files = Directory.GetFiles(root, "*", ops);
             Console.WriteLine("Starting import of " + files.Length + " digital assets.");
-            XxHash64 xx64 = new XxHash64();
+            
             int cnt = 0;
-            //Parallel.ForEach(files, (file =>
-            foreach(var file in files)
+            Parallel.ForEach(files, (file =>
+            //foreach(var file in files)
             {
                 Interlocked.Increment(ref cnt);
+                XxHash64 xx64 = new XxHash64();
                 using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read))
                 {
                     xx64.Append(fs);
                 }
 
                 ulong hash = xx64.GetCurrentHashAsUInt64();
-                xx64.Reset();
 
                 FileInfo fi = new FileInfo(file);
                 DigitalAsset asset = new DigitalAsset();
@@ -96,7 +95,7 @@ namespace TestHarness
 
                 if ((cnt % 100) == 0)
                     Console.Write(".");
-            }//));
+            }));
         }
 
         static void TestCrypto()

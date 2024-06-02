@@ -63,7 +63,7 @@ namespace HatTrick.MemDb
 
         public DigitalAsset Deserialize(ReadOnlySpan<byte> from)
         {
-            //TODO: yuck, this is extremely inefficient...refactor to just smash each prop right out of the readonly span.
+            //TODO: this is extremely inefficient...refactor to just smash each prop right out of the readonly span.
             DigitalAsset record = null;
             using (var ms = new MemoryStream(from.ToArray()))
             {

@@ -29,10 +29,10 @@ namespace HatTrick.MemDb
         }
         #endregion
 
-        #region calculate crypto length
+        #region calculate crypto byte length
         public static int CalculateCryptoByteLength(int byteLength)
         {
-            //lets do everything in byte len vs bit to avoid cast to unsigned int
+            //do everything in byte len vs bit to avoid cast to unsigned int
 
             //cryptolen = (inputlen + (blocklen - (inputlen % blocklen))) + ivlen;
 
@@ -96,10 +96,13 @@ namespace HatTrick.MemDb
                 }
             }
 
-            //obviously the this AES implementation does not expect a stream full of intermingled...
-            //clear and encrypted data...It over F*cking reads the provided stream while buffering...
-            //this is just a sh*tty temp hack, I know exactly how much encrypted data I want decrypted...
-            //so I'm going to shift the stream position back to where it should have stopped consuming.
+            //Obviously this AES implementation does not expect a stream full of intermingled
+            //clear and encrypted data...The crypto stream over reads the provided input stream while buffering...
+            //This is just a hack, I know exactly how much encrypted data I want decrypted, so I'm going to
+            //shift the stream position back to where it should have stopped consuming.
+            //Its either this hack, or alloc ANOTHER stream instance for every encrypted record and copy
+            //the exact amount of encrypted data from the primary memdb.db file stream into the new stream 
+            //before calling Decrypt...This seems a bit more efficient.
             input.Position = initPos + MemDbAESEncryptor.CalculateCryptoByteLength(length);
 
             return raw;
