@@ -155,8 +155,9 @@ namespace HatTrick.MemDb
                     continue;
 
                 oldDb.Position = oPtr.Position;
-                oldDb.ReadExactly(buffer, 0, oPtr.Length);
+                oldDb.ReadExactly(buffer, 0, (oPtr.IsEncrypted) ? MemDbAESEncryptor.CalculateCryptoByteLength(oPtr.Length) : oPtr.Length);
 
+                //the pointer should always store the un-encrypted length...
                 var nPtr = new MemDbPointer(oPtr.Id, RecordState.Fresh, oPtr.IsEncrypted, (uint)newDb.Position, oPtr.Length);
                 pointers.Add(nPtr);
 
