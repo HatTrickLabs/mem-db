@@ -32,8 +32,6 @@ namespace HatTrick.MemDb
 
         public decimal Avg(Func<T, decimal> selector);
 
-        public Y[] FindDistinct<Y>(Converter<T, Y> converter) where Y : IConvertible;
-
         public T Find(Func<T, bool> where);
 
         public T[] FindAll(Func<T, bool> where);

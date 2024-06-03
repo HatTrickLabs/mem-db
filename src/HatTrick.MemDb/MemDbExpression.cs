@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace HatTrick.MemDb
@@ -208,6 +209,42 @@ namespace HatTrick.MemDb
 
             decimal val = set.Average(selector);
             return val;
+        }
+        #endregion
+
+        #region select
+        public Y[] Select<Y>(Func<T, Y> selector)
+        {
+            Type t = typeof(Y);
+            bool allowShallowCopy = t == typeof(string) || t.IsValueType;
+            
+            //we only want to incur the cost of deep copy if necessary...
+            //returning non ref types does not expose any risk.
+            T[] set = _queryExecutor(this, !allowShallowCopy);
+            if (set.Length == 0)
+                return Array.Empty<Y>();
+
+            Y[] result = set.Select(selector).ToArray();
+
+            return result;
+        }
+        #endregion
+
+        #region select distinct
+        public Y[] SelectDistinct<Y>(Func<T, Y> selector)// where Y : IConvertible
+        {
+            Type t = typeof(Y);
+            bool allowShallowCopy = t == typeof(string) || t.IsValueType;
+
+            //we only want to incur the cost of deep copy if necessary...
+            //returning non ref types does not expose any risk.
+            T[] set = _queryExecutor(this, !allowShallowCopy);
+            if (set.Length == 0)
+                return Array.Empty<Y>();
+
+            Y[] result = set.Select(selector).Distinct().ToArray();
+
+            return result;
         }
         #endregion
 

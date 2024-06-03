@@ -284,18 +284,6 @@ namespace HatTrick.MemDb
         }
         #endregion
 
-        #region find distinct
-        public Y[] FindDistinct<Y>(Converter<T, Y> converter) where Y : IConvertible
-        {
-            this.EnsureReadMode(nameof(FindDistinct));
-
-            lock (_recSyncLock)
-            {
-                return _records.Where(r => r.State == RecordState.Fresh).Select((r) => converter(r.Value)).Distinct().ToArray();
-            }
-        }
-        #endregion
-
         #region find
         public T Find(Func<T, bool> where)
         {

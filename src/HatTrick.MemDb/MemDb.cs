@@ -173,13 +173,6 @@ namespace HatTrick.MemDb
         }
         #endregion
 
-        #region find distinct
-        public Y[] FindDistinct<Y>(Converter<T, Y> converter) where Y : IConvertible
-        {
-            return _cache.FindDistinct<Y>(converter);
-        }
-        #endregion
-
         #region find
         public T Find(Func<T, bool> where)
         {
