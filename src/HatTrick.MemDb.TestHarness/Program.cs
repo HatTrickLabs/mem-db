@@ -26,10 +26,10 @@ namespace TestHarness
             //return;
 
             MemDb.ConfigureFor<DigitalAsset>(datasetName, DbRoot)
-                .SerializeWith(() => new DigitalAssetSerializer())
-                .CloneWith(() => new DigitalAssetCloner())
+                //.SerializeWith(() => new DigitalAssetSerializer())
+                //.CloneWith(() => new DigitalAssetCloner())
                 //.EncryptWithKey(() => new byte[] { 198, 1, 6, 8, 12, 1, 1, 1, 1, 88, 1, 1, 1, 1, 1, 9, 9, 9, 1, 1, 99, 1, 1, 1, 1, 1, 1, 1, 33, 1, 1, 77 })
-                .EncryptWithPassword(() => "Jerrod's badass password...")
+                .EncryptWithPassword(() => "Jerrod's super simple password...")
                 .ReadWrite()
                 .Register();
 
@@ -42,11 +42,11 @@ namespace TestHarness
                 Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
                 _sw.Start();
 
-                //List<DigitalAsset> aaa = new List<DigitalAsset>(_db.FindAll(a => true));
+                List<DigitalAsset> aaa = new List<DigitalAsset>(_db.FindAll(a => true));
                 //aaa.OrderByDescending(a => a.Created, (DateTime a, DateTime b) => a.CompareTo(b));
-                //ulong xxhash = aaa.GroupBy(a => a.XXHash).OrderByDescending(g => g.Count()).FirstOrDefault().Key;
-
-                ulong[] hashes = _db.Query().OrderBy((a, b) => a.XXHash.CompareTo(b.XXHash)).Select(a => a.XXHash);
+                ulong xxhash = aaa.GroupBy(a => a.XXHash).OrderByDescending(g => g.Count()).FirstOrDefault().Key;
+                (ulong, uint) key = aaa.GroupBy(a => (a.XXHash, a.Id)).OrderByDescending(g => g.Count()).FirstOrDefault().Key;
+                ulong[] hashes = _db.Query().OrderBy((a, b) => a.XXHash.CompareTo(b.XXHash)).SelectDistinct(a => a.XXHash);
                 Console.WriteLine(_db.Count(a => string.Compare(a.Extension, ".jpg", true) == 0));
                 Console.WriteLine(_db.Count(a => string.Compare(a.Extension, ".jpeg", true) == 0));
                 Console.WriteLine(_db.Count(a => string.Compare(a.Extension, ".png", true) == 0));

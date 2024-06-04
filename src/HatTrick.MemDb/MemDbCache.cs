@@ -17,7 +17,7 @@ namespace HatTrick.MemDb
         private AccessMode _mode;
         #endregion
 
-        #region constructors
+        #region ctors
         internal MemDbCache(string datasetName, IMemDbCloner<T> cloner, IMemDbPersister<T> persister)
         {
             if (datasetName is null)

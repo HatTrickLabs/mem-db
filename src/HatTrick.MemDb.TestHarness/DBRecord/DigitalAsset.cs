@@ -20,8 +20,6 @@ namespace HatTrick.MemDb
         public string FullPath => Path.Join(this.Directory, this.Name);
         public string Extension => Path.GetExtension(this.Name);
 
-        public List<DateTime> AccessedAt { get; set; } = new List<DateTime>();
-
         public override string ToString()
         {
             return this.Name;

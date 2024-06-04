@@ -93,7 +93,8 @@ namespace HatTrick.MemDb
                 _map.InitializeExisting();
             }
 
-            _fileSyncTimer = new Timer(new TimerCallback(this.Flush), null, (1000 * 5), Timeout.Infinite); //5 seconds...
+            if (_mode != AccessMode.ReadOnly)
+                _fileSyncTimer = new Timer(new TimerCallback(this.Flush), null, (1000 * 5), Timeout.Infinite); //5 seconds...
         }
         #endregion
 
@@ -146,7 +147,7 @@ namespace HatTrick.MemDb
         {
             this.EnsureMode(AccessMode.ReadOnly | AccessMode.ReadWrite, nameof(ReadAll));
 
-            //TODO: this should at most be called ONE time on read or readwrite initialization of cache...ensure that somehowe.
+            //TODO: this should at most be called ONE time on read or readwrite initialization of cache...ensure that...
             int encrypted = 0;
             List<MemDbRecord<T>> records = null;
             lock (_mapSyncLock)
@@ -272,8 +273,11 @@ namespace HatTrick.MemDb
             if (state == null && _isClosed)
                 return;
 
-            this.AppendInsertedItems();
-            this.UpdateItemStates();
+            if (_mode == AccessMode.ReadWrite || _mode == AccessMode.AppendOnly)
+                this.AppendInsertedItems();
+
+            if (_mode == AccessMode.ReadWrite)
+                this.UpdateItemStates();
 
             if (!_isClosed)
             {
