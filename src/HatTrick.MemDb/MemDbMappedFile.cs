@@ -165,14 +165,17 @@ namespace HatTrick.MemDb
 
                         if (pointer.State != RecordState.Fresh)
                         {
-                            fsDb.Position += pointer.Length;
+                            if (pointer.IsEncrypted)
+                                fsDb.Position += MemDbAESEncryptor.CalculateCryptoByteLength(pointer.Length);
+
+                            else
+                                fsDb.Position += pointer.Length;
+
                             continue;
                         }
 
                         if (pointer.IsEncrypted && !this.IsEncryptionReady)
                         {
-                            //remember pointer.Length is the un-encrypted record length, must shift
-                            //forward the actual length of the encrypted data
                             fsDb.Position += MemDbAESEncryptor.CalculateCryptoByteLength(pointer.Length);
                             encrypted += 1;
                             continue;
