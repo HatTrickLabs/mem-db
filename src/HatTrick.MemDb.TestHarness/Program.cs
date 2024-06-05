@@ -26,8 +26,8 @@ namespace TestHarness
             //return;
 
             MemDb.ConfigureFor<DigitalAsset>(datasetName, DbRoot)
-                //.SerializeWith(() => new DigitalAssetSerializer())
-                //.CloneWith(() => new DigitalAssetCloner())
+                .SerializeWith(() => new DigitalAssetSerializer())
+                .CloneWith(() => new DigitalAssetCloner())
                 //.EncryptWithKey(() => new byte[] { 198, 1, 6, 8, 12, 1, 1, 1, 1, 88, 1, 1, 1, 1, 1, 9, 9, 9, 1, 1, 99, 1, 1, 1, 1, 1, 1, 1, 33, 1, 1, 77 })
                 .EncryptWithPassword(() => "Jerrod's super simple password...")
                 .ReadWrite()
@@ -42,32 +42,56 @@ namespace TestHarness
                 Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
                 _sw.Start();
 
-                //List<DigitalAsset> aaa = new List<DigitalAsset>(_db.FindAll(a => true));
-                //aaa.OrderByDescending(a => a.Created, (DateTime a, DateTime b) => a.CompareTo(b));
-                //ulong xxhash = aaa.GroupBy(a => a.XXHash).OrderByDescending(g => g.Count()).FirstOrDefault().Key;
-                //(ulong, uint) key = aaa.GroupBy(a => (a.XXHash, a.Id)).OrderByDescending(g => g.Count()).FirstOrDefault().Key;
-                //ulong[] hashes = _db.Query().OrderBy((a, b) => a.XXHash.CompareTo(b.XXHash)).SelectDistinct(a => a.XXHash);
-                Console.WriteLine(_db.Count(a => string.Compare(a.Extension, ".jpg", true) == 0));
-                Console.WriteLine(_db.Count(a => string.Compare(a.Extension, ".jpeg", true) == 0));
-                Console.WriteLine(_db.Count(a => string.Compare(a.Extension, ".png", true) == 0));
-                Console.WriteLine(_db.Count(a => string.Compare(a.Extension, ".csv", true) == 0));
-
-                var exts =_db.Query().Where(a => true)
-                    .OrderBy((a, b) => a.Extension.CompareTo(b.Extension))
-                    .GroupBy(a => a.Extension)
-                    .Having(g => g.Average(a => a.Length) > 2048)
-                    .Select(g => (g.Key, g.Average(a => a.Length)));
-
-                //var set = _db.FindAll(a => true);
-                //var grouping = set.ToLookup(a => (a.XXHash, a.Extension)).Where(g => g.Count() > 1).Select(g => g.Key);
+                ulong[] dupeHashes =_db.Query().GroupBy(a => a.XXHash).Having(g => g.Count() > 1).Select(g => g.Key);
 
                 //ImportAssets(@"D:\tmp");
+                //UpdateAssetsWithXXHash(@"D:\tmp");
             }
 
             _sw.Stop();
             Console.WriteLine("Process completed in " + _sw.ElapsedMilliseconds + " milliseconds.");
             Console.WriteLine("Press [Enter] to exit.");
             Console.ReadLine();
+        }
+
+        static void UpdateAssetsWithXXHash(string root)
+        {
+            DateTime now = DateTime.Now;
+
+            var ops = new EnumerationOptions();
+            ops.AttributesToSkip = FileAttributes.Hidden | FileAttributes.System | FileAttributes.Temporary;
+            ops.IgnoreInaccessible = true;
+            ops.ReturnSpecialDirectories = false;
+            ops.RecurseSubdirectories = true;
+            ops.MatchType = MatchType.Simple;
+
+            string[] files = Directory.GetFiles(root, "*", ops);
+            Console.WriteLine("Starting update of " + files.Length + " digital assets.");
+
+            long at = 0;
+            Parallel.ForEach(files, (file) =>
+            {
+                Interlocked.Increment(ref at);
+
+                XxHash64 xx64 = new XxHash64();
+                using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read))
+                {
+                    xx64.Append(fs);
+                }
+                ulong hash = xx64.GetCurrentHashAsUInt64();
+
+                int cnt = _db.Update(
+                    apply: (a) => a.XXHash = hash, 
+                    where: (a) => a.Name == Path.GetFileName(file) && a.Directory == Path.GetDirectoryName(file)
+                );
+
+                if (cnt == 0)
+                    Console.WriteLine("No asset found for file: " + file);
+
+                long x = Interlocked.Read(ref at);
+                if ((x % 100) == 0)
+                    Console.Write('.');
+            });
         }
 
         static void ImportAssets(string root)
@@ -89,13 +113,13 @@ namespace TestHarness
             //foreach(var file in files)
             {
                 Interlocked.Increment(ref cnt);
-                XxHash64 xx64 = new XxHash64();
-                using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read))
-                {
-                    xx64.Append(fs);
-                }
+                //XxHash64 xx64 = new XxHash64();
+                //using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read))
+                //{
+                //    xx64.Append(fs);
+                //}
 
-                ulong hash = xx64.GetCurrentHashAsUInt64();
+                //ulong hash = xx64.GetCurrentHashAsUInt64();
 
                 FileInfo fi = new FileInfo(file);
                 DigitalAsset asset = new DigitalAsset();
@@ -106,9 +130,9 @@ namespace TestHarness
                 asset.LastWrite = fi.LastWriteTime;
                 asset.Length = fi.Length;
                 asset.Imported = now;
-                asset.XXHash = hash;
+                //asset.XXHash = hash;
 
-                _db.Insert(asset, (id) => asset.Id = id, true);
+                _db.Insert(asset, (id) => asset.Id = id, false);
 
                 if ((cnt % 100) == 0)
                     Console.Write(".");

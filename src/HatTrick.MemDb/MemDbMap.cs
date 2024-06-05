@@ -34,7 +34,7 @@ namespace HatTrick.MemDb
 
         internal long TotalFreshSize => this.GetTotalSize(RecordState.Fresh);
         internal long TotalStaleSize => this.GetTotalSize(RecordState.Stale);
-        internal long TotalDeletedSize => this.GetTotalSize(RecordState.Stale);
+        internal long TotalDeletedSize => this.GetTotalSize(RecordState.Deleted);
 
         internal int MaxFreshRecordSize => this.GetMaxRecordSize(RecordState.Fresh);
         internal int MaxStaleRecordSize => this.GetMaxRecordSize(RecordState.Stale);
