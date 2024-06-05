@@ -42,15 +42,24 @@ namespace TestHarness
                 Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
                 _sw.Start();
 
-                List<DigitalAsset> aaa = new List<DigitalAsset>(_db.FindAll(a => true));
+                //List<DigitalAsset> aaa = new List<DigitalAsset>(_db.FindAll(a => true));
                 //aaa.OrderByDescending(a => a.Created, (DateTime a, DateTime b) => a.CompareTo(b));
-                ulong xxhash = aaa.GroupBy(a => a.XXHash).OrderByDescending(g => g.Count()).FirstOrDefault().Key;
-                (ulong, uint) key = aaa.GroupBy(a => (a.XXHash, a.Id)).OrderByDescending(g => g.Count()).FirstOrDefault().Key;
-                ulong[] hashes = _db.Query().OrderBy((a, b) => a.XXHash.CompareTo(b.XXHash)).SelectDistinct(a => a.XXHash);
+                //ulong xxhash = aaa.GroupBy(a => a.XXHash).OrderByDescending(g => g.Count()).FirstOrDefault().Key;
+                //(ulong, uint) key = aaa.GroupBy(a => (a.XXHash, a.Id)).OrderByDescending(g => g.Count()).FirstOrDefault().Key;
+                //ulong[] hashes = _db.Query().OrderBy((a, b) => a.XXHash.CompareTo(b.XXHash)).SelectDistinct(a => a.XXHash);
                 Console.WriteLine(_db.Count(a => string.Compare(a.Extension, ".jpg", true) == 0));
                 Console.WriteLine(_db.Count(a => string.Compare(a.Extension, ".jpeg", true) == 0));
                 Console.WriteLine(_db.Count(a => string.Compare(a.Extension, ".png", true) == 0));
                 Console.WriteLine(_db.Count(a => string.Compare(a.Extension, ".csv", true) == 0));
+
+                var exts =_db.Query().Where(a => true)
+                    .OrderBy((a, b) => a.Extension.CompareTo(b.Extension))
+                    .GroupBy(a => a.Extension)
+                    .Having(g => g.Average(a => a.Length) > 2048)
+                    .Select(g => (g.Key, g.Average(a => a.Length)));
+
+                //var set = _db.FindAll(a => true);
+                //var grouping = set.ToLookup(a => (a.XXHash, a.Extension)).Where(g => g.Count() > 1).Select(g => g.Key);
 
                 //ImportAssets(@"D:\tmp");
             }

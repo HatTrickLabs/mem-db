@@ -7,9 +7,10 @@ namespace HatTrick.MemDb
     public class MemDbExpression<T> where T : class, new()
     {
         #region internals
-        private ExecuteQuery _queryExecutor;
-        private ExecuteUpdate _updateExecutor;
-        private ExecuteDelete _deleteExecutor;
+        private ExecuteQuery _query;
+        private ExecuteUpdate _update;
+        private ExecuteDelete _delete;
+
         private Func<T, bool> _filter;
         private Comparison<T> _orderBy;
         private int? _skip;
@@ -17,6 +18,8 @@ namespace HatTrick.MemDb
         #endregion
 
         #region interface
+        internal MemDbExpression<T>.ExecuteQuery Query  => _query;
+
         internal bool HasFilter => _filter is not null;
         internal Func<T, bool> Filter => _filter ?? ((x) => true);
 
@@ -39,18 +42,18 @@ namespace HatTrick.MemDb
         #endregion
 
         #region constructors
-        internal MemDbExpression(ExecuteQuery queryExecutor, ExecuteUpdate updateExecutor, ExecuteDelete deleteExecutor)
+        internal MemDbExpression(ExecuteQuery query, ExecuteUpdate update, ExecuteDelete delete)
         {
-            _queryExecutor = queryExecutor ?? throw new ArgumentNullException(nameof(queryExecutor));
-            _updateExecutor = updateExecutor ?? throw new ArgumentNullException(nameof(updateExecutor)); ;
-            _deleteExecutor = deleteExecutor ?? throw new ArgumentNullException(nameof(deleteExecutor)); ;
+            _query = query ?? throw new ArgumentNullException(nameof(query));
+            _update = update ?? throw new ArgumentNullException(nameof(update)); ;
+            _delete = delete ?? throw new ArgumentNullException(nameof(delete)); ;
         }
         #endregion
 
         #region where
-        public MemDbExpression<T> Where(Func<T, bool> func)
+        public MemDbExpression<T> Where(Func<T, bool> predicate)
         {
-            _filter = func;
+            _filter = predicate;
             return this;
         }
         #endregion
@@ -64,6 +67,13 @@ namespace HatTrick.MemDb
         #endregion
 
         #region group by
+        public IMemDbGroupedExpression<TKey, T> GroupBy<TKey>(Func<T, TKey> keySelector)
+        {
+            if (keySelector is null)
+                throw new ArgumentNullException(nameof(keySelector));
+
+            return new MemDbGroupedExpression<TKey, T>(keySelector, this);
+        }
         #endregion
 
         #region skip
@@ -85,7 +95,7 @@ namespace HatTrick.MemDb
         #region sum
         public int Sum(Func<T, int> selector)
         {
-            T[] set = _queryExecutor(this, false);
+            T[] set = _query(this, false);
             if (set.Length == 0)
                 return 0;
 
@@ -95,7 +105,7 @@ namespace HatTrick.MemDb
 
         public long Sum(Func<T, long> selector)
         {
-            T[] set = _queryExecutor(this, false);
+            T[] set = _query(this, false);
             if (set.Length == 0)
                 return 0;
 
@@ -105,7 +115,7 @@ namespace HatTrick.MemDb
 
         public float Sum(Func<T, float> selector)
         {
-            T[] set = _queryExecutor(this, false);
+            T[] set = _query(this, false);
             if (set.Length == 0)
                 return 0;
 
@@ -115,7 +125,7 @@ namespace HatTrick.MemDb
 
         public double Sum(Func<T, double> selector)
         {
-            T[] set = _queryExecutor(this, false);
+            T[] set = _query(this, false);
             if (set.Length == 0)
                 return 0;
 
@@ -125,7 +135,7 @@ namespace HatTrick.MemDb
 
         public decimal Sum(Func<T, decimal> selector)
         {
-            T[] set = _queryExecutor(this, false);
+            T[] set = _query(this, false);
             if (set.Length == 0)
                 return 0;
 
@@ -137,7 +147,7 @@ namespace HatTrick.MemDb
         #region max
         public Y Max<Y>(Func<T, Y> func)
         {
-            T[] set = _queryExecutor(this, false);
+            T[] set = _query(this, false);
             if (set.Length == 0)
                 return default(Y);
 
@@ -150,7 +160,7 @@ namespace HatTrick.MemDb
         #region min
         public Y Min<Y>(Func<T, Y> func)
         {
-            T[] set = _queryExecutor(this, false);
+            T[] set = _query(this, false);
             if (set.Length == 0)
                 return default(Y);
 
@@ -163,7 +173,7 @@ namespace HatTrick.MemDb
         #region avg
         public double Avg(Func<T, int> selector)
         {
-            T[] set = _queryExecutor(this, false);
+            T[] set = _query(this, false);
             if (set.Length == 0)
                 return 0;
 
@@ -173,7 +183,7 @@ namespace HatTrick.MemDb
 
         public double Avg(Func<T, long> selector)
         {
-            T[] set = _queryExecutor(this, false);
+            T[] set = _query(this, false);
             if (set.Length == 0)
                 return 0;
 
@@ -183,7 +193,7 @@ namespace HatTrick.MemDb
 
         public float Avg(Func<T, float> selector)
         {
-            T[] set = _queryExecutor(this, false);
+            T[] set = _query(this, false);
             if (set.Length == 0)
                 return 0;
 
@@ -193,7 +203,7 @@ namespace HatTrick.MemDb
 
         public double Avg(Func<T, double> selector)
         {
-            T[] set = _queryExecutor(this, false);
+            T[] set = _query(this, false);
             if (set.Length == 0)
                 return 0;
 
@@ -203,7 +213,7 @@ namespace HatTrick.MemDb
 
         public decimal Avg(Func<T, decimal> selector)
         {
-            T[] set = _queryExecutor(this, false);
+            T[] set = _query(this, false);
             if (set.Length == 0)
                 return 0;
 
@@ -220,7 +230,7 @@ namespace HatTrick.MemDb
             
             //we only want to incur the cost of deep copy if necessary...
             //returning non ref types does not expose any risk.
-            T[] set = _queryExecutor(this, !allowShallowCopy);
+            T[] set = _query(this, !allowShallowCopy);
             if (set.Length == 0)
                 return Array.Empty<Y>();
 
@@ -238,7 +248,7 @@ namespace HatTrick.MemDb
 
             //we only want to incur the cost of deep copy if necessary...
             //returning non ref types does not expose any risk.
-            T[] set = _queryExecutor(this, !allowShallowCopy);
+            T[] set = _query(this, !allowShallowCopy);
             if (set.Length == 0)
                 return Array.Empty<Y>();
 
@@ -251,7 +261,7 @@ namespace HatTrick.MemDb
         #region to array
         public T[] ToArray()
         {
-            return _queryExecutor(this, true);
+            return _query(this, true);
         }
         #endregion
 
@@ -261,14 +271,14 @@ namespace HatTrick.MemDb
             if (apply is null)
                 throw new ArgumentNullException(nameof(apply));
 
-            return _updateExecutor(this, apply);
+            return _update(this, apply);
         }
         #endregion
 
         #region delete
         public int Delete()
         {
-            return _deleteExecutor(this);
+            return _delete(this);
         }
         #endregion
     }
