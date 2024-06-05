@@ -155,13 +155,15 @@ namespace HatTrick.MemDb
                     continue;
 
                 oldDb.Position = oPtr.Position;
-                oldDb.ReadExactly(buffer, 0, (oPtr.IsEncrypted) ? MemDbAESEncryptor.CalculateCryptoByteLength(oPtr.Length) : oPtr.Length);
+                int actualLen = oPtr.IsEncrypted ? MemDbAESEncryptor.CalculateCryptoByteLength(oPtr.Length) : oPtr.Length;
+
+                oldDb.ReadExactly(buffer, 0, actualLen);
 
                 //the pointer should always store the un-encrypted length...
                 var nPtr = new MemDbPointer(oPtr.Id, RecordState.Fresh, oPtr.IsEncrypted, (uint)newDb.Position, oPtr.Length);
                 pointers.Add(nPtr);
 
-                newDb.Write(buffer, 0, oPtr.Length);
+                newDb.Write(buffer, 0, actualLen);
             }
 
             //write the defragged map file
