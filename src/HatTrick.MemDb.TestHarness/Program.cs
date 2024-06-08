@@ -29,7 +29,7 @@ namespace TestHarness
                 .SerializeWith(() => new DigitalAssetSerializer())
                 .CloneWith(() => new DigitalAssetCloner())
                 //.EncryptWithKey(() => new byte[] { 198, 1, 6, 8, 12, 1, 1, 1, 1, 88, 1, 1, 1, 1, 1, 9, 9, 9, 1, 1, 99, 1, 1, 1, 1, 1, 1, 1, 33, 1, 1, 77 })
-                .EncryptWithPassword(() => "Jerrod's super simple password...")
+                .EncryptWithPassword(() => "Jerrod's super simple password...!!!")
                 .ReadWrite()
                 .Register();
 
@@ -42,16 +42,34 @@ namespace TestHarness
                 Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
                 _sw.Start();
 
-                ulong[] dupeHashes =_db.Query().GroupBy(a => a.XXHash).Having(g => g.Count() > 1).Select(g => g.Key);
+
+                //QUERY ... find the avg length of both .jpg and .png files with groupby and avg
+
+                var result = _db.Query()
+                    .Where(a => a.Extension == ".jpg" || a.Extension == ".png")
+                    .GroupBy(a => a.Extension)
+                    .Select(g => (g.Key, g.Average(a => a.Length)))
+                    .ToArray();
 
                 //ImportAssets(@"D:\tmp");
                 //UpdateAssetsWithXXHash(@"D:\tmp");
+                //ImportAssets(@"C:\Users\jerrod.eiman\Pictures");
+                //UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Pictures");
             }
 
             _sw.Stop();
             Console.WriteLine("Process completed in " + _sw.ElapsedMilliseconds + " milliseconds.");
             Console.WriteLine("Press [Enter] to exit.");
             Console.ReadLine();
+        }
+
+        static void ConcurrentQueryTest(int count)
+        {
+            Parallel.For(0, count, (i) =>
+            {
+                var sets = _db.Query().GroupBy(a => a.Extension.ToLower()).Having(g => g.Count() > 25).Select(g => (g.Key, g.Count())).ToArray();
+                Array.Sort<(string key, int cnt)>(sets, (a, b) => b.cnt.CompareTo(a.cnt));
+            });
         }
 
         static void UpdateAssetsWithXXHash(string root)
@@ -82,7 +100,7 @@ namespace TestHarness
 
                 int cnt = _db.Update(
                     apply: (a) => a.XXHash = hash, 
-                    where: (a) => a.Name == Path.GetFileName(file) && a.Directory == Path.GetDirectoryName(file)
+                    where: (a) => a.XXHash == 0 && a.Name == Path.GetFileName(file) && a.Directory == Path.GetDirectoryName(file)
                 );
 
                 if (cnt == 0)

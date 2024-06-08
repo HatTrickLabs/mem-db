@@ -8,30 +8,6 @@ namespace HatTrick.MemDb
 
         public int Count(Func<T, bool> selector);
 
-        public Y Max<Y>(Func<T, Y> selector);
-
-        public Y Min<Y>(Func<T, Y> selector);
-
-        public int Sum(Func<T, int> selector);
-
-        public long Sum(Func<T, long> selector);
-
-        public float Sum(Func<T, float> selector);
-
-        public double Sum(Func<T, double> selector);
-
-        public decimal Sum(Func<T, decimal> selector);
-
-        public double Avg(Func<T, int> selector);
-
-        public double Avg(Func<T, long> selector);
-
-        public float Avg(Func<T, float> selector);
-
-        public double Avg(Func<T, double> selector);
-
-        public decimal Avg(Func<T, decimal> selector);
-
         public T Find(Func<T, bool> where);
 
         public T[] FindAll(Func<T, bool> where);

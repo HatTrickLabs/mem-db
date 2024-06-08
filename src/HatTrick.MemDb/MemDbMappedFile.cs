@@ -142,10 +142,10 @@ namespace HatTrick.MemDb
         }
         #endregion
 
-        #region read all
-        public IList<MemDbRecord<T>> ReadAll()
+        #region initialize mapped records
+        public IList<MemDbRecord<T>> InitializeMappedRecords()
         {
-            this.EnsureMode(AccessMode.ReadOnly | AccessMode.ReadWrite, nameof(ReadAll));
+            this.EnsureMode(AccessMode.ReadOnly | AccessMode.ReadWrite, nameof(Initialize));
 
             //TODO: this should at most be called ONE time on read or readwrite initialization of cache...ensure that...
             int encrypted = 0;

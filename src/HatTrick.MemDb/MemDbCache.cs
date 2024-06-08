@@ -49,7 +49,7 @@ namespace HatTrick.MemDb
             int recCount = _persister.RecordCount;
             int capacity = _mode == AccessMode.ReadOnly ? recCount : (int)(recCount * 1.1);
             _records = new List<MemDbRecord<T>>(capacity);
-            _records.AddRange(_persister.ReadAll());
+            _records.AddRange(_persister.InitializeMappedRecords());
         }
         #endregion
 
@@ -90,197 +90,6 @@ namespace HatTrick.MemDb
             {
                 return _records.Count(r => r.State == RecordState.Fresh && selector(r.Value));
             }
-        }
-        #endregion
-
-        #region max
-        public Y Max<Y>(Func<T, Y> selector)
-        {
-            this.EnsureReadMode(nameof(Max));
-
-            Y max = default(Y);
-            lock (_recSyncLock)
-            {
-                if (_records.Count > 0)
-                {
-                    max = _records.Where(r => r.State == RecordState.Fresh).Max<MemDbRecord<T>, Y>((r) => selector(r.Value));
-                }
-            }
-            return max;
-        }
-        #endregion
-
-        #region min
-        public Y Min<Y>(Func<T, Y> selector)
-        {
-            this.EnsureReadMode(nameof(Min));
-
-            Y min = default(Y);
-            lock (_recSyncLock)
-            {
-                if (_records.Count > 0)
-                {
-                    min = _records.Where(r => r.State == RecordState.Fresh).Min<MemDbRecord<T>, Y>((r) => selector(r.Value));
-                }
-            }
-            return min;
-        }
-        #endregion
-
-        #region sum
-        //TODO: why does sum have 5 distinct sigs instead of just one Sum(Func<T, Y> selector)
-        //Actually need 5 MORE for the nullable variants.
-        //Ask Microsoft
-        public int Sum(Func<T, int> selector)
-        {
-            this.EnsureReadMode(nameof(Sum));
-
-            int sum = default(int);
-            lock (_recSyncLock)
-            {
-                if (_records.Count > 0)
-                {
-                    sum = _records.Where(r => r.State == RecordState.Fresh).Sum((r) => selector(r.Value));
-                }
-            }
-            return sum;
-        }
-
-        public long Sum(Func<T, long> selector)
-        {
-            this.EnsureReadMode(nameof(Sum));
-
-            long sum = default(long);
-            lock (_recSyncLock)
-            {
-                if (_records.Count > 0)
-                {
-                    sum = _records.Where(r => r.State == RecordState.Fresh).Sum((r) => selector(r.Value));
-                }
-            }
-            return sum;
-        }
-
-        public float Sum(Func<T, float> selector)
-        {
-            this.EnsureReadMode(nameof(Sum));
-
-            float sum = default(float);
-            lock (_recSyncLock)
-            {
-                if (_records.Count > 0)
-                {
-                    sum = _records.Where(r => r.State == RecordState.Fresh).Sum((r) => selector(r.Value));
-                }
-            }
-            return sum;
-        }
-
-        public double Sum(Func<T, double> selector)
-        {
-            this.EnsureReadMode(nameof(Sum));
-
-            double sum = default(double);
-            lock (_recSyncLock)
-            {
-                if (_records.Count > 0)
-                {
-                    sum = _records.Where(r => r.State == RecordState.Fresh).Sum((r) => selector(r.Value));
-                }
-            }
-            return sum;
-        }
-
-        public decimal Sum(Func<T, decimal> selector)
-        {
-            this.EnsureReadMode(nameof(Sum));
-
-            decimal sum = default(decimal);
-            lock (_recSyncLock)
-            {
-                if (_records.Count > 0)
-                {
-                    sum = _records.Where(r => r.State == RecordState.Fresh).Sum((r) => selector(r.Value));
-                }
-            }
-            return sum;
-        }
-        #endregion
-
-        #region avg
-        public double Avg(Func<T, int> selector)
-        {
-            this.EnsureReadMode(nameof(Avg));
-
-            double avg = default(double);
-            lock (_recSyncLock)
-            {
-                if (_records.Count > 0)
-                {
-                    avg = _records.Where(r => r.State == RecordState.Fresh).Average((r) => selector(r.Value));
-                }
-            }
-            return avg;
-        }
-
-        public double Avg(Func<T, long> selector)
-        {
-            this.EnsureReadMode(nameof(Avg));
-
-            double avg = default(double);
-            lock (_recSyncLock)
-            {
-                if (_records.Count > 0)
-                {
-                    avg = _records.Where(r => r.State == RecordState.Fresh).Average((r) => selector(r.Value));
-                }
-            }
-            return avg;
-        }
-
-        public float Avg(Func<T, float> selector)
-        {
-            this.EnsureReadMode(nameof(Avg));
-
-            float avg = default(float);
-            lock (_recSyncLock)
-            {
-                if (_records.Count > 0)
-                {
-                    avg = _records.Where(r => r.State == RecordState.Fresh).Average((r) => selector(r.Value));
-                }
-            }
-            return avg;
-        }
-
-        public double Avg(Func<T, double> selector)
-        {
-            this.EnsureReadMode(nameof(Avg));
-
-            double avg = default(double);
-            lock (_recSyncLock)
-            {
-                if (_records.Count > 0)
-                {
-                    avg = _records.Where(r => r.State == RecordState.Fresh).Average((r) => selector(r.Value));
-                }
-            }
-            return avg;
-        }
-
-        public decimal Avg(Func<T, decimal> selector)
-        {
-            this.EnsureReadMode(nameof(Avg));
-
-            decimal avg = default(decimal);
-            lock (_recSyncLock)
-            {
-                if (_records.Count > 0)
-                {
-                    avg = _records.Where(r => r.State == RecordState.Fresh).Average((r) => selector(r.Value));
-                }
-            }
-            return avg;
         }
         #endregion
 
@@ -346,7 +155,7 @@ namespace HatTrick.MemDb
                 if (matches.Length == 0 || (expression.HasSkip && expression.SkipCount >= matches.Length))
                     goto EMPTY;
 
-                if (expression.HasOrderBy)
+                if (expression.HasOrderBy && matches.Length > 1)
                     Array.Sort<T>(matches, expression.OrderByComparison);
 
                 if (expression.HasSkip)
@@ -456,7 +265,10 @@ namespace HatTrick.MemDb
                     for (int i = 0; i < matches.Count; i++)
                     {
                         var oldRec = matches[i];
-                        var newRec = new MemDbRecord<T>(oldRec.Id, _cloner.DeepCopy(oldRec.Value), oldRec.IsEncrypted);
+                        //no reason to deep copy here...the old cache value will get the update, but it will also be
+                        //marked stale...the update on old will never get persisted...the deep copy is pointless.
+                        var newRec = new MemDbRecord<T>(oldRec.Id, oldRec.Value, oldRec.IsEncrypted);
+
                         oldRec.MarkStale();
                         apply(newRec.Value);
 
