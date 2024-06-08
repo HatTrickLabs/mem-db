@@ -189,11 +189,12 @@ namespace HatTrick.MemDb
         private int ExecuteUpdateExpression(MemDbExpression<T> expression, Action<T> apply)
         {
             int cnt = 0;
-            //TODO: this works, but super inefficient...refactor this
             lock (_recSyncLock)
             {
                 T[] set = this.ExecuteQueryExpression(expression, false);
-                cnt = this.Update(apply, (r) => Array.IndexOf(set, r) > -1);
+                cnt = (set.Length > 0)
+                    ? this.Update(apply, (r) => Array.IndexOf(set, r) > -1)
+                    : 0;
             }
             return cnt;
         }
@@ -203,11 +204,12 @@ namespace HatTrick.MemDb
         private int ExecuteDeleteExpression(MemDbExpression<T> expression)
         {
             int cnt = 0;
-            //TODO: this works, but super inefficient...refactor this
             lock (_recSyncLock)
             {
                 T[] set = this.ExecuteQueryExpression(expression, false);
-                cnt = this.Delete((r) => Array.IndexOf(set, r) > -1);
+                cnt = (set.Length > 0) 
+                    ? this.Delete((r) => Array.IndexOf(set, r) > -1)
+                    : 0;
             }
             return cnt;
         }

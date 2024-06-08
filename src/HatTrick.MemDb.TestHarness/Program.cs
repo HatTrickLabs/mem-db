@@ -42,19 +42,29 @@ namespace TestHarness
                 Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
                 _sw.Start();
 
+                uint midId = _db.Query().Min(a => a.Id);
+                uint maxId = _db.Query().Max(a => a.Id);
 
-                //QUERY ... find the avg length of both .jpg and .png files with groupby and avg
+                int cnt = _db.Count(a => a.Directory.Contains(@"\Videos\"));
+                Console.WriteLine("Count: " + cnt);
 
-                var result = _db.Query()
-                    .Where(a => a.Extension == ".jpg" || a.Extension == ".png")
-                    .GroupBy(a => a.Extension)
-                    .Select(g => (g.Key, g.Average(a => a.Length)))
-                    .ToArray();
+                //uint[] idsToDelete = _db.Query().Where(a => a.Directory.Contains(@"\Videos\")).Select(a => a.Id);
+                //Console.WriteLine("Length: " + idsToDelete.Length);
+
+                int deleted = _db.Delete(a => a.Directory.Contains(@"\Videos\"));
+                //Parallel.ForEach(idsToDelete, (id) =>
+                //{
+                //    int x = _db.Delete(a => a.Id == id);
+                //    Interlocked.Increment(ref deleted);
+                //});
+                Console.WriteLine("Deleted: " + deleted);
 
                 //ImportAssets(@"D:\tmp");
                 //UpdateAssetsWithXXHash(@"D:\tmp");
                 //ImportAssets(@"C:\Users\jerrod.eiman\Pictures");
                 //UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Pictures");
+                //ImportAssets(@"C:\Users\jerrod.eiman\Videos");
+                //UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Videos");
             }
 
             _sw.Stop();
@@ -150,7 +160,7 @@ namespace TestHarness
                 asset.Imported = now;
                 //asset.XXHash = hash;
 
-                _db.Insert(asset, (id) => asset.Id = id, false);
+                _db.Insert(asset, (id) => asset.Id = id, true);
 
                 if ((cnt % 100) == 0)
                     Console.Write(".");
