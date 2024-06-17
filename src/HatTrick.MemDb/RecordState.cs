@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace HatTrick.MemDb
+namespace HatTrick.InMemDb
 {
     #region [enum] record state
     public enum RecordState : byte

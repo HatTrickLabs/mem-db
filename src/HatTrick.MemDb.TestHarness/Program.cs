@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Diagnostics;
-using HatTrick.MemDb;
+using HatTrick.InMemDb;
 using System.IO.Hashing;
 using System.IO;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Security.Cryptography;
 using System.Text;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace TestHarness

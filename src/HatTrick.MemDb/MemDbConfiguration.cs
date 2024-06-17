@@ -2,7 +2,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace HatTrick.MemDb
+namespace HatTrick.InMemDb
 {
     #region [class] mem db configuration
     public class MemDbConfiguration

@@ -4,7 +4,7 @@ using System.Text;
 using System.Collections.Generic;
 using System.Threading;
 
-namespace HatTrick.MemDb
+namespace HatTrick.InMemDb
 {
     internal sealed class MemDbMappedFile<T> : IMemDbPersister<T>, IDisposable where T : class, new()
     {

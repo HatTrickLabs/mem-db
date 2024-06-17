@@ -4,7 +4,7 @@ using System.Text;
 using System.IO;
 using System.Linq;
 
-namespace HatTrick.MemDb
+namespace HatTrick.InMemDb
 {
     internal sealed class MemDbMap
     {

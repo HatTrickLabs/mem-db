@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 
-namespace HatTrick.MemDb
+namespace HatTrick.InMemDb
 {
     public class DigitalAsset
     {

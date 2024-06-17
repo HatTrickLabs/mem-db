@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace HatTrick.MemDb
+namespace HatTrick.InMemDb
 {
     internal class MemDbPointer
     {

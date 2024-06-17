@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace HatTrick.MemDb
+namespace HatTrick.InMemDb
 {
     public interface IMemDbAcceessor<T> where T : class, new()
     {

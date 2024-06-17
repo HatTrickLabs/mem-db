@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace HatTrick.MemDb
+namespace HatTrick.InMemDb
 {
     public class MemDbDefragmenter<T> : IMemDbDefragmenter<T> where T : class, new()
     {

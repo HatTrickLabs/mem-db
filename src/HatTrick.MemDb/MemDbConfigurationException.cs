@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace HatTrick.MemDb
+namespace HatTrick.InMemDb
 {
     public class MemDbConfigurationException : Exception
     {

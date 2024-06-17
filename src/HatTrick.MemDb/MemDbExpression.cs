@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace HatTrick.MemDb
+namespace HatTrick.InMemDb
 {
     public class MemDbExpression<T> where T : class, new()
     {

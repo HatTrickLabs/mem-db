@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace HatTrick.MemDb
+namespace HatTrick.InMemDb
 {
     internal interface IMemDbCacher<T> : IMemDbAcceessor<T>, IDisposable where T : class, new()
     {

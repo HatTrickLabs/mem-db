@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace HatTrick.MemDb
+namespace HatTrick.InMemDb
 {
     public class DigitalAssetCloner : IMemDbCloner<DigitalAsset>
     {

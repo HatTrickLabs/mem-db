@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HatTrick.MemDb
+namespace HatTrick.InMemDb
 {
     public interface IMemDbGroupedExpression<TKey, T> where T : class, new()
     {

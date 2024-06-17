@@ -2,7 +2,7 @@
 using System.IO;
 using System.Text;
 
-namespace HatTrick.MemDb
+namespace HatTrick.InMemDb
 {
     public class DigitalAssetSerializer : IMemDbSerializer<DigitalAsset>
     {

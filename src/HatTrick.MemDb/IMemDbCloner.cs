@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace HatTrick.MemDb
+namespace HatTrick.InMemDb
 {
     public interface IMemDbCloner<T> where T : class, new()
     {

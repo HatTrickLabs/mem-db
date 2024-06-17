@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace HatTrick.MemDb
+namespace HatTrick.InMemDb
 {
     internal interface IMemDbDefragmenter<T> where T : class, new()
     {

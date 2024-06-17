@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Collections.Generic;
 
-namespace HatTrick.MemDb
+namespace HatTrick.InMemDb
 {
     internal sealed class MemDbCache<T> : IMemDbCacher<T>, IDisposable where T : class, new()
     {

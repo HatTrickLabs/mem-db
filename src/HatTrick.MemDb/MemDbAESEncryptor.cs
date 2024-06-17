@@ -3,7 +3,7 @@ using System.IO;
 using System.Security.Cryptography;
 
 
-namespace HatTrick.MemDb
+namespace HatTrick.InMemDb
 {
     public class MemDbAESEncryptor : IMemDbEncryptor
     {
