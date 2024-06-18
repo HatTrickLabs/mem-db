@@ -82,26 +82,10 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
-        #region read only
-        public MemDbConfiguration<T> ReadOnly()
+        #region set mode
+        public MemDbConfiguration<T> SetMode(AccessMode mode)
         {
-            _mode = AccessMode.ReadOnly;
-            return this;
-        }
-        #endregion
-
-        #region append only
-        public MemDbConfiguration<T> AppendOnly()
-        {
-            _mode = AccessMode.AppendOnly;
-            return this;
-        }
-        #endregion
-
-        #region read write
-        public MemDbConfiguration<T> ReadWrite()
-        {
-            _mode = AccessMode.ReadWrite;
+            _mode = mode;
             return this;
         }
         #endregion
