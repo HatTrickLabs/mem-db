@@ -29,7 +29,7 @@ namespace TestHarness
                 .CloneWith(() => new DigitalAssetCloner())
                 //.EncryptWithKey(() => new byte[] { 198, 1, 6, 8, 12, 1, 1, 1, 1, 88, 1, 1, 1, 1, 1, 9, 9, 9, 1, 1, 99, 1, 1, 1, 1, 1, 1, 1, 33, 1, 1, 77 })
                 .EncryptWithPassword(() => "Jerrod's super simple password...!!!")
-                .SetMode(AccessMode.ReadWrite)
+                .SetMode(AccessMode.ReadOnly)
                 .Register();
 
             _sw = new Stopwatch();
@@ -41,22 +41,9 @@ namespace TestHarness
                 Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
                 _sw.Start();
 
-                uint midId = _db.Query().Min(a => a.Id);
-                uint maxId = _db.Query().Max(a => a.Id);
+                double len =_db.Query().Where(a => a.Extension == ".jpg").Avg(a => a.Length);
 
-                int cnt = _db.Count(a => a.Directory.Contains(@"\Videos\"));
-                Console.WriteLine("Count: " + cnt);
-
-                //uint[] idsToDelete = _db.Query().Where(a => a.Directory.Contains(@"\Videos\")).Select(a => a.Id);
-                //Console.WriteLine("Length: " + idsToDelete.Length);
-
-                int deleted = _db.Delete(a => a.Directory.Contains(@"\Videos\"));
-                //Parallel.ForEach(idsToDelete, (id) =>
-                //{
-                //    int x = _db.Delete(a => a.Id == id);
-                //    Interlocked.Increment(ref deleted);
-                //});
-                Console.WriteLine("Deleted: " + deleted);
+                len = len / 1025;
 
                 //ImportAssets(@"D:\tmp");
                 //UpdateAssetsWithXXHash(@"D:\tmp");
@@ -159,7 +146,7 @@ namespace TestHarness
                 asset.Imported = now;
                 //asset.XXHash = hash;
 
-                _db.Insert(asset, (id) => asset.Id = id, true);
+                _db.Insert(asset, (id) => asset.Id = id, false);
 
                 if ((cnt % 100) == 0)
                     Console.Write(".");

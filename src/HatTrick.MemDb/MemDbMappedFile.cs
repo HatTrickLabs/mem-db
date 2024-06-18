@@ -306,24 +306,35 @@ namespace HatTrick.InMemDb
                         do
                         {
                             uint startPos = (uint)fsDb.Position;
-                            int length;
 
-                            MemDbPointer pointer = null;
-                            if (rec.IsEncrypted)
+                            try
                             {
-                                Span<byte> raw = _serializer.Serialize(rec.Value);
-                                _encryptor.Encrypt(raw, fsDb);
-                                //we must record the RAW length of the record NOT crypto...we can calc crypto len on read
-                                pointer = new MemDbPointer(rec.Id, RecordState.Fresh, true, startPos, raw.Length);
-                            }
-                            else
-                            {
-                                _serializer.Serialize(rec.Value, dbWriter);
-                                length = (int)(fsDb.Position - startPos);
-                                pointer = new MemDbPointer(rec.Id, RecordState.Fresh, false, startPos, length);
-                            }
+                                int length;
 
-                            rec.SetMapIndex(_map.Add(pointer));
+                                if (rec.IsEncrypted)
+                                {
+                                    Span<byte> raw = _serializer.Serialize(rec.Value);
+                                    _encryptor.Encrypt(raw, fsDb);
+                                    //we must record the RAW length of the record NOT crypto...we can calc crypto len on read
+                                    length = raw.Length;
+                                }
+                                else
+                                {
+                                    _serializer.Serialize(rec.Value, dbWriter);
+                                    length = (int)(fsDb.Position - startPos);
+                                }
+
+                                var pointer = new MemDbPointer(rec.Id, RecordState.Fresh, rec.IsEncrypted, startPos, length);
+                                rec.SetMapIndex(_map.Add(pointer));
+                            }
+                            catch
+                            {
+                                //reset the len of file back to position before this pass started.
+                                fsDb.SetLength(startPos);
+                                //ensure pointers successfully added get flushed before tossing the ex
+                                _map.Flush();
+                                throw;
+                            }
 
                         } while (this.TryPopInsertRecord(out rec));
                         _map.Flush();
