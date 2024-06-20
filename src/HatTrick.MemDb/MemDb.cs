@@ -83,6 +83,30 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region defrag
+        public static void Defrag(string datasetName)
+        {
+            MemDbConfiguration config = MemDb.Configurations.Find(r => r.DatasetName == datasetName);
+
+            if (config is null)
+                throw new ArgumentException($"No configuration registered fr provided datasetName: {datasetName}");
+
+            var configOfT = config.EnsureGenericType<T>(config);
+
+            configOfT.Initialize();
+
+            if (configOfT.ShouldArchive)
+            {
+                IMemDbArchiver<T> archiver = new MemDbArchiver<T>(config.DatasetName, config.Path, configOfT.GetArchivePath());
+                archiver.Archive();
+            }
+
+            IMemDbDefragmenter<T> defragmenter = new MemDbDefragmenter<T>(config.DatasetName, config.Path);
+
+            defragmenter.Defrag();
+        }
+        #endregion
+
         #region flush
         public void Flush()
         {

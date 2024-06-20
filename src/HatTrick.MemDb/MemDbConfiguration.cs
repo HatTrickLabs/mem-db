@@ -63,8 +63,13 @@ namespace HatTrick.InMemDb
         private IMemDbCacher<T> _cache;
         private IMemDbPersister<T> _persister;
         private AccessMode _mode;
+        private string _archivePath;
 
         private bool _isInitialized;
+        #endregion
+
+        #region interface
+        internal bool ShouldArchive => _archivePath is not null;
         #endregion
 
         #region constructors
@@ -150,6 +155,24 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region archive on defrag
+        public MemDbConfiguration<T> ArchiveOnDefrag(string archivePath)
+        {
+            if (archivePath is null)
+                throw new ArgumentNullException(nameof(archivePath));
+
+            if (_archivePath is not null)
+                throw new InvalidOperationException("Archive path already provided.");
+
+            if (archivePath == string.Empty)
+                throw new ArgumentException("Argument must contain a value.", nameof(archivePath));
+
+            _archivePath = archivePath;
+
+            return this;
+        }
+        #endregion
+
         #region register
         public void Register()
         {
@@ -190,6 +213,14 @@ namespace HatTrick.InMemDb
         {
             this.EnsureInitalized();
             return _cache;
+        }
+        #endregion
+
+        #region get archive path
+        internal string GetArchivePath()
+        {
+            this.EnsureInitalized();
+            return _archivePath;
         }
         #endregion
     }

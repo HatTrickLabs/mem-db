@@ -20,38 +20,33 @@ namespace TestHarness
 
         static void Main(string[] args)
         {
-            //var defrag = new MemDbDefragmenter<DigitalAsset>(datasetName, DbRoot);
-            //defrag.Defrag();
-            //return;
-
             MemDb.ConfigureFor<DigitalAsset>(datasetName, DbRoot)
                 .SerializeWith(() => new DigitalAssetSerializer())
                 .CloneWith(() => new DigitalAssetCloner())
                 //.EncryptWithKey(() => new byte[] { 198, 1, 6, 8, 12, 1, 1, 1, 1, 88, 1, 1, 1, 1, 1, 9, 9, 9, 1, 1, 99, 1, 1, 1, 1, 1, 1, 1, 33, 1, 1, 77 })
                 .EncryptWithPassword(() => "Jerrod's super simple password...!!!")
-                .SetMode(AccessMode.ReadOnly)
+                .SetMode(AccessMode.ReadWrite)
+                .ArchiveOnDefrag(Path.Combine(DbRoot, "archive"))
                 .Register();
 
             _sw = new Stopwatch();
             _sw.Start();
 
-            using (_db = MemDb<DigitalAsset>.Open(datasetName))
-            {
-                _sw.Stop();
-                Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
-                _sw.Start();
+            MemDb<DigitalAsset>.Defrag(datasetName);
 
-                double len =_db.Query().Where(a => a.Extension == ".jpg").Avg(a => a.Length);
+            //using (_db = MemDb<DigitalAsset>.Open(datasetName))
+            //{
+            //    _sw.Stop();
+            //    Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
+            //    _sw.Start();
 
-                len = len / 1025;
-
-                //ImportAssets(@"D:\tmp");
-                //UpdateAssetsWithXXHash(@"D:\tmp");
-                //ImportAssets(@"C:\Users\jerrod.eiman\Pictures");
-                //UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Pictures");
-                //ImportAssets(@"C:\Users\jerrod.eiman\Videos");
-                //UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Videos");
-            }
+            //    //ImportAssets(@"D:\tmp");
+            //    //UpdateAssetsWithXXHash(@"D:\tmp");
+            //    //ImportAssets(@"C:\Users\jerrod.eiman\Pictures");
+            //    //UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Pictures");
+            //    //ImportAssets(@"C:\Users\jerrod.eiman\Videos");
+            //    //UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Videos");
+            //}
 
             _sw.Stop();
             Console.WriteLine("Process completed in " + _sw.ElapsedMilliseconds + " milliseconds.");

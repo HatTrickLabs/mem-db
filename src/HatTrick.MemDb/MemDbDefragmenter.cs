@@ -5,7 +5,7 @@ using System.Text;
 
 namespace HatTrick.InMemDb
 {
-    public class MemDbDefragmenter<T> : IMemDbDefragmenter<T> where T : class, new()
+    internal class MemDbDefragmenter<T> : IMemDbDefragmenter<T> where T : class, new()
     {
         #region internals
         private string _path;
@@ -23,7 +23,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region constructors
-        public MemDbDefragmenter(string datasetName, string path)
+        internal MemDbDefragmenter(string datasetName, string path)
         {
             if (string.IsNullOrEmpty(datasetName))
                 throw new ArgumentException("arg must have a value.", nameof(datasetName));
@@ -45,7 +45,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region defrag
-        public void Defrag()
+        void IMemDbDefragmenter<T>.Defrag()
         {
             //ensure the record map actually exists
             if (!File.Exists(_fullMapPath))
@@ -111,7 +111,8 @@ namespace HatTrick.InMemDb
 
             if (spaceAvailable < spaceNeeded)
             {
-                string ex = $"Insufficient disk space available on {drive.Name} ...{Environment.NewLine}"
+                string ex = "Defragment cannot be completed..." + Environment.NewLine
+                          + $"Insufficient disk space available on {drive.Name} ...{Environment.NewLine}"
                           + $"space needed: {spaceNeeded} space available: {spaceAvailable}";
                 throw new InvalidOperationException(ex);
             }
