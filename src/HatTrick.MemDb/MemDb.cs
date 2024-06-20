@@ -21,6 +21,26 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region defrag
+        public static void Defrag(string datasetName)
+        {
+            MemDbConfiguration config = MemDb.Configurations.Find(r => r.DatasetName == datasetName);
+
+            if (config is null)
+                throw new ArgumentException($"No configuration registered fr provided datasetName: {datasetName}");
+
+            if (config.ShouldArchive)
+            {
+                IMemDbArchiver archiver = new MemDbArchiver(config.DatasetName, config.Path, config.ArchivePath);
+                archiver.Archive();
+            }
+
+            IMemDbDefragmenter defragmenter = new MemDbDefragmenter(config.DatasetName, config.Path);
+
+            defragmenter.Defrag();
+        }
+        #endregion
+
         #region configure for
         public static MemDbConfiguration<T> ConfigureFor<T>(string datasetName, string path) where T : class, new()
         {
@@ -37,6 +57,14 @@ namespace HatTrick.InMemDb
             _configurations.Add(configuration);
         }
         #endregion
+
+        public static MemDb<T> Open<T>(string datasetName) where T : class, new()
+        {
+            if (datasetName is null)
+                throw new ArgumentException(nameof(datasetName));
+
+            return MemDb<T>.Open(datasetName);
+        }
     }
     #endregion
 
@@ -52,14 +80,8 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region constructors
-        private MemDb(string datasetName, string path, IMemDbCacher<T> cacher)
+        private MemDb(IMemDbCacher<T> cacher)
         {
-            if (string.IsNullOrEmpty(datasetName))
-                throw new ArgumentException("arg must have a value.", nameof(datasetName));
-
-            if (string.IsNullOrEmpty(path))
-                throw new ArgumentException("arg must have a value.", nameof(path));
-
             if (cacher is null)
                 throw new ArgumentNullException(nameof(cacher));
 
@@ -68,7 +90,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region open
-        public static MemDb<T> Open(string datasetName)
+        internal static MemDb<T> Open(string datasetName)
         {
             MemDbConfiguration config = MemDb.Configurations.Find(r => r.DatasetName == datasetName);
 
@@ -79,31 +101,7 @@ namespace HatTrick.InMemDb
 
             configOfT.Initialize();
 
-            return new MemDb<T>(config.DatasetName, config.Path, configOfT.GetCache());
-        }
-        #endregion
-
-        #region defrag
-        public static void Defrag(string datasetName)
-        {
-            MemDbConfiguration config = MemDb.Configurations.Find(r => r.DatasetName == datasetName);
-
-            if (config is null)
-                throw new ArgumentException($"No configuration registered fr provided datasetName: {datasetName}");
-
-            var configOfT = config.EnsureGenericType<T>(config);
-
-            configOfT.Initialize();
-
-            if (configOfT.ShouldArchive)
-            {
-                IMemDbArchiver<T> archiver = new MemDbArchiver<T>(config.DatasetName, config.Path, configOfT.GetArchivePath());
-                archiver.Archive();
-            }
-
-            IMemDbDefragmenter<T> defragmenter = new MemDbDefragmenter<T>(config.DatasetName, config.Path);
-
-            defragmenter.Defrag();
+            return new MemDb<T>(configOfT.GetCache());
         }
         #endregion
 

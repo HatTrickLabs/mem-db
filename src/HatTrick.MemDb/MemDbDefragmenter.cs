@@ -5,7 +5,7 @@ using System.Text;
 
 namespace HatTrick.InMemDb
 {
-    internal class MemDbDefragmenter<T> : IMemDbDefragmenter<T> where T : class, new()
+    internal class MemDbDefragmenter : IMemDbDefragmenter
     {
         #region internals
         private string _path;
@@ -45,7 +45,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region defrag
-        void IMemDbDefragmenter<T>.Defrag()
+        void IMemDbDefragmenter.Defrag()
         {
             //ensure the record map actually exists
             if (!File.Exists(_fullMapPath))

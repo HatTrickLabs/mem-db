@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace HatTrick.InMemDb
 {
-    internal interface IMemDbArchiver<T> where T : class, new()
+    internal interface IMemDbArchiver
     {
         internal void Archive();
     }

@@ -6,7 +6,7 @@ using System.Text;
 
 namespace HatTrick.InMemDb
 {
-    internal class MemDbArchiver<T> : IMemDbArchiver<T> where T : class, new()
+    internal class MemDbArchiver : IMemDbArchiver
     {
         #region internals
         private string _path;
@@ -67,7 +67,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region archive
-        void IMemDbArchiver<T>.Archive()
+        void IMemDbArchiver.Archive()
         {
             //ensure the record map actually exists
             if (!File.Exists(_fullMapPath))

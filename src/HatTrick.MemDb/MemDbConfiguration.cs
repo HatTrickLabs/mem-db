@@ -10,11 +10,14 @@ namespace HatTrick.InMemDb
         #region internals
         private string _datasetName;
         private string _path;
+        private string _archivePath;
         #endregion
 
         #region interface
         public string DatasetName => _datasetName;
         public string Path => _path;
+        internal bool ShouldArchive => _archivePath is not null;
+        internal string ArchivePath => _archivePath;
         #endregion
 
         #region constructors
@@ -22,6 +25,16 @@ namespace HatTrick.InMemDb
         {
             _datasetName = datasetName ?? throw new ArgumentNullException(nameof(datasetName));
             _path = path ?? throw new ArgumentNullException(nameof(path));
+        }
+        #endregion
+
+        #region set archive path
+        protected void SetArchivePath(string archivePath)
+        {
+            if (_archivePath is not null)
+                throw new InvalidOperationException("Archive path already provided.");
+
+            _archivePath = archivePath;
         }
         #endregion
 
@@ -63,13 +76,8 @@ namespace HatTrick.InMemDb
         private IMemDbCacher<T> _cache;
         private IMemDbPersister<T> _persister;
         private AccessMode _mode;
-        private string _archivePath;
 
         private bool _isInitialized;
-        #endregion
-
-        #region interface
-        internal bool ShouldArchive => _archivePath is not null;
         #endregion
 
         #region constructors
@@ -161,13 +169,10 @@ namespace HatTrick.InMemDb
             if (archivePath is null)
                 throw new ArgumentNullException(nameof(archivePath));
 
-            if (_archivePath is not null)
-                throw new InvalidOperationException("Archive path already provided.");
-
             if (archivePath == string.Empty)
                 throw new ArgumentException("Argument must contain a value.", nameof(archivePath));
 
-            _archivePath = archivePath;
+            base.SetArchivePath(archivePath);
 
             return this;
         }
@@ -213,14 +218,6 @@ namespace HatTrick.InMemDb
         {
             this.EnsureInitalized();
             return _cache;
-        }
-        #endregion
-
-        #region get archive path
-        internal string GetArchivePath()
-        {
-            this.EnsureInitalized();
-            return _archivePath;
         }
         #endregion
     }

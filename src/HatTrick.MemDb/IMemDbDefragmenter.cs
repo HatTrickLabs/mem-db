@@ -2,7 +2,7 @@
 
 namespace HatTrick.InMemDb
 {
-    internal interface IMemDbDefragmenter<T> where T : class, new()
+    internal interface IMemDbDefragmenter
     {
         internal void Defrag();
     }

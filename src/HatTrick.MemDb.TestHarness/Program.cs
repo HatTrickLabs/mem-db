@@ -32,21 +32,21 @@ namespace TestHarness
             _sw = new Stopwatch();
             _sw.Start();
 
-            MemDb<DigitalAsset>.Defrag(datasetName);
+            //MemDb.Defrag(datasetName);
 
-            //using (_db = MemDb<DigitalAsset>.Open(datasetName))
-            //{
-            //    _sw.Stop();
-            //    Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
-            //    _sw.Start();
+            using (_db = MemDb.Open<DigitalAsset>(datasetName))
+            {
+                _sw.Stop();
+                Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
+                _sw.Start();
 
-            //    //ImportAssets(@"D:\tmp");
-            //    //UpdateAssetsWithXXHash(@"D:\tmp");
-            //    //ImportAssets(@"C:\Users\jerrod.eiman\Pictures");
-            //    //UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Pictures");
-            //    //ImportAssets(@"C:\Users\jerrod.eiman\Videos");
-            //    //UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Videos");
-            //}
+                //ImportAssets(@"D:\tmp");
+                //UpdateAssetsWithXXHash(@"D:\tmp");
+                //ImportAssets(@"C:\Users\jerrod.eiman\Pictures");
+                //UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Pictures");
+                //ImportAssets(@"C:\Users\jerrod.eiman\Videos");
+                //UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Videos");
+            }
 
             _sw.Stop();
             Console.WriteLine("Process completed in " + _sw.ElapsedMilliseconds + " milliseconds.");
