@@ -24,7 +24,7 @@ namespace TestHarness
                 .SerializeWith(() => new DigitalAssetSerializer())
                 .CloneWith(() => new DigitalAssetCloner())
                 //.EncryptWithKey(() => new byte[] { 198, 1, 6, 8, 12, 1, 1, 1, 1, 88, 1, 1, 1, 1, 1, 9, 9, 9, 1, 1, 99, 1, 1, 1, 1, 1, 1, 1, 33, 1, 1, 77 })
-                .EncryptWithPassword(() => "Jerrod's super simple password...!!!")
+                .EncryptWithPassword(() => "Jerrod's super simple password...!!!!!!!!")
                 .SetMode(AccessMode.ReadWrite)
                 .ArchiveOnDefrag(Path.Combine(DbRoot, "archive"))
                 .Register();
@@ -32,21 +32,24 @@ namespace TestHarness
             _sw = new Stopwatch();
             _sw.Start();
 
+
+            MemDb.ReadArchive<DigitalAsset>(datasetName);
+
             //MemDb.Defrag(datasetName);
 
-            using (_db = MemDb.Open<DigitalAsset>(datasetName))
-            {
-                _sw.Stop();
-                Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
-                _sw.Start();
+            //using (_db = MemDb.Open<DigitalAsset>(datasetName))
+            //{
+            //    _sw.Stop();
+            //    Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
+            //    _sw.Start();
 
-                //ImportAssets(@"D:\tmp");
-                //UpdateAssetsWithXXHash(@"D:\tmp");
-                //ImportAssets(@"C:\Users\jerrod.eiman\Pictures");
-                //UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Pictures");
-                //ImportAssets(@"C:\Users\jerrod.eiman\Videos");
-                //UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Videos");
-            }
+            //    //ImportAssets(@"D:\tmp");
+            //    //UpdateAssetsWithXXHash(@"D:\tmp");
+            //    //ImportAssets(@"C:\Users\jerrod.eiman\Pictures");
+            //    //UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Pictures");
+            //    //ImportAssets(@"C:\Users\jerrod.eiman\Videos");
+            //    //UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Videos");
+            //}
 
             _sw.Stop();
             Console.WriteLine("Process completed in " + _sw.ElapsedMilliseconds + " milliseconds.");
@@ -141,46 +144,11 @@ namespace TestHarness
                 asset.Imported = now;
                 //asset.XXHash = hash;
 
-                _db.Insert(asset, (id) => asset.Id = id, false);
+                _db.Insert(asset, (id) => asset.Id = id, true);
 
                 if ((cnt % 100) == 0)
                     Console.Write(".");
             }));
-        }
-
-        static void TestCrypto()
-        {
-            //cryptosize = inputsize + (blocksize - (inputsize % blocksize)) + ivsize;
-            int cryptoSize = 74 + (16 - (74 % 16)) + 16;
-
-            byte[] key = null;
-            using (SHA256 sha256 = SHA256.Create())
-            {
-                key = sha256.ComputeHash(Encoding.UTF8.GetBytes("Jerrod's super secure password."));
-            }
-
-            MemDbAESEncryptor aes = new MemDbAESEncryptor(key);
-
-            int cryptoSize2 = MemDbAESEncryptor.CalculateCryptoByteLength(74);
-
-            string text = "This is just a sample statement used for encrypt/decrypt testing purposes.";
-            byte[] encrypted = null;
-            ReadOnlySpan<byte> input = Encoding.UTF8.GetBytes(text);
-            using (var ms = new MemoryStream())
-            {
-                aes.Encrypt(input, ms);
-                encrypted = new byte[ms.Length];
-                ms.Position = 0;
-                ms.Read(encrypted, 0, encrypted.Length);
-            }
-
-
-            byte[] raw = null;
-            using (var ms = new MemoryStream(encrypted))
-            {
-                raw = aes.Decrypt(ms, input.Length);
-            }
-            string roundTripText = Encoding.UTF8.GetString(raw);
         }
     }
 }

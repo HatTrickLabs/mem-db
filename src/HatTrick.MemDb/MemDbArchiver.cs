@@ -199,7 +199,7 @@ namespace HatTrick.InMemDb
             }
 
             //write the archive map file
-            var archMap = MemDbMap.Create(_fullMapArchivePath, originalMap.LastId, pointers);
+            var archMap = new MemDbMap(_fullMapArchivePath, originalMap.LastId, pointers);
             using var fs = new FileStream(_fullMapArchivePath, FileMode.Open, FileAccess.Write);
             using var writer = new BinaryWriter(fs, Encoding.UTF8, true);
             archMap.SerializeTo(writer);
@@ -213,7 +213,9 @@ namespace HatTrick.InMemDb
             using (ZipArchive zip = ZipFile.Open(_fullZipArchivePath, mode))
             {
                 ZipArchiveEntry map = zip.CreateEntryFromFile(_fullMapArchivePath, _mapArchiveFileName, CompressionLevel.Optimal);
+                map.Comment = "map";
                 ZipArchiveEntry db = zip.CreateEntryFromFile(_fullDbArchivePath, _dbArchiveFileName, CompressionLevel.Optimal);
+                db.Comment = "db";
             }
         }
         #endregion

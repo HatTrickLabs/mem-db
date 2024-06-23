@@ -49,7 +49,7 @@ namespace HatTrick.InMemDb
         internal MemDbMap(string path) : this(path, 0, null)
         { }
 
-        private MemDbMap(string path, uint lastId, List<MemDbPointer> pointers)
+        internal MemDbMap(string path, uint lastId, List<MemDbPointer> pointers)
         {
             _path = path ?? throw new ArgumentNullException(nameof(path));
             _lastId = lastId;
@@ -59,7 +59,7 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
-        #region initialize existing
+        #region initialize
         internal void InitializeNew()
         {
             lock (_syncLock)
@@ -139,14 +139,6 @@ namespace HatTrick.InMemDb
             {
                 return _pointers.Where(p => p.State == state).Select(selector).DefaultIfEmpty().Min();
             }
-        }
-        #endregion
-
-        #region create
-        internal static MemDbMap Create(string path, uint lastId, List<MemDbPointer> pointers)
-        {
-            MemDbMap map = new MemDbMap(path, lastId, pointers);
-            return map;
         }
         #endregion
 

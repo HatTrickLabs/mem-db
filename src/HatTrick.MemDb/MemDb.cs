@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace HatTrick.InMemDb
 {
@@ -41,6 +42,23 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region read archive
+        public static void ReadArchive<T>(string datasetName) where T : class, new()
+        {
+            MemDbConfiguration config = MemDb.Configurations.Find(r => r.DatasetName == datasetName);
+
+            if (config is null)
+                throw new ArgumentException($"No configuration registered fr provided datasetName: {datasetName}");
+
+            if (!config.ShouldArchive)
+                throw new InvalidOperationException($"Configuration for provided dataset '{datasetName}' is not configured to archive on defrag.");
+
+            var configOfT = config.EnsureGenericType<T>(config);
+            var archReader = new MemDbArchiveReader<T>(config.DatasetName, config.ArchivePath, configOfT.GetSerializer(), configOfT.GetEncryptor());
+            var archives = archReader.ReadArchiveRecords().ToArray();
+        }
+        #endregion
+
         #region configure for
         public static MemDbConfiguration<T> ConfigureFor<T>(string datasetName, string path) where T : class, new()
         {
@@ -58,6 +76,7 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region open
         public static MemDb<T> Open<T>(string datasetName) where T : class, new()
         {
             if (datasetName is null)
@@ -65,6 +84,7 @@ namespace HatTrick.InMemDb
 
             return MemDb<T>.Open(datasetName);
         }
+        #endregion
     }
     #endregion
 

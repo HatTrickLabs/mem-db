@@ -213,6 +213,22 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region get encryptor
+        public IMemDbEncryptor GetEncryptor()
+        {
+            this.EnsureInitalized();
+            return _encryptor;
+        }
+        #endregion
+
+        #region get serializer
+        internal IMemDbSerializer<T> GetSerializer()
+        {
+            this.EnsureInitalized();
+            return _serializer;
+        }
+        #endregion
+
         #region get cache
         internal IMemDbCacher<T> GetCache()
         {
