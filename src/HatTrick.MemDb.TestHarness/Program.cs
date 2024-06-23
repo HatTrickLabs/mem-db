@@ -33,8 +33,6 @@ namespace TestHarness
             _sw.Start();
 
 
-            MemDb.ReadArchive<DigitalAsset>(datasetName);
-
             //MemDb.Defrag(datasetName);
 
             //using (_db = MemDb.Open<DigitalAsset>(datasetName))
