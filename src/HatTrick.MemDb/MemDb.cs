@@ -44,7 +44,7 @@ namespace HatTrick.InMemDb
 
         #region read archive
         //TODO: private to hide until I figure out what to do with the archive reader...
-        private static void ReadArchive<T>(string datasetName) where T : class, new()
+        private static void ReadArchive<T>(string datasetName) where T : class
         {
             MemDbConfiguration config = MemDb.Configurations.Find(r => r.DatasetName == datasetName);
 
@@ -61,14 +61,14 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region configure for
-        public static MemDbConfiguration<T> ConfigureFor<T>(string datasetName, string path) where T : class, new()
+        public static MemDbConfiguration<T> ConfigureFor<T>(string datasetName, string path) where T : class
         {
             return new MemDbConfiguration<T>(datasetName, path, MemDb.RegisterConfiguration);
         }
         #endregion
 
         #region register
-        private static void RegisterConfiguration<T>(MemDbConfiguration<T> configuration) where T : class, new()
+        private static void RegisterConfiguration<T>(MemDbConfiguration<T> configuration) where T : class
         {
             if (_configurations.Exists(c => string.Compare(c.DatasetName, configuration.DatasetName, true) == 0))
                 throw new MemDbConfigurationException("Cannot register configuration with duplicate dataset name of existing configuration: " + configuration.DatasetName);
@@ -78,7 +78,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region open
-        public static MemDb<T> Open<T>(string datasetName) where T : class, new()
+        public static MemDb<T> Open<T>(string datasetName) where T : class
         {
             if (datasetName is null)
                 throw new ArgumentException(nameof(datasetName));
@@ -90,7 +90,7 @@ namespace HatTrick.InMemDb
     #endregion
 
     #region [class] memdb<T>
-    public class MemDb<T> : MemDb, IDisposable, IMemDbAcceessor<T> where T : class, new()
+    public class MemDb<T> : MemDb, IDisposable, IMemDbAcceessor<T> where T : class
     {
         #region internals
         private IMemDbCacher<T> _cache;

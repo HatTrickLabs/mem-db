@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace HatTrick.InMemDb
 {
-    internal sealed class MemDbMappedFile<T> : IMemDbPersister<T>, IDisposable where T : class, new()
+    internal sealed class MemDbMappedFile<T> : IMemDbPersister<T>, IDisposable where T : class
     {
         #region internals
         private readonly string _path;

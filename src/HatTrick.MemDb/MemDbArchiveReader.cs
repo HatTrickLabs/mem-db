@@ -7,7 +7,7 @@ using System.Text;
 
 namespace HatTrick.InMemDb
 {
-    internal class MemDbArchiveReader<T> where T : class, new()
+    internal class MemDbArchiveReader<T> where T : class
     {
         #region internals
         private readonly string _archivePath;

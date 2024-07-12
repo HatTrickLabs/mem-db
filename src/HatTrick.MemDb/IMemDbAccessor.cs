@@ -2,7 +2,7 @@
 
 namespace HatTrick.InMemDb
 {
-    public interface IMemDbAcceessor<T> where T : class, new()
+    public interface IMemDbAcceessor<T> where T : class
     {
         public int Count();
 

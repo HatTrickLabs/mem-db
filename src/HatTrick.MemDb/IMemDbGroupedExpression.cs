@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace HatTrick.InMemDb
 {
-    public interface IMemDbGroupedExpression<TKey, T> where T : class, new()
+    public interface IMemDbGroupedExpression<TKey, T> where T : class
     {
         IMemDbGroupedExpression<TKey, T> Having(Func<IGrouping<TKey, T>, bool> predicate);
 
