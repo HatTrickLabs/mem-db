@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace HatTrick.InMemDb
 {
-    public class MemDbExpression<T> where T : class, new()
+    public class MemDbExpression<T> where T : class
     {
         #region internals
         private ExecuteQuery _query;

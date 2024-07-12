@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace HatTrick.InMemDb
 {
-    internal interface IMemDbPersister<T> : IDisposable where T : class, new()
+    internal interface IMemDbPersister<T> : IDisposable where T : class
     {
         internal AccessMode Mode { get; }
         internal int RecordCount { get; }

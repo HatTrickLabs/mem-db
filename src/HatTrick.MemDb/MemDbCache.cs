@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace HatTrick.InMemDb
 {
-    internal sealed class MemDbCache<T> : IMemDbCacher<T>, IDisposable where T : class, new()
+    internal sealed class MemDbCache<T> : IMemDbCacher<T>, IDisposable where T : class
     {
         #region internals
         private string _datasetName;

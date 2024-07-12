@@ -39,7 +39,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region ensure generic type
-        internal MemDbConfiguration<T> EnsureGenericType<T>(MemDbConfiguration configuration) where T : class, new()
+        internal MemDbConfiguration<T> EnsureGenericType<T>(MemDbConfiguration configuration) where T : class
         {
             if (configuration is null)
                 throw new ArgumentNullException(nameof(configuration));
@@ -60,7 +60,7 @@ namespace HatTrick.InMemDb
     #endregion
 
     #region [class] mem db configuration of T
-    public class MemDbConfiguration<T> : MemDbConfiguration where T : class, new()
+    public class MemDbConfiguration<T> : MemDbConfiguration where T : class
     {
         #region internals
         private Action<MemDbConfiguration<T>> _registerCallback;

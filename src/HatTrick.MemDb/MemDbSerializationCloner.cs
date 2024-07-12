@@ -5,7 +5,7 @@ using System.Text;
 
 namespace HatTrick.InMemDb
 {
-    internal class MemDbSerializationCloner<T> : IMemDbCloner<T> where T : class, new()
+    internal class MemDbSerializationCloner<T> : IMemDbCloner<T> where T : class
     {
         #region internals
         private IMemDbSerializer<T> _serializer;

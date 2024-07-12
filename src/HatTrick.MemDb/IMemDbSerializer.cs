@@ -3,7 +3,7 @@ using System.IO;
 
 namespace HatTrick.InMemDb
 {
-    public interface IMemDbSerializer<T> where T : class, new()
+    public interface IMemDbSerializer<T> where T : class
     {
         void Serialize(T record, BinaryWriter to);
 

@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace HatTrick.InMemDb
 {
-    public class MemDbGroupedExpression<TKey, T> : IMemDbGroupedExpression<TKey, T> where T : class, new()
+    public class MemDbGroupedExpression<TKey, T> : IMemDbGroupedExpression<TKey, T> where T : class
     {
         #region internals
         private Func<T, TKey> _keySelector;
