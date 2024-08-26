@@ -33,21 +33,50 @@ namespace TestHarness
             _sw.Start();
 
 
-            //MemDb.Defrag(datasetName);
+            using (_db = MemDb.Open<DigitalAsset>(datasetName))
+            {
+                _sw.Stop();
+                Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
+                _sw.Start();
 
-            //using (_db = MemDb.Open<DigitalAsset>(datasetName))
-            //{
-            //    _sw.Stop();
-            //    Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
-            //    _sw.Start();
+                Console.WriteLine($"Total records: {_db.Count()}");
+                Console.WriteLine($"Total tmp records: {_db.Count((a) => a.FullPath.Contains("tmp"))}");
+                Console.WriteLine($"Total pics records: {_db.Count((a) => a.FullPath.Contains("Pictures"))}");
+                Console.WriteLine($"Total vids records: {_db.Count((a) => a.FullPath.Contains("Videos"))}");
 
-            //    //ImportAssets(@"D:\tmp");
-            //    //UpdateAssetsWithXXHash(@"D:\tmp");
-            //    //ImportAssets(@"C:\Users\jerrod.eiman\Pictures");
-            //    //UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Pictures");
-            //    //ImportAssets(@"C:\Users\jerrod.eiman\Videos");
-            //    //UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Videos");
-            //}
+                //Thread t1 = new Thread(new ParameterizedThreadStart((path) => ImportAssets(path.ToString())));
+                //Thread t2 = new Thread(new ParameterizedThreadStart((count) => ConcurrentQueryTest((int)count)));
+                //Thread t3 = new Thread(new ParameterizedThreadStart((path) => ImportAssets(path.ToString())));
+                //Thread t4 = new Thread(new ParameterizedThreadStart((path) => ImportAssets(path.ToString())));
+                //t3.Start(@"D:\tmp");
+                //t4.Start(@"C:\Users\jerrod.eiman\Pictures");
+                //t2.Start(8000);
+                //t1.Start(@"C:\Users\jerrod.eiman\Videos");
+
+                //t2.Join();
+                //t3.Join();
+                //t1.Join();
+
+
+                //Thread t5 = new Thread(new ThreadStart(() => UpdateAssetsWithXXHash(@"D:\tmp")));
+                //Thread t6 = new Thread(new ThreadStart(() => UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Pictures")));
+                //Thread t7 = new Thread(new ThreadStart(() => UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Videos")));
+
+                //t5.Start();
+                //t6.Start();
+                //t7.Start();
+
+                //t5.Join();
+                //t6.Join();
+                //t7.Join();
+
+                //ImportAssets(@"D:\tmp");
+                //UpdateAssetsWithXXHash(@"D:\tmp");
+                //ImportAssets(@"C:\Users\jerrod.eiman\Pictures");
+                //UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Pictures");
+                //ImportAssets(@"C:\Users\jerrod.eiman\Videos");
+                //UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Videos");
+            }
 
             _sw.Stop();
             Console.WriteLine("Process completed in " + _sw.ElapsedMilliseconds + " milliseconds.");
@@ -61,6 +90,8 @@ namespace TestHarness
             {
                 var sets = _db.Query().GroupBy(a => a.Extension.ToLower()).Having(g => g.Count() > 25).Select(g => (g.Key, g.Count())).ToArray();
                 Array.Sort<(string key, int cnt)>(sets, (a, b) => b.cnt.CompareTo(a.cnt));
+                if ((i % 100) == 0)
+                    Console.WriteLine(sets[0]);
             });
         }
 
@@ -69,7 +100,7 @@ namespace TestHarness
             DateTime now = DateTime.Now;
 
             var ops = new EnumerationOptions();
-            ops.AttributesToSkip = FileAttributes.Hidden | FileAttributes.System | FileAttributes.Temporary;
+            ops.AttributesToSkip = FileAttributes.System | FileAttributes.Temporary;
             ops.IgnoreInaccessible = true;
             ops.ReturnSpecialDirectories = false;
             ops.RecurseSubdirectories = true;
@@ -109,7 +140,7 @@ namespace TestHarness
             DateTime now = DateTime.Now;
 
             var ops = new EnumerationOptions();
-            ops.AttributesToSkip = FileAttributes.Hidden | FileAttributes.System | FileAttributes.Temporary;
+            ops.AttributesToSkip = FileAttributes.System | FileAttributes.Temporary;
             ops.IgnoreInaccessible = true;
             ops.ReturnSpecialDirectories = false;
             ops.RecurseSubdirectories = true;
