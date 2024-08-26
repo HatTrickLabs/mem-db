@@ -190,7 +190,7 @@ namespace HatTrick.InMemDb
                         }
                         else
                         {
-                            value = _serializer.Deserialize(reader, pointer.Length);//T value
+                            value = _serializer.Deserialize(reader, pointer.Length);
                         }
 
                         var record = new MemDbRecord<T>(pointer.Id, value, RecordState.Fresh, pointer.IsEncrypted, records.Count, i);
@@ -383,7 +383,7 @@ namespace HatTrick.InMemDb
         {
             if (!_isClosed)
             {
-                this.Close(true); //emergency catch all to save flushed records if process dies...
+                this.Close(true); //emergency catch all to save un-flushed records if process is killed...
             }
         }
         #endregion
