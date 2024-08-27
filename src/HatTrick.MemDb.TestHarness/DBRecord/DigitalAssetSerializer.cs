@@ -36,7 +36,6 @@ namespace HatTrick.InMemDb
                 using (var writer = new BinaryWriter(ms, Encoding.UTF8, true))
                 {
                     this.Serialize(record, writer);
-                    writer.Flush();
                 }
                 raw = ms.ToArray();
             }

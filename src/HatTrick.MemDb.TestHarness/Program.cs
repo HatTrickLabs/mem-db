@@ -42,6 +42,9 @@ namespace TestHarness
                 Console.WriteLine($"Video Count: {_db.Count(a => a.Directory.Contains("Videos"))}");
                 Console.WriteLine($"Tmp Count:   {_db.Count(a => a.Directory.Contains("tmp"))}");
 
+                var asset1 = _db.Find(a => a.Id == 100);
+                Console.WriteLine(asset1.Directory);
+
                 var sets = _db.Query().GroupBy(a => a.Extension.ToLower()).Having(g => g.Count() > 1000).Select(g => (g.Key, g.Count())).ToArray();
                 Array.Sort<(string key, int cnt)>(sets, (a, b) => b.cnt.CompareTo(a.cnt));
                 Console.WriteLine(sets[0]);
