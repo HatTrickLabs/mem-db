@@ -38,16 +38,24 @@ namespace TestHarness
                 Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
                 _sw.Start();
 
+                Console.WriteLine($"Image Count: {_db.Count(a => a.Directory.Contains("Pictures"))}");
+                Console.WriteLine($"Video Count: {_db.Count(a => a.Directory.Contains("Videos"))}");
+                Console.WriteLine($"Tmp Count:   {_db.Count(a => a.Directory.Contains("tmp"))}");
+
+                var sets = _db.Query().GroupBy(a => a.Extension.ToLower()).Having(g => g.Count() > 1000).Select(g => (g.Key, g.Count())).ToArray();
+                Array.Sort<(string key, int cnt)>(sets, (a, b) => b.cnt.CompareTo(a.cnt));
+                Console.WriteLine(sets[0]);
+
                 //Thread t1 = new Thread(new ParameterizedThreadStart((path) => ImportAssets(path.ToString())));
-                Thread t2 = new Thread(new ParameterizedThreadStart((count) => ConcurrentQueryTest((int)count)));
+                //Thread t2 = new Thread(new ParameterizedThreadStart((count) => ConcurrentQueryTest((int)count)));
                 //Thread t3 = new Thread(new ParameterizedThreadStart((path) => ImportAssets(path.ToString())));
                 //Thread t4 = new Thread(new ParameterizedThreadStart((path) => ImportAssets(path.ToString())));
                 //t3.Start(@"D:\tmp");
                 //t4.Start(@"C:\Users\jerrod.eiman\Pictures");
-                t2.Start(10);
+                //t2.Start(100);
                 //t1.Start(@"C:\Users\jerrod.eiman\Videos");
 
-                t2.Join();
+                //t2.Join();
                 //t3.Join();
                 //t1.Join();
                 //t4.Join();
