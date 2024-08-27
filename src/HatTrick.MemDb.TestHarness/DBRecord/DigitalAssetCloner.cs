@@ -27,18 +27,7 @@ namespace HatTrick.InMemDb
             for (int i = 0; i < values.Count; i++)
             {
                 DigitalAsset value = values[i];
-                var asset = new DigitalAsset();
-                asset.Id = value.Id;
-                asset.Name = value.Name;
-                asset.Directory = value.Directory;
-                asset.Created = value.Created;
-                asset.LastAccess = value.LastAccess;
-                asset.LastWrite = value.LastWrite;
-                asset.Length = value.Length;
-                asset.XXHash = value.XXHash;
-                asset.Imported = value.Imported;
-
-                assets[i] = asset;
+                assets[i] = this.DeepCopy(value);
             }
             return assets;
         }

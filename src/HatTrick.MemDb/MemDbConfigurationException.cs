@@ -8,4 +8,11 @@ namespace HatTrick.InMemDb
         {
         }
     }
+
+    public class NotEncryptionReadyException : MemDbConfigurationException
+    {
+        public NotEncryptionReadyException(string message) : base(message)
+        {
+        }
+    }
 }

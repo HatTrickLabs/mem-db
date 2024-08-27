@@ -28,19 +28,19 @@ namespace HatTrick.InMemDb
 
         public byte[] Serialize(DigitalAsset record)
         {
-            int capacity = sizeof(uint) + (sizeof(long) * 6) + 255;
-            byte[] utf8 = null;
+            int capacity = sizeof(uint) + 255 + (sizeof(long) * 5) + sizeof(ulong);
+
+            byte[] raw = null;
             using (var ms = new MemoryStream(capacity))
             {
                 using (var writer = new BinaryWriter(ms, Encoding.UTF8, true))
                 {
                     this.Serialize(record, writer);
+                    writer.Flush();
                 }
-                utf8 = new byte[ms.Length];
-                ms.Position = 0;
-                ms.Read(utf8, 0, utf8.Length);
+                raw = ms.ToArray();
             }
-            return utf8;
+            return raw;
         }
         #endregion
 
@@ -63,7 +63,6 @@ namespace HatTrick.InMemDb
 
         public DigitalAsset Deserialize(ReadOnlySpan<byte> from)
         {
-            //TODO: this is extremely inefficient...refactor to just smash each prop right out of the readonly span.
             DigitalAsset record = null;
             using (var ms = new MemoryStream(from.ToArray()))
             {

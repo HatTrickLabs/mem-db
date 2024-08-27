@@ -270,6 +270,7 @@ namespace HatTrick.InMemDb
                         //no reason to deep copy here...the old cache value will get the update, but it will also be
                         //marked stale...the update on old will never get persisted...the deep copy is pointless.
                         var newRec = new MemDbRecord<T>(oldRec.Id, oldRec.Value, oldRec.IsEncrypted);
+                        //we know the MemDb instance is encryption ready if anything encrypted was ever read into or inserted into the cache.
 
                         oldRec.MarkStale();
                         apply(newRec.Value);

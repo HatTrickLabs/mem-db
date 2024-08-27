@@ -93,7 +93,9 @@ namespace HatTrick.InMemDb
     public class MemDb<T> : MemDb, IDisposable, IMemDbAcceessor<T> where T : class
     {
         #region internals
+        private string _datasetName;
         private IMemDbCacher<T> _cache;
+        private bool _isEncryptionReady;
         private bool _isClosed;
         #endregion
 
@@ -101,12 +103,10 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region constructors
-        private MemDb(IMemDbCacher<T> cacher)
+        private MemDb(string datasetName, IMemDbCacher<T> cacher)
         {
-            if (cacher is null)
-                throw new ArgumentNullException(nameof(cacher));
-
-            _cache = cacher;
+            _datasetName = datasetName ?? throw new ArgumentNullException(nameof(datasetName));
+            _cache = cacher ?? throw new ArgumentNullException(nameof(cacher));
         }
         #endregion
 
@@ -122,7 +122,11 @@ namespace HatTrick.InMemDb
 
             configOfT.Initialize();
 
-            return new MemDb<T>(configOfT.GetCache());
+            var memDb = new MemDb<T>(config.DatasetName, configOfT.GetCache());
+
+            memDb._isEncryptionReady = configOfT.GetEncryptor() is not null;
+
+            return memDb;
         }
         #endregion
 
@@ -170,6 +174,9 @@ namespace HatTrick.InMemDb
 
         public void Insert(T record, Action<uint> idCallback, bool encrypt = false)
         {
+            if (encrypt && !_isEncryptionReady)
+                throw new NotEncryptionReadyException($"MemDb config for '{_datasetName}' does not contain an encryption key or password.");
+
             _cache.Insert(record, idCallback, encrypt);
         }
         #endregion

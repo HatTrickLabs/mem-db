@@ -24,7 +24,7 @@ namespace TestHarness
                 .SerializeWith(() => new DigitalAssetSerializer())
                 .CloneWith(() => new DigitalAssetCloner())
                 //.EncryptWithKey(() => new byte[] { 198, 1, 6, 8, 12, 1, 1, 1, 1, 88, 1, 1, 1, 1, 1, 9, 9, 9, 1, 1, 99, 1, 1, 1, 1, 1, 1, 1, 33, 1, 1, 77 })
-                .EncryptWithPassword(() => "Jerrod's super simple password...!!!!!!!!")
+                //.EncryptWithPassword(() => "Jerrod's super simple password...!!!!!!!!")
                 .SetMode(AccessMode.ReadWrite)
                 .ArchiveOnDefrag(Path.Combine(DbRoot, "archive"))
                 .Register();
@@ -32,31 +32,25 @@ namespace TestHarness
             _sw = new Stopwatch();
             _sw.Start();
 
-
             using (_db = MemDb.Open<DigitalAsset>(datasetName))
             {
                 _sw.Stop();
                 Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
                 _sw.Start();
 
-                Console.WriteLine($"Total records: {_db.Count()}");
-                Console.WriteLine($"Total tmp records: {_db.Count((a) => a.FullPath.Contains("tmp"))}");
-                Console.WriteLine($"Total pics records: {_db.Count((a) => a.FullPath.Contains("Pictures"))}");
-                Console.WriteLine($"Total vids records: {_db.Count((a) => a.FullPath.Contains("Videos"))}");
-
                 //Thread t1 = new Thread(new ParameterizedThreadStart((path) => ImportAssets(path.ToString())));
-                //Thread t2 = new Thread(new ParameterizedThreadStart((count) => ConcurrentQueryTest((int)count)));
+                Thread t2 = new Thread(new ParameterizedThreadStart((count) => ConcurrentQueryTest((int)count)));
                 //Thread t3 = new Thread(new ParameterizedThreadStart((path) => ImportAssets(path.ToString())));
                 //Thread t4 = new Thread(new ParameterizedThreadStart((path) => ImportAssets(path.ToString())));
                 //t3.Start(@"D:\tmp");
                 //t4.Start(@"C:\Users\jerrod.eiman\Pictures");
-                //t2.Start(8000);
+                t2.Start(10);
                 //t1.Start(@"C:\Users\jerrod.eiman\Videos");
 
-                //t2.Join();
+                t2.Join();
                 //t3.Join();
                 //t1.Join();
-
+                //t4.Join();
 
                 //Thread t5 = new Thread(new ThreadStart(() => UpdateAssetsWithXXHash(@"D:\tmp")));
                 //Thread t6 = new Thread(new ThreadStart(() => UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Pictures")));
@@ -88,10 +82,9 @@ namespace TestHarness
         {
             Parallel.For(0, count, (i) =>
             {
-                var sets = _db.Query().GroupBy(a => a.Extension.ToLower()).Having(g => g.Count() > 25).Select(g => (g.Key, g.Count())).ToArray();
+                var sets = _db.Query().GroupBy(a => a.Extension.ToLower()).Having(g => g.Count() > 100).Select(g => (g.Key, g.Count())).ToArray();
                 Array.Sort<(string key, int cnt)>(sets, (a, b) => b.cnt.CompareTo(a.cnt));
-                if ((i % 100) == 0)
-                    Console.WriteLine(sets[0]);
+                Console.WriteLine(sets[0]);
             });
         }
 
@@ -114,16 +107,17 @@ namespace TestHarness
             {
                 Interlocked.Increment(ref at);
 
-                XxHash64 xx64 = new XxHash64();
+                ulong hash = 0;
                 using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read))
                 {
+                    XxHash64 xx64 = new XxHash64(fs.Length);
                     xx64.Append(fs);
+                    hash = xx64.GetCurrentHashAsUInt64();
                 }
-                ulong hash = xx64.GetCurrentHashAsUInt64();
 
                 int cnt = _db.Update(
                     apply: (a) => a.XXHash = hash, 
-                    where: (a) => a.XXHash == 0 && a.Name == Path.GetFileName(file) && a.Directory == Path.GetDirectoryName(file)
+                    where: (a) => a.Name == Path.GetFileName(file) && a.Directory == Path.GetDirectoryName(file)
                 );
 
                 if (cnt == 0)
@@ -173,7 +167,7 @@ namespace TestHarness
                 asset.Imported = now;
                 //asset.XXHash = hash;
 
-                _db.Insert(asset, (id) => asset.Id = id, true);
+                _db.Insert(asset, (id) => asset.Id = id);
 
                 if ((cnt % 100) == 0)
                     Console.Write(".");
