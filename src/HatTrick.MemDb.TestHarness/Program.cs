@@ -14,17 +14,23 @@ namespace TestHarness
     class Program
     {
         static Stopwatch _sw;
-        static MemDb<DigitalAsset> _db;
+        static MemDb<IDigitalAsset> _db;
         static string datasetName = "assets";
         static string DbRoot = @"d:\tmp\mem-db\assets";
 
         static void Main(string[] args)
         {
-            MemDb.ConfigureFor<DigitalAsset>(datasetName, DbRoot)
-                .SerializeWith(() => new DigitalAssetSerializer())
-                .CloneWith(() => new DigitalAssetCloner())
+            MemDb.ConfigureFor<IDigitalAsset>(datasetName, DbRoot)
+                //.SerializeWith(() => new DigitalAssetBinarySerializer())
+                //.CloneWith(() => new DigitalAssetCloner())
+                .SerializeWith(() =>
+                {
+                    var serializer = MemDbJsonSerializer<IDigitalAsset>.GetInstance();
+                    serializer.ApplyConverterFor<IDigitalAsset>(new IDigitalAssetConverter<DigitalAsset>());
+                    return serializer;
+                })
                 //.EncryptWithKey(() => new byte[] { 198, 1, 6, 8, 12, 1, 1, 1, 1, 88, 1, 1, 1, 1, 1, 9, 9, 9, 1, 1, 99, 1, 1, 1, 1, 1, 1, 1, 33, 1, 1, 77 })
-                //.EncryptWithPassword(() => "Jerrod's super simple password...!!!!!!!!")
+                .EncryptWithPassword(() => "Jerrod's super simple password...!!!!!!!!")
                 .SetMode(AccessMode.ReadWrite)
                 .ArchiveOnDefrag(Path.Combine(DbRoot, "archive"))
                 .Register();
@@ -32,48 +38,18 @@ namespace TestHarness
             _sw = new Stopwatch();
             _sw.Start();
 
-            using (_db = MemDb.Open<DigitalAsset>(datasetName))
+            using (_db = MemDb.Open<IDigitalAsset>(datasetName))
             {
                 _sw.Stop();
                 Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
                 _sw.Start();
 
-                Console.WriteLine($"Image Count: {_db.Count(a => a.Directory.Contains("Pictures"))}");
-                Console.WriteLine($"Video Count: {_db.Count(a => a.Directory.Contains("Videos"))}");
-                Console.WriteLine($"Tmp Count:   {_db.Count(a => a.Directory.Contains("tmp"))}");
+                Console.WriteLine($"Image Count: {_db.Count(a => a is ImageAsset)}");
+                Console.WriteLine($"Video Count: {_db.Count(a => a is VideoAsset)}");
+                Console.WriteLine($"Tmp Count:   {_db.Count(a => a is DocAsset)}");
 
-                var asset1 = _db.Find(a => a.Id == 100);
-                Console.WriteLine(asset1.Directory);
-
-                var sets = _db.Query().GroupBy(a => a.Extension.ToLower()).Having(g => g.Count() > 1000).Select(g => (g.Key, g.Count())).ToArray();
-                Array.Sort<(string key, int cnt)>(sets, (a, b) => b.cnt.CompareTo(a.cnt));
-                Console.WriteLine(sets[0]);
-
-                //Thread t1 = new Thread(new ParameterizedThreadStart((path) => ImportAssets(path.ToString())));
-                //Thread t2 = new Thread(new ParameterizedThreadStart((count) => ConcurrentQueryTest((int)count)));
-                //Thread t3 = new Thread(new ParameterizedThreadStart((path) => ImportAssets(path.ToString())));
-                //Thread t4 = new Thread(new ParameterizedThreadStart((path) => ImportAssets(path.ToString())));
-                //t3.Start(@"D:\tmp");
-                //t4.Start(@"C:\Users\jerrod.eiman\Pictures");
-                //t2.Start(100);
-                //t1.Start(@"C:\Users\jerrod.eiman\Videos");
-
-                //t2.Join();
-                //t3.Join();
-                //t1.Join();
-                //t4.Join();
-
-                //Thread t5 = new Thread(new ThreadStart(() => UpdateAssetsWithXXHash(@"D:\tmp")));
-                //Thread t6 = new Thread(new ThreadStart(() => UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Pictures")));
-                //Thread t7 = new Thread(new ThreadStart(() => UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Videos")));
-
-                //t5.Start();
-                //t6.Start();
-                //t7.Start();
-
-                //t5.Join();
-                //t6.Join();
-                //t7.Join();
+                var images = _db.FindAll(a => a is ImageAsset);
+                Console.WriteLine(images.Length);
 
                 //ImportAssets(@"D:\tmp");
                 //UpdateAssetsWithXXHash(@"D:\tmp");
@@ -151,6 +127,12 @@ namespace TestHarness
             ops.RecurseSubdirectories = true;
             ops.MatchType = MatchType.Simple;
 
+            DigitalAssetType type = root.Contains("Pictures", StringComparison.OrdinalIgnoreCase)
+                ? DigitalAssetType.Image
+                : root.Contains("Videos", StringComparison.OrdinalIgnoreCase)
+                    ? DigitalAssetType.Video
+                    : DigitalAssetType.Doc;
+
             string[] files = Directory.GetFiles(root, "*", ops);
             Console.WriteLine("Starting import of " + files.Length + " digital assets.");
             
@@ -168,7 +150,7 @@ namespace TestHarness
                 //ulong hash = xx64.GetCurrentHashAsUInt64();
 
                 FileInfo fi = new FileInfo(file);
-                DigitalAsset asset = new DigitalAsset();
+                DigitalAsset asset = DigitalAsset.CreateNew(type);
                 asset.Name = fi.Name;
                 asset.Directory = Path.GetDirectoryName(file);
                 asset.Created = fi.CreationTime;
@@ -178,7 +160,7 @@ namespace TestHarness
                 asset.Imported = now;
                 //asset.XXHash = hash;
 
-                _db.Insert(asset, (id) => asset.Id = id);
+                _db.Insert(asset, (id) => asset.Id = id, true);
 
                 if ((cnt % 100) == 0)
                     Console.Write(".");

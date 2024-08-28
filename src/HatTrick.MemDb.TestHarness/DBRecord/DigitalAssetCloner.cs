@@ -7,7 +7,8 @@ namespace HatTrick.InMemDb
     {
         public DigitalAsset DeepCopy(DigitalAsset value)
         {
-            var asset = new DigitalAsset();
+            var asset = DigitalAsset.CreateNew(value.AssetType);
+
             asset.Id = value.Id;
             asset.Name = value.Name;
             asset.Directory = value.Directory;

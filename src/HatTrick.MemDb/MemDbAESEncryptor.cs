@@ -8,9 +8,9 @@ namespace HatTrick.InMemDb
     public class MemDbAESEncryptor : IMemDbEncryptor
     {
         #region internals
-        private static readonly int _keySize = 256;
-        private static readonly int _blockSize = 128;
-        private static readonly int _ivSize = 128;
+        private const int _keySize = 256;
+        private const int _blockSize = 128;
+        private const int _ivSize = 128;
         private static readonly CipherMode _mode = CipherMode.CBC;
 
         private byte[] _key;
@@ -45,8 +45,8 @@ namespace HatTrick.InMemDb
 
             //cryptolen = (inputlen + (blocklen - (inputlen % blocklen))) + ivlen;
 
-            int blockLength = _blockSize / 8;
-            int ivLength = _ivSize / 8;
+            const int blockLength = _blockSize / 8;
+            const int ivLength = _ivSize / 8;
 
             int len = (byteLength + (blockLength - (byteLength % blockLength))) + ivLength;
 

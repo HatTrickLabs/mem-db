@@ -7,7 +7,7 @@ using System.Text.Json.Serialization;
 namespace HatTrick.InMemDb
 {
     #region [class] mem db json serializer
-    internal class MemDbJsonSerializer
+    public class MemDbJsonSerializer
     {
         #region static internals
         private static List<MemDbJsonSerializer> _instances;
@@ -50,27 +50,29 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region serializer registered
-        protected static bool SerializerRegistered(Type ofType)
+        protected static bool SerializerRegistered(Type ofType, out MemDbJsonSerializer serializer)
         {
-            return _instances.Exists(i => i.GetType().GetGenericArguments()[0] == ofType);
+            serializer = _instances.Find(i => i.GetType().GetGenericArguments()[0] == ofType);
+            return serializer is not null;
         }
         #endregion
 
         #region get serializer
         protected static MemDbJsonSerializer GetSerializer(Type ofType)
         {
-            int idx = _instances.FindIndex(i => i.GetType().GetGenericArguments()[0] == ofType);
-            if (idx == -1)
+            MemDbJsonSerializer serializer = _instances.Find(i => i.GetType().GetGenericArguments()[0] == ofType);
+
+            if (serializer is null)
                 throw new ArgumentException("No serializer registerd for provided type: " + ofType.Name);
 
-            return _instances[idx];
+            return serializer;
         }
         #endregion
     }
     #endregion
 
     #region [class] mem db json serializer of T
-    internal class MemDbJsonSerializer<T> : MemDbJsonSerializer, IMemDbSerializer<T> where T : class
+    public class MemDbJsonSerializer<T> : MemDbJsonSerializer, IMemDbSerializer<T> where T : class
     {
         #region internals
         private MemDbJsonSerializer<T> _instance;
@@ -85,7 +87,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region create instance
-        public static MemDbJsonSerializer<T> CreateInstance(params JsonConverter[] converters)
+        private static MemDbJsonSerializer<T> CreateInstance(params JsonConverter[] converters)
         {
             //clone the defaults then add converters
             var ops = new JsonSerializerOptions(MemDbJsonSerializer.DefaultOpions);
@@ -107,11 +109,39 @@ namespace HatTrick.InMemDb
         public static MemDbJsonSerializer<T> GetInstance()
         {
             Type ofType = typeof(T);
-            if (!MemDbJsonSerializer.SerializerRegistered(typeof(T)))
-                return MemDbJsonSerializer<T>.CreateInstance();
+            MemDbJsonSerializer serializer = null;
+            if (!MemDbJsonSerializer.SerializerRegistered(typeof(T), out serializer))
+                serializer = MemDbJsonSerializer<T>.CreateInstance(/*** Default converters??? ***/);
 
-            var serializer = MemDbJsonSerializer.GetSerializer(typeof(T));
             return (MemDbJsonSerializer<T>)serializer;
+        }
+        #endregion
+
+        #region apply converter for [This is NOT thread safe]
+        public void ApplyConverterFor<U>(JsonConverter<U> converter) where U : class
+        {
+            //build a copy of existing options
+            var options = new JsonSerializerOptions(_options);
+
+            //remove any existing converters for the same typeof(T)
+            JsonConverter c = null;
+            for (int i = 0; i < options.Converters.Count; i++)
+            {
+                if (options.Converters[i].CanConvert(typeof(T)))
+                {
+                    c = options.Converters[i];
+                    break;
+                }
+            }
+
+            if (c is not null)
+                options.Converters.Remove(c);
+
+            //replace with .. or add the applied converter
+            options.Converters.Add(converter);
+
+            //hot swap new options 
+            _options = options;
         }
         #endregion
 
