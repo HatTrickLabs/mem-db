@@ -21,8 +21,8 @@ namespace HatTrick.InMemDb
         private Queue<MemDbRecord<T>> _insertQueue;
         private object _insertSyncLock;
 
-        private Queue<MemDbRecord> _updateStateQueue;
-        private object _updateStateSyncLock;
+        private Queue<MemDbRecord> _stateChangeQueue;
+        private object _stateChangeSyncLock;
 
         private MemDbMap _map;
         private object _mapSyncLock;
@@ -76,8 +76,8 @@ namespace HatTrick.InMemDb
 
             _insertQueue = new Queue<MemDbRecord<T>>(256);
             _insertSyncLock = new();
-            _updateStateQueue = new Queue<MemDbRecord>(256);
-            _updateStateSyncLock = new();
+            _stateChangeQueue = new Queue<MemDbRecord>(256);
+            _stateChangeSyncLock = new();
 
             this.Initialize();
         }
@@ -227,9 +227,9 @@ namespace HatTrick.InMemDb
         {
             this.EnsureMode(AccessMode.ReadWrite, nameof(MarkStale));
 
-            lock (_updateStateSyncLock)
+            lock (_stateChangeSyncLock)
             {
-                _updateStateQueue.Enqueue(record);
+                _stateChangeQueue.Enqueue(record);//deletes and updates both go to the same queue
             }
         }
         #endregion
@@ -239,9 +239,9 @@ namespace HatTrick.InMemDb
         {
             this.EnsureMode(AccessMode.ReadWrite, nameof(MarkDeleted));
 
-            lock (_updateStateSyncLock)
+            lock (_stateChangeSyncLock)
             {
-                _updateStateQueue.Enqueue(record);
+                _stateChangeQueue.Enqueue(record);//deletes and updates both go to the same queue.
             }
         }
         #endregion
@@ -258,13 +258,13 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
-        #region try pop stale record
-        private bool TryPopStaleRecord(out MemDbRecord record)
+        #region try pop state change record
+        private bool TryPopStateChangeRecord(out MemDbRecord record)
         {
             bool found = false;
-            lock (_updateStateSyncLock)
+            lock (_stateChangeSyncLock)
             {
-                found = _updateStateQueue.TryDequeue(out record);
+                found = _stateChangeQueue.TryDequeue(out record);
             }
             return found;
         }
@@ -347,7 +347,7 @@ namespace HatTrick.InMemDb
         #region update item state
         private void UpdateItemStates()
         {
-            _map.UpdatePointerState(this.TryPopStaleRecord);
+            _map.UpdatePointerState(this.TryPopStateChangeRecord);
         }
         #endregion
 

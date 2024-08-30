@@ -14,21 +14,21 @@ namespace TestHarness
     class Program
     {
         static Stopwatch _sw;
-        static MemDb<IDigitalAsset> _db;
+        static MemDb<DigitalAsset> _db;
         static string datasetName = "assets";
         static string DbRoot = @"d:\tmp\mem-db\assets";
 
         static void Main(string[] args)
         {
-            MemDb.ConfigureFor<IDigitalAsset>(datasetName, DbRoot)
-                //.SerializeWith(() => new DigitalAssetBinarySerializer())
-                //.CloneWith(() => new DigitalAssetCloner())
-                .SerializeWith(() =>
-                {
-                    var serializer = MemDbJsonSerializer<IDigitalAsset>.GetInstance();
-                    serializer.ApplyConverterFor<IDigitalAsset>(new IDigitalAssetConverter<DigitalAsset>());
-                    return serializer;
-                })
+            MemDb.ConfigureFor<DigitalAsset>(datasetName, DbRoot)
+                .SerializeWith(() => new DigitalAssetBinarySerializer())
+                .CloneWith(() => new DigitalAssetCloner())
+                //.SerializeWith(() =>
+                //{
+                //    var serializer = MemDbJsonSerializer<IDigitalAsset>.GetInstance();
+                //    serializer.ApplyConverterFor<IDigitalAsset>(new IDigitalAssetConverter<DigitalAsset>());
+                //    return serializer;
+                //})
                 //.EncryptWithKey(() => new byte[] { 198, 1, 6, 8, 12, 1, 1, 1, 1, 88, 1, 1, 1, 1, 1, 9, 9, 9, 1, 1, 99, 1, 1, 1, 1, 1, 1, 1, 33, 1, 1, 77 })
                 .EncryptWithPassword(() => "Jerrod's super simple password...!!!!!!!!")
                 .SetMode(AccessMode.ReadWrite)
@@ -38,18 +38,19 @@ namespace TestHarness
             _sw = new Stopwatch();
             _sw.Start();
 
-            using (_db = MemDb.Open<IDigitalAsset>(datasetName))
+            //MemDb.Defrag(datasetName);
+
+            using (_db = MemDb.Open<DigitalAsset>(datasetName))
             {
                 _sw.Stop();
                 Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
                 _sw.Start();
 
+                //string[] extensions = _db.Query().SelectDistinct(a => a.Extension);
+
                 Console.WriteLine($"Image Count: {_db.Count(a => a is ImageAsset)}");
                 Console.WriteLine($"Video Count: {_db.Count(a => a is VideoAsset)}");
-                Console.WriteLine($"Tmp Count:   {_db.Count(a => a is DocAsset)}");
-
-                var images = _db.FindAll(a => a is ImageAsset);
-                Console.WriteLine(images.Length);
+                Console.WriteLine($"Doc Count:   {_db.Count(a => a is DocAsset)}");
 
                 //ImportAssets(@"D:\tmp");
                 //UpdateAssetsWithXXHash(@"D:\tmp");
@@ -127,11 +128,11 @@ namespace TestHarness
             ops.RecurseSubdirectories = true;
             ops.MatchType = MatchType.Simple;
 
-            DigitalAssetType type = root.Contains("Pictures", StringComparison.OrdinalIgnoreCase)
-                ? DigitalAssetType.Image
-                : root.Contains("Videos", StringComparison.OrdinalIgnoreCase)
-                    ? DigitalAssetType.Video
-                    : DigitalAssetType.Doc;
+            //DigitalAssetType type = root.Contains("Pictures", StringComparison.OrdinalIgnoreCase)
+            //    ? DigitalAssetType.Image
+            //    : root.Contains("Videos", StringComparison.OrdinalIgnoreCase)
+            //        ? DigitalAssetType.Video
+            //        : DigitalAssetType.Doc;
 
             string[] files = Directory.GetFiles(root, "*", ops);
             Console.WriteLine("Starting import of " + files.Length + " digital assets.");
@@ -150,7 +151,7 @@ namespace TestHarness
                 //ulong hash = xx64.GetCurrentHashAsUInt64();
 
                 FileInfo fi = new FileInfo(file);
-                DigitalAsset asset = DigitalAsset.CreateNew(type);
+                DigitalAsset asset = DigitalAsset.CreateNew(DigitalAssetType.Doc);
                 asset.Name = fi.Name;
                 asset.Directory = Path.GetDirectoryName(file);
                 asset.Created = fi.CreationTime;

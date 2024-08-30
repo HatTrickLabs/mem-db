@@ -67,9 +67,9 @@ namespace HatTrick.InMemDb
                 Array.Sort(sets, (a, b) => a.key.CompareTo(b.key));
 
                 //should result in
-                //{ x.htl.x.db.arch, x.htl.x.map.arch }
-                //{ y.htl.y.db.arch, y.htl.y.map.arch }
-                //{ z.htl.z.db.arch, z.htl.z.map.arch }
+                //{x, [ x.htl.datasetName.db.arch, x.htl.datasetName.map.arch ] }
+                //{y, [ y.htl.datasetName.db.arch, y.htl.datasetName.map.arch ] }
+                //{z, [ z.htl.datasetName.db.arch, z.htl.datasetName.map.arch ] }
 
                 foreach (var set in sets)
                 {

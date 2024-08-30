@@ -12,6 +12,7 @@ namespace HatTrick.InMemDb
         internal uint GetNextId();
         internal void Insert(MemDbRecord<T> record);
         internal void MarkStale(MemDbRecord<T> record);
+        internal void MarkDeleted(MemDbRecord<T> record);
         internal void Flush(object state);
     }
 }

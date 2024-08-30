@@ -74,7 +74,6 @@ namespace HatTrick.InMemDb
     internal class MemDbRecord<T> : MemDbRecord where T: class
     {
         #region internals
-        private static IMemDbSerializer<T> _serializer;
         private T _value;
         #endregion
 

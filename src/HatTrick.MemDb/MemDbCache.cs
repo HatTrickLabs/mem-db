@@ -304,7 +304,7 @@ namespace HatTrick.InMemDb
                 {
                     cnt += 1;
                     r.MarkDeleted();
-                    _persister.MarkStale(r);
+                    _persister.MarkDeleted(r);
                 }
             }
 
