@@ -192,7 +192,7 @@ namespace HatTrick.InMemDb
                 origDb.ReadExactly(buffer, 0, actualLen);
 
                 //the pointer should always store the un-encrypted length...
-                var nPtr = new MemDbPointer(oPtr.Id, oPtr.State, oPtr.IsEncrypted, (uint)archDb.Position, oPtr.Length);
+                var nPtr = new MemDbPointer(oPtr.Id, oPtr.State, oPtr.StateSetAt, oPtr.IsEncrypted, (uint)archDb.Position, oPtr.Length);
                 pointers.Add(nPtr);
 
                 archDb.Write(buffer, 0, actualLen);

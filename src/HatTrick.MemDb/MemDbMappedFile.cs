@@ -48,7 +48,7 @@ namespace HatTrick.InMemDb
             : this(datasetName, path, mode, serializer, null)
         { }
 
-        public MemDbMappedFile(string datasetName, string path, AccessMode mode, IMemDbSerializer<T> serializer, IMemDbEncryptor encryptor)
+        internal MemDbMappedFile(string datasetName, string path, AccessMode mode, IMemDbSerializer<T> serializer, IMemDbEncryptor encryptor)
         {
             if (string.IsNullOrEmpty(datasetName))
                 throw new ArgumentException("arg must have a value.", nameof(datasetName));
@@ -94,7 +94,7 @@ namespace HatTrick.InMemDb
             }
 
             if (_mode != AccessMode.ReadOnly)
-                _fileSyncTimer = new Timer(new TimerCallback(this.Flush), null, (1000 * 5), Timeout.Infinite); //5 seconds...
+                _fileSyncTimer = new Timer(new TimerCallback((this as IMemDbPersister<T>).Flush), null, (1000 * 5), Timeout.Infinite); //5 seconds...
         }
         #endregion
 
@@ -143,9 +143,9 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region initialize mapped records
-        public IList<MemDbRecord<T>> InitializeMappedRecords()
+        IList<MemDbRecord<T>> IMemDbPersister<T>.InitializeMappedRecords()
         {
-            this.EnsureMode(AccessMode.ReadOnly | AccessMode.ReadWrite, nameof(Initialize));
+            this.EnsureMode(AccessMode.ReadOnly | AccessMode.ReadWrite, nameof(IMemDbPersister<T>.InitializeMappedRecords));
 
             //TODO: this should at most be called ONE time on read or readwrite initialization of cache...ensure that...
             int encrypted = 0;
@@ -158,12 +158,14 @@ namespace HatTrick.InMemDb
                     using var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read);
                     using var reader = new BinaryReader(fsDb, Encoding.UTF8, true);
 
+                    RecordState fresh = RecordState.Fresh;
                     MemDbPointer pointer;
+                    MemDbRecord<T> record;
                     for (int i = 0; i < _map.Count; i++)
                     {
                         pointer = _map[i];
 
-                        if (pointer.State != RecordState.Fresh)
+                        if (pointer.State != fresh)
                         {
                             if (pointer.IsEncrypted)
                                 fsDb.Position += MemDbAESEncryptor.CalculateCryptoByteLength(pointer.Length);
@@ -193,7 +195,7 @@ namespace HatTrick.InMemDb
                             value = _serializer.Deserialize(reader, pointer.Length);
                         }
 
-                        var record = new MemDbRecord<T>(pointer.Id, value, RecordState.Fresh, pointer.IsEncrypted, records.Count, i);
+                        record = new(pointer.Id, value, fresh, pointer.StateSetAt, pointer.IsEncrypted, records.Count, i);
                         records.Add(record);
                     }
                 }
@@ -204,16 +206,16 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region get next id
-        public uint GetNextId()
+        uint IMemDbPersister<T>.GetNextId()
         {
             return _map.GetNextId();
         }
         #endregion
 
         #region insert
-        public void Insert(MemDbRecord<T> record)
+        void IMemDbPersister<T>.Insert(MemDbRecord<T> record)
         {
-            this.EnsureMode(AccessMode.AppendOnly | AccessMode.ReadWrite, nameof(Insert));
+            this.EnsureMode(AccessMode.AppendOnly | AccessMode.ReadWrite, nameof(IMemDbPersister<T>.Insert));
 
             lock (_insertSyncLock)
             {
@@ -223,9 +225,9 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region mark stale
-        public void MarkStale(MemDbRecord<T> record)
+        void IMemDbPersister<T>.MarkStale(MemDbRecord<T> record)
         {
-            this.EnsureMode(AccessMode.ReadWrite, nameof(MarkStale));
+            this.EnsureMode(AccessMode.ReadWrite, nameof(IMemDbPersister<T>.MarkStale));
 
             lock (_stateChangeSyncLock)
             {
@@ -235,9 +237,9 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region mark deleted
-        public void MarkDeleted(MemDbRecord<T> record)
+        void IMemDbPersister<T>.MarkDeleted(MemDbRecord<T> record)
         {
-            this.EnsureMode(AccessMode.ReadWrite, nameof(MarkDeleted));
+            this.EnsureMode(AccessMode.ReadWrite, nameof(IMemDbPersister<T>.MarkDeleted));
 
             lock (_stateChangeSyncLock)
             {
@@ -271,7 +273,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region flush
-        public void Flush(object state)
+        void IMemDbPersister<T>.Flush(object state)
         {
             if (state == null && _isClosed)
                 return;
@@ -296,8 +298,9 @@ namespace HatTrick.InMemDb
             {
                 lock (_dbSyncLock)
                 {
-                    MemDbRecord<T> rec = null;
-                    if (this.TryPopInsertRecord(out rec))
+                    MemDbRecord<T> record = null;
+                    var fresh = RecordState.Fresh;
+                    if (this.TryPopInsertRecord(out record))
                     {
                         using var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.ReadWrite);
                         using var dbWriter = new BinaryWriter(fsDb, Encoding.UTF8, true);
@@ -311,21 +314,21 @@ namespace HatTrick.InMemDb
                             {
                                 int length;
 
-                                if (rec.IsEncrypted)
+                                if (record.IsEncrypted)
                                 {
-                                    Span<byte> raw = _serializer.Serialize(rec.Value);
+                                    Span<byte> raw = _serializer.Serialize(record.Value);
                                     _encryptor.Encrypt(raw, fsDb);
                                     //we must record the RAW length of the record NOT crypto...we can calc crypto len on read
                                     length = raw.Length;
                                 }
                                 else
                                 {
-                                    _serializer.Serialize(rec.Value, dbWriter);
+                                    _serializer.Serialize(record.Value, dbWriter);
                                     length = (int)(fsDb.Position - startPos);
                                 }
 
-                                var pointer = new MemDbPointer(rec.Id, RecordState.Fresh, rec.IsEncrypted, startPos, length);
-                                rec.SetMapIndex(_map.Add(pointer));
+                                var pointer = new MemDbPointer(record.Id, fresh, record.StateSetAt, record.IsEncrypted, startPos, length);
+                                record.SetMapIndex(_map.Add(pointer));
                             }
                             catch
                             {
@@ -336,7 +339,7 @@ namespace HatTrick.InMemDb
                                 throw;
                             }
 
-                        } while (this.TryPopInsertRecord(out rec));
+                        } while (this.TryPopInsertRecord(out record));
                         _map.Flush();
                     }
                 }
@@ -359,7 +362,7 @@ namespace HatTrick.InMemDb
             _fileSyncTimer.Change(Timeout.Infinite, Timeout.Infinite);
             _fileSyncTimer.Dispose();
 
-            this.Flush(new());
+            (this as IMemDbPersister<T>).Flush(new());
 
             if (!isFinalizer)
             {

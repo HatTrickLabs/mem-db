@@ -260,6 +260,7 @@ namespace HatTrick.InMemDb
             List<MemDbRecord<T>> matches = null;
             lock (_recSyncLock)
             {
+                long binaryUtcTimestamp = DateTime.UtcNow.ToBinary();
                 matches = _records.FindAll(r => r.State == RecordState.Fresh && where(r.Value));
 
                 if (matches.Count > 0)
@@ -272,7 +273,7 @@ namespace HatTrick.InMemDb
                         var newRec = new MemDbRecord<T>(oldRec.Id, oldRec.Value, oldRec.IsEncrypted);
                         //we know the MemDb instance is encryption ready if anything encrypted was ever read into or inserted into the cache.
 
-                        oldRec.MarkStale();
+                        oldRec.MarkStale(binaryUtcTimestamp);
                         apply(newRec.Value);
 
                         newRec.SetCacheIndex(_records.Count);
@@ -299,11 +300,12 @@ namespace HatTrick.InMemDb
             int cnt = 0;
             lock (_recSyncLock)
             {
+                long binaryUtcTimestamp = DateTime.UtcNow.ToBinary();
                 var set = _records.Where(r => r.State == RecordState.Fresh && where(r.Value));
                 foreach (var r in set)
                 {
                     cnt += 1;
-                    r.MarkDeleted();
+                    r.MarkDeleted(binaryUtcTimestamp);
                     _persister.MarkDeleted(r);
                 }
             }

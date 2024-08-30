@@ -91,31 +91,31 @@ namespace HatTrick.InMemDb
                     {
                         using (var dbReader = new BinaryReader(dbStream))
                         {
-                            MemDbPointer pointer;
+                            MemDbPointer ptr;
                             long cnt = 0;
                             Stream fsDb = dbReader.BaseStream;
                             for (int i = 0; i < map.Count; i++)
                             {
-                                pointer = map[i];
+                                ptr = map[i];
 
-                                if (pointer.IsEncrypted && !this.IsEncryptionReady)
+                                if (ptr.IsEncrypted && !this.IsEncryptionReady)
                                 {
-                                    fsDb.Position += MemDbAESEncryptor.CalculateCryptoByteLength(pointer.Length);
+                                    fsDb.Position += MemDbAESEncryptor.CalculateCryptoByteLength(ptr.Length);
                                     continue;
                                 }
 
                                 T value = null;
-                                if (pointer.IsEncrypted)
+                                if (ptr.IsEncrypted)
                                 {
-                                    Span<byte> raw = _encryptor.Decrypt(fsDb, pointer.Length);
+                                    Span<byte> raw = _encryptor.Decrypt(fsDb, ptr.Length);
                                     value = _serializer.Deserialize(raw);
                                 }
                                 else
                                 {
-                                    value = _serializer.Deserialize(dbReader, pointer.Length);//T value
+                                    value = _serializer.Deserialize(dbReader, ptr.Length);//T value
                                 }
 
-                                var record = new MemDbRecord<T>(pointer.Id, value, pointer.State, pointer.IsEncrypted, -1, i);
+                                var record = new MemDbRecord<T>(ptr.Id, value, ptr.State, ptr.StateSetAt, ptr.IsEncrypted, -1, i);
                                 cnt += 1;
                                 yield return record;
                             }
