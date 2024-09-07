@@ -9,16 +9,20 @@ namespace HatTrick.InMemDb
     {
         #region static internals
         private static List<MemDbConfiguration> _configurations;
+        private static List<string> _openDatasets;
+        private static object _lock;
         #endregion
 
         #region static interface
         protected static List<MemDbConfiguration> Configurations => _configurations;
         #endregion
 
-        #region static constructor
+        #region static ctor
         static MemDb()
         {
             _configurations = new List<MemDbConfiguration>();
+            _openDatasets = new List<string>();
+            _lock = new();
         }
         #endregion
 
@@ -83,7 +87,25 @@ namespace HatTrick.InMemDb
             if (datasetName is null)
                 throw new ArgumentException(nameof(datasetName));
 
-            return MemDb<T>.Open(datasetName);
+            lock (_lock)
+            {
+                if (_openDatasets.Contains(datasetName))
+                    throw new InvalidOperationException($"MemDb instance for provided {nameof(datasetName)} '{datasetName}' is already open.");
+
+                var memDb = MemDb<T>.Open(datasetName);
+                _openDatasets.Add(datasetName);
+                return memDb;
+            }
+        }
+        #endregion
+
+        #region dispose
+        protected static void Close(string datasetName)
+        {
+            lock (_lock)
+            {
+                _openDatasets.Remove(datasetName);
+            }
         }
         #endregion
     }
@@ -206,6 +228,7 @@ namespace HatTrick.InMemDb
         private void Close(bool isFinalizer = false)
         {
             _cache.Dispose();
+            MemDb.Close(_datasetName);
         }
         #endregion
 

@@ -47,10 +47,16 @@ namespace TestHarness
                 _sw.Start();
 
                 //string[] extensions = _db.Query().SelectDistinct(a => a.Extension);
+                //for (int i = 0; i < extensions.Length; i++)
+                //{
+                //    Console.WriteLine(extensions[i]);
+                //}
+                //Console.WriteLine($"Image Count: {_db.Count(a => a is ImageAsset)}");
+                //Console.WriteLine($"Video Count: {_db.Count(a => a is VideoAsset)}");
+                //Console.WriteLine($"Doc Count:   {_db.Count(a => a is DocAsset)}");
 
-                Console.WriteLine($"Image Count: {_db.Count(a => a is ImageAsset)}");
-                Console.WriteLine($"Video Count: {_db.Count(a => a is VideoAsset)}");
-                Console.WriteLine($"Doc Count:   {_db.Count(a => a is DocAsset)}");
+                //_db.Update(a => a.XXHash = 3, a => true);
+                //Console.WriteLine(_db.Count(a => a.XXHash == 3));
 
                 //ImportAssets(@"D:\tmp");
                 //UpdateAssetsWithXXHash(@"D:\tmp");
