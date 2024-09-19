@@ -47,6 +47,18 @@ namespace TestHarness
                 Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
                 _sw.Start();
 
+                Thread t1 = new Thread(() => { ImportAssets(@"D:\tmp"); });
+                Thread t2 = new Thread(() => { ImportAssets(@"C:\Users\jerrod.eiman\Pictures"); });
+                Thread t3 = new Thread(() => { ImportAssets(@"C:\Users\jerrod.eiman\Videos"); });
+                Thread t4 = new Thread(() => { UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Videos"); });
+
+                t3.Start();
+                t1.Start();
+                t2.Start();
+
+                t3.Join();
+                t4.Start();
+
                 int hasXXX = _db.Count(a => a.XXHash > 0);
                 Console.WriteLine($"{hasXXX} files have xx hash.");
 
@@ -62,8 +74,12 @@ namespace TestHarness
                 long totalVidsLen = _db.Query().Where(a => a.FullPath.Contains("Videos")).Sum(a => a.Length);
                 Console.WriteLine($"Total file len: {totalVidsLen}");
 
-
-                Console.WriteLine((totalVidsLen + totalPicsLen + totalTmpLen) == totalFileLen);
+                t1.Join();
+                Console.WriteLine("joined t1");
+                t2.Join();
+                Console.WriteLine("joined t2");
+                t4.Join();
+                Console.WriteLine("joined t4");
 
                 //ImportAssets(@"D:\tmp");
                 //UpdateAssetsWithXXHash(@"D:\tmp");
@@ -173,7 +189,6 @@ namespace TestHarness
                 asset.Length = fi.Length;
                 asset.Imported = now;
                 //asset.XXHash = hash;
-                Thread.Sleep(1);
 
                 _db.Insert(asset, (id) => asset.Id = id, true);
 

@@ -9,7 +9,7 @@ namespace HatTrick.InMemDb
     internal sealed class MemDbMappedFile<T> : IMemDbPersister<T>, IDisposable where T : class
     {
         #region internals
-        private const int _flushInterval = (1000 * 5);//5 seconds
+        private const int _flushInterval = (1000 * 2);//5 seconds
 
         private readonly string _path;
         private readonly string _datasetName;
@@ -17,7 +17,6 @@ namespace HatTrick.InMemDb
 
         private string _fullMapPath;
         private string _fullDbPath;
-        private object _dbSyncLock;
         private Timer _fileSyncTimer;
 
         private Queue<MemDbRecord<T>> _insertQueue;
@@ -27,7 +26,8 @@ namespace HatTrick.InMemDb
         private object _stateChangeSyncLock;
 
         private MemDbMap _map;
-        private object _mapSyncLock;
+
+        private object _flushLock;
 
         private IMemDbSerializer<T> _serializer;
         private IMemDbEncryptor _encryptor;
@@ -66,15 +66,15 @@ namespace HatTrick.InMemDb
             _path = path;
             _datasetName = datasetName;
             _mode = mode;
-            _dbSyncLock = new();
 
             _serializer = serializer;
             _encryptor = encryptor;
 
             _fullDbPath = Path.Combine(path, $"htl.{datasetName}.db");
             _fullMapPath = Path.Combine(path, $"htl.{datasetName}.map");
-            _mapSyncLock = new();
             _map = new MemDbMap(_fullMapPath);
+
+            _flushLock = new();
 
             _insertQueue = new Queue<MemDbRecord<T>>(256);
             _insertSyncLock = new();
@@ -122,7 +122,7 @@ namespace HatTrick.InMemDb
             if (!dbExists)
             {
                 dbCreated = true;
-                lock (_dbSyncLock)
+                lock (_flushLock)
                 {
                     dbCreated = true;
                     using var fs = new FileStream(_fullDbPath, FileMode.CreateNew);
@@ -152,54 +152,51 @@ namespace HatTrick.InMemDb
             //TODO: this should at most be called ONE time on read or readwrite initialization of cache...ensure that...
             int encrypted = 0;
             List<MemDbRecord<T>> records = null;
-            lock (_mapSyncLock)
+            lock (_flushLock)
             {
-                lock (_dbSyncLock)
+                records = new List<MemDbRecord<T>>((int)(_map.FreshCount * 1.1));
+                using var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read);
+                using var reader = new BinaryReader(fsDb, Encoding.UTF8, true);
+
+                RecordState fresh = RecordState.Fresh;
+                MemDbPointer pointer;
+                MemDbRecord<T> record;
+                for (int i = 0; i < _map.Count; i++)
                 {
-                    records = new List<MemDbRecord<T>>((int)(_map.FreshCount * 1.1));
-                    using var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read);
-                    using var reader = new BinaryReader(fsDb, Encoding.UTF8, true);
+                    pointer = _map[i];
 
-                    RecordState fresh = RecordState.Fresh;
-                    MemDbPointer pointer;
-                    MemDbRecord<T> record;
-                    for (int i = 0; i < _map.Count; i++)
+                    if (pointer.State != fresh)
                     {
-                        pointer = _map[i];
-
-                        if (pointer.State != fresh)
-                        {
-                            if (pointer.IsEncrypted)
-                                fsDb.Position += MemDbAESEncryptor.CalculateCryptoByteLength(pointer.Length);
-
-                            else
-                                fsDb.Position += pointer.Length;
-
-                            continue;
-                        }
-
-                        if (pointer.IsEncrypted && !this.IsEncryptionReady)
-                        {
-                            fsDb.Position += MemDbAESEncryptor.CalculateCryptoByteLength(pointer.Length);
-                            encrypted += 1;
-                            continue;
-                        }
-
-                        T value = null;
                         if (pointer.IsEncrypted)
-                        {
-                            Span<byte> raw = _encryptor.Decrypt(fsDb, pointer.Length);
-                            value = _serializer.Deserialize(raw);
-                            encrypted += 1;
-                        }
-                        else
-                        {
-                            value = _serializer.Deserialize(reader, pointer.Length);
-                        }
+                            fsDb.Position += MemDbAESEncryptor.CalculateCryptoByteLength(pointer.Length);
 
-                        record = new(pointer.Id, value, fresh, pointer.StateSetAt, pointer.IsEncrypted, records.Count, i);
-                        records.Add(record);
+                        else
+                            fsDb.Position += pointer.Length;
+
+                        continue;
                     }
+
+                    if (pointer.IsEncrypted && !this.IsEncryptionReady)
+                    {
+                        fsDb.Position += MemDbAESEncryptor.CalculateCryptoByteLength(pointer.Length);
+                        encrypted += 1;
+                        continue;
+                    }
+
+                    T value = null;
+                    if (pointer.IsEncrypted)
+                    {
+                        Span<byte> raw = _encryptor.Decrypt(fsDb, pointer.Length);
+                        value = _serializer.Deserialize(raw);
+                        encrypted += 1;
+                    }
+                    else
+                    {
+                        value = _serializer.Deserialize(reader, pointer.Length);
+                    }
+
+                    record = new(pointer.Id, value, fresh, pointer.StateSetAt, pointer.IsEncrypted, records.Count, i);
+                    records.Add(record);
                 }
             }
             _cryptoRecordCount = encrypted;
@@ -298,54 +295,51 @@ namespace HatTrick.InMemDb
         #region append inserted items
         private void AppendInsertedItems()
         {
-            lock (_mapSyncLock)
+            lock (_flushLock)
             {
-                lock (_dbSyncLock)
+                MemDbRecord<T> record = null;
+                var fresh = RecordState.Fresh;
+                if (this.TryPopInsertRecord(out record))
                 {
-                    MemDbRecord<T> record = null;
-                    var fresh = RecordState.Fresh;
-                    if (this.TryPopInsertRecord(out record))
+                    using var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.ReadWrite);
+                    using var dbWriter = new BinaryWriter(fsDb, Encoding.UTF8, true);
+
+                    fsDb.Position = fsDb.Length;
+                    do
                     {
-                        using var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.ReadWrite);
-                        using var dbWriter = new BinaryWriter(fsDb, Encoding.UTF8, true);
+                        uint startPos = (uint)fsDb.Position;
 
-                        fsDb.Position = fsDb.Length;
-                        do
+                        try
                         {
-                            uint startPos = (uint)fsDb.Position;
+                            int length;
 
-                            try
+                            if (record.IsEncrypted)
                             {
-                                int length;
-
-                                if (record.IsEncrypted)
-                                {
-                                    Span<byte> raw = _serializer.Serialize(record.Value);
-                                    _encryptor.Encrypt(raw, fsDb);
-                                    //we must record the RAW length of the record NOT crypto...we can calc crypto len on read
-                                    length = raw.Length;
-                                }
-                                else
-                                {
-                                    _serializer.Serialize(record.Value, dbWriter);
-                                    length = (int)(fsDb.Position - startPos);
-                                }
-
-                                var pointer = new MemDbPointer(record.Id, fresh, record.StateSetAt, record.IsEncrypted, startPos, length);
-                                record.SetMapIndex(_map.Add(pointer));
+                                Span<byte> raw = _serializer.Serialize(record.Value);
+                                _encryptor.Encrypt(raw, fsDb);
+                                //we must record the RAW length of the record NOT crypto...we can calc crypto len on read
+                                length = raw.Length;
                             }
-                            catch
+                            else
                             {
-                                //reset the len of file back to position before this pass started.
-                                fsDb.SetLength(startPos);
-                                //ensure pointers successfully added get flushed before tossing the ex
-                                _map.Flush();
-                                throw;
+                                _serializer.Serialize(record.Value, dbWriter);
+                                length = (int)(fsDb.Position - startPos);
                             }
 
-                        } while (this.TryPopInsertRecord(out record));
-                        _map.Flush();
-                    }
+                            var pointer = new MemDbPointer(record.Id, fresh, record.StateSetAt, record.IsEncrypted, startPos, length);
+                            record.SetMapIndex(_map.Add(pointer));
+                        }
+                        catch
+                        {
+                            //reset the len of file back to position before this pass started.
+                            fsDb.SetLength(startPos);
+                            //ensure pointers successfully added get flushed before tossing the ex
+                            _map.Flush();
+                            throw;
+                        }
+
+                    } while (this.TryPopInsertRecord(out record));
+                    _map.Flush();
                 }
             }
         }
