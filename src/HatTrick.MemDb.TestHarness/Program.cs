@@ -40,23 +40,30 @@ namespace TestHarness
 
             //MemDb.Defrag(datasetName);
 
+
             using (_db = MemDb.Open<DigitalAsset>(datasetName))
             {
                 _sw.Stop();
                 Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
                 _sw.Start();
 
-                //string[] extensions = _db.Query().SelectDistinct(a => a.Extension);
-                //for (int i = 0; i < extensions.Length; i++)
-                //{
-                //    Console.WriteLine(extensions[i]);
-                //}
-                //Console.WriteLine($"Image Count: {_db.Count(a => a is ImageAsset)}");
-                //Console.WriteLine($"Video Count: {_db.Count(a => a is VideoAsset)}");
-                //Console.WriteLine($"Doc Count:   {_db.Count(a => a is DocAsset)}");
+                int hasXXX = _db.Count(a => a.XXHash > 0);
+                Console.WriteLine($"{hasXXX} files have xx hash.");
 
-                //_db.Update(a => a.XXHash = 3, a => true);
-                //Console.WriteLine(_db.Count(a => a.XXHash == 3));
+                long totalFileLen = _db.Query().Sum(a => a.Length);
+                Console.WriteLine($"Total file len: {totalFileLen}");
+
+                long totalTmpLen = _db.Query().Where(a => a.FullPath.Contains("tmp")).Sum(a => a.Length);
+                Console.WriteLine($"Total file len: {totalTmpLen}");
+
+                long totalPicsLen = _db.Query().Where(a => a.FullPath.Contains("Pictures")).Sum(a => a.Length);
+                Console.WriteLine($"Total file len: {totalPicsLen}");
+
+                long totalVidsLen = _db.Query().Where(a => a.FullPath.Contains("Videos")).Sum(a => a.Length);
+                Console.WriteLine($"Total file len: {totalVidsLen}");
+
+
+                Console.WriteLine((totalVidsLen + totalPicsLen + totalTmpLen) == totalFileLen);
 
                 //ImportAssets(@"D:\tmp");
                 //UpdateAssetsWithXXHash(@"D:\tmp");
@@ -144,8 +151,8 @@ namespace TestHarness
             Console.WriteLine("Starting import of " + files.Length + " digital assets.");
             
             int cnt = 0;
-            Parallel.ForEach(files, (file =>
-            //foreach(var file in files)
+            //Parallel.ForEach(files, (file =>
+            foreach(var file in files)
             {
                 Interlocked.Increment(ref cnt);
                 //XxHash64 xx64 = new XxHash64();
@@ -166,12 +173,13 @@ namespace TestHarness
                 asset.Length = fi.Length;
                 asset.Imported = now;
                 //asset.XXHash = hash;
+                Thread.Sleep(1);
 
                 _db.Insert(asset, (id) => asset.Id = id, true);
 
                 if ((cnt % 100) == 0)
                     Console.Write(".");
-            }));
+            }//));
         }
     }
 }

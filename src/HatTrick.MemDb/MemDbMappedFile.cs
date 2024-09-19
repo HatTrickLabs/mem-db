@@ -9,6 +9,8 @@ namespace HatTrick.InMemDb
     internal sealed class MemDbMappedFile<T> : IMemDbPersister<T>, IDisposable where T : class
     {
         #region internals
+        private const int _flushInterval = (1000 * 5);//5 seconds
+
         private readonly string _path;
         private readonly string _datasetName;
         private readonly AccessMode _mode;
@@ -94,7 +96,7 @@ namespace HatTrick.InMemDb
             }
 
             if (_mode != AccessMode.ReadOnly)
-                _fileSyncTimer = new Timer(new TimerCallback((this as IMemDbPersister<T>).Flush), null, (1000 * 5), Timeout.Infinite); //5 seconds...
+                _fileSyncTimer = new Timer(new TimerCallback((this as IMemDbPersister<T>).Flush), null, _flushInterval, Timeout.Infinite); //5 seconds...
         }
         #endregion
 
@@ -275,18 +277,20 @@ namespace HatTrick.InMemDb
         #region flush
         void IMemDbPersister<T>.Flush(object state)
         {
+            //this is to avoid the timer 'flush' from getting in after
+            //the 'close' flush has already entered...
             if (state == null && _isClosed)
                 return;
 
-            if (_mode == AccessMode.ReadWrite || _mode == AccessMode.AppendOnly)
+            if (_insertQueue.Count > 0 && (_mode == AccessMode.ReadWrite || _mode == AccessMode.AppendOnly))
                 this.AppendInsertedItems();
 
-            if (_mode == AccessMode.ReadWrite)
+            if (_stateChangeQueue.Count > 0 && _mode == AccessMode.ReadWrite)
                 this.UpdateItemStates();
 
             if (!_isClosed)
             {
-                _fileSyncTimer.Change((1000 * 5), Timeout.Infinite);//5 seconds...
+                _fileSyncTimer.Change(_flushInterval, Timeout.Infinite);
             }
         }
         #endregion
@@ -386,7 +390,7 @@ namespace HatTrick.InMemDb
         {
             if (!_isClosed)
             {
-                this.Close(true); //emergency catch all to save un-flushed records if process is killed...
+                this.Close(true); //emergency catch all to save un-flushed records if not properly disposed...
             }
         }
         #endregion
