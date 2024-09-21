@@ -49,20 +49,18 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region mark stale
-        internal MemDbPointer MarkStale(long binaryUTCTimestamp)
+        internal void MarkStale(long binaryUTCTimestamp)
         {
             _state = RecordState.Stale;
             _stateSetAt = binaryUTCTimestamp;
-            return this;
         }
         #endregion
 
         #region mark deleted
-        internal MemDbPointer MarkDeleted(long binaryUTCTimestamp)
+        internal void MarkDeleted(long binaryUTCTimestamp)
         {
             _state = RecordState.Deleted;
             _stateSetAt = binaryUTCTimestamp;
-            return this;
         }
         #endregion
 

@@ -17,9 +17,11 @@ namespace HatTrick.InMemDb
         private string _fullTempMapPath;
         private string _fullTempDbPath;
 
-        private MemDbMap _map;
+        private MemDbMap _originalMap;
         private int _staleCount;
         private int _deletedCount;
+
+        private MemDbMap _freshMap;
         #endregion
 
         #region constructors
@@ -58,7 +60,7 @@ namespace HatTrick.InMemDb
             //read into memory the fragmented map
             this.ReadFragmentedMap();
 
-            if ((_map.StaleCount + _map.DeletedCount) == 0)
+            if ((_originalMap.StaleCount + _originalMap.DeletedCount) == 0)
                 return;//0 fragmentation, nothing can be cleaned up
 
             //ensure enough drive space exists to perform the defrag operation
@@ -81,10 +83,9 @@ namespace HatTrick.InMemDb
         #region read fragmented map
         private void ReadFragmentedMap()
         {
-            _map = new MemDbMap(_fullMapPath);
-            _map.InitializeExisting();
-            _staleCount = _map.StaleCount;
-            _deletedCount = _map.DeletedCount;
+            _originalMap = new MemDbMap(_fullMapPath);
+            _staleCount = _originalMap.StaleCount;
+            _deletedCount = _originalMap.DeletedCount;
         }
         #endregion
 
@@ -96,10 +97,10 @@ namespace HatTrick.InMemDb
             //the sizeof(int) is to account for the 32 bit int at the very beginning of the file (total pointer count)
             //the sizeof(uint) is to account for the 32 bit unsigned int at the beginning of the file (Last Identity)
             //TODO: these (outside of MemDbMap) size calcs are going to bite you in the ASS.
-            long mapSize = sizeof(int) + sizeof(uint) + ((_map.Count - (_staleCount + _deletedCount)) * MemDbPointer.Size);
+            long mapSize = sizeof(int) + sizeof(uint) + ((_originalMap.Count - (_staleCount + _deletedCount)) * MemDbPointer.Size);
 
             //get file size of the non-stale...non-deleted db records
-            long dbSize = _map.TotalFreshSize;
+            long dbSize = _originalMap.TotalFreshSize;
 
             //get available drive space 
             var directory = new DirectoryInfo(_path);
@@ -128,7 +129,7 @@ namespace HatTrick.InMemDb
             if (File.Exists(_fullTempDbPath))
                 File.Delete(_fullTempDbPath);
 
-            File.Create(_fullTempMapPath).Dispose();
+            _freshMap = new MemDbMap(_fullTempMapPath);
             File.Create(_fullTempDbPath).Dispose();
 
         }
@@ -137,10 +138,10 @@ namespace HatTrick.InMemDb
         #region write defragmented temp files
         private void WriteDefragmentedTempFiles()
         {
-            MemDbMap originalMap = _map;
-            List<MemDbPointer> pointers = new List<MemDbPointer>(_map.Count - (_staleCount + _deletedCount));
+            MemDbMap origMap = _originalMap;
+            MemDbMap freshMap = _freshMap;
 
-            int maxRecLength = originalMap.MaxFreshRecordSize;
+            int maxRecLength = origMap.MaxFreshRecordSize;
 
             byte[] buffer = new byte[maxRecLength];
 
@@ -148,9 +149,9 @@ namespace HatTrick.InMemDb
             using var oldDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read);
             using var newDb = new FileStream(_fullTempDbPath, FileMode.Open, FileAccess.Write);
 
-            for (int i = 0; i < originalMap.Count; i++)
+            for (int i = 0; i < origMap.Count; i++)
             {
-                MemDbPointer oPtr = originalMap[i];
+                MemDbPointer oPtr = origMap[i];
 
                 if (oPtr.State != RecordState.Fresh)
                     continue;
@@ -162,16 +163,12 @@ namespace HatTrick.InMemDb
 
                 //the pointer should always store the un-encrypted length...
                 var nPtr = new MemDbPointer(oPtr.Id, RecordState.Fresh, oPtr.StateSetAt, oPtr.IsEncrypted, (uint)newDb.Position, oPtr.Length);
-                pointers.Add(nPtr);
+                freshMap.Add(nPtr);
 
                 newDb.Write(buffer, 0, actualLen);
             }
 
-            //write the defragged map file
-            var defraggedMap = new MemDbMap(_fullMapPath, _map.LastId, pointers);
-            using var fs = new FileStream(_fullTempMapPath, FileMode.Open, FileAccess.Write);
-            using var writer = new BinaryWriter(fs, Encoding.UTF8, true);
-            defraggedMap.SerializeTo(writer);
+            _freshMap.Flush();
         }
         #endregion
 

@@ -13,8 +13,11 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region internals
+        private const int _defaultInitialCapacity = 64;
+
         private string _path;
         private List<MemDbPointer> _pointers;
+        private int _nextFlushIdx;
         private object _syncLock;
 
         private uint _lastId;
@@ -46,37 +49,52 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region constructors
-        internal MemDbMap(string path) : this(path, 0, null)
+        internal MemDbMap(string path) : this(path, true)
         { }
 
-        internal MemDbMap(string path, uint lastId, List<MemDbPointer> pointers)
+        internal MemDbMap(string path, bool initialize)
         {
             _path = path ?? throw new ArgumentNullException(nameof(path));
-            _lastId = lastId;
-            _pointers = pointers ?? new List<MemDbPointer>();//TODO: this alloc necessary ???
+            _lastId = 0;
+            _nextFlushIdx = 0;
+            //_pointers = new List<MemDbPointer>(initialCapacity);
             _syncLock = new();
             _idSyncLock = new();
+
+            if (initialize)
+                this.Initialize();
+            else
+                _pointers = new List<MemDbPointer>(_defaultInitialCapacity);
         }
         #endregion
 
         #region initialize
-        internal void InitializeNew()
+        private void Initialize()
         {
+            bool exists = File.Exists(_path);
+
             lock (_syncLock)
             {
-                using var fs = new FileStream(_path, FileMode.CreateNew);
-                this.SerializeTo(fs);
+                if (exists)
+                    this.InitializeExisting();
+
+                else
+                    this.InitializeNew();
             }
         }
 
-        internal void InitializeExisting()
+        private void InitializeNew()
         {
-            lock (_syncLock)
-            {
-                using var fsMap = new FileStream(_path, FileMode.Open, FileAccess.Read); ;
-                using var reader = new BinaryReader(fsMap, Encoding.UTF8, true);
-                this.DeserializeFrom(reader);
-            }
+            _pointers = new List<MemDbPointer>(_defaultInitialCapacity);
+            using var fs = new FileStream(_path, FileMode.CreateNew);
+            this.SerializeTo(fs);
+        }
+
+        private void InitializeExisting()
+        {
+            using var fsMap = new FileStream(_path, FileMode.Open, FileAccess.Read); ;
+            using var reader = new BinaryReader(fsMap, Encoding.UTF8, true);
+            this.DeserializeFrom(reader);
         }
         #endregion
 
@@ -114,7 +132,7 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
-        #region get max records size
+        #region get max record size
         private int GetMaxRecordSize(RecordState state)
         {
             Func<MemDbPointer, int> selector = (p) => p.IsEncrypted
@@ -128,7 +146,7 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
-        #region get min records size
+        #region get min record size
         private int GetMinRecordSize(RecordState state)
         {
             Func<MemDbPointer, int> selector = (p) => p.IsEncrypted
@@ -167,11 +185,13 @@ namespace HatTrick.InMemDb
                 using var fsMap = new FileStream(_path, FileMode.Open, FileAccess.ReadWrite);
                 do
                 {
-                    _ = record.State == RecordState.Stale 
-                        ? _pointers[record.MapIndex].MarkStale(binaryUtcTimestamp)
-                        : _pointers[record.MapIndex].MarkDeleted(binaryUtcTimestamp);
+                    if (record.State == RecordState.Stale)
+                        _pointers[record.MapIndex].MarkStale(binaryUtcTimestamp);
+
+                    else
+                        _pointers[record.MapIndex].MarkDeleted(binaryUtcTimestamp);
+
                     //sizeof(pointercount) + sizeof(lastId) + (idx * size) + sizeof(id)
-                    //TODO: shift this calc inside MemDbMap somehow.
                     fsMap.Position = sizeof(int) + sizeof(uint) + (record.MapIndex * MemDbPointer.Size) + sizeof(int);
                     fsMap.WriteByte((byte)record.State);
 
@@ -193,20 +213,23 @@ namespace HatTrick.InMemDb
                 mapWriter.Write(_lastId);
 
                 fsMap.Position = fsMap.Length;
-                //TODO: refactor to start this for loop at the next index after
-                //prev flush as we are only flushing additions
-                for (int i = 0; i < _pointers.Count; i++)
+
+                //start this for loop at the next index after prev flush
+                //...we are only flushing newly added records
+                for (int i = _nextFlushIdx; i < _pointers.Count; i++)
                 {
                     var p = _pointers[i];
-                    if (!p.Flushed)
+                    if (!p.Flushed)//technically don't need this check anymore...we are now tracking next flush idx
                         p.SerializeTo(mapWriter);
                 }
+
+                _nextFlushIdx = _pointers.Count;
             }
         }
         #endregion
 
         #region serialize to
-        internal void SerializeTo(Stream stream)
+        private void SerializeTo(Stream stream)
         {
             lock (_syncLock)
             {
@@ -217,7 +240,7 @@ namespace HatTrick.InMemDb
             }
         }
 
-        internal void SerializeTo(BinaryWriter writer)
+        private void SerializeTo(BinaryWriter writer)
         {
             lock (_syncLock)
             {
@@ -246,6 +269,8 @@ namespace HatTrick.InMemDb
                 {
                     _pointers.Add(MemDbPointer.DeserializeFrom(reader));
                 }
+
+                _nextFlushIdx = count;
             }
         }
         #endregion

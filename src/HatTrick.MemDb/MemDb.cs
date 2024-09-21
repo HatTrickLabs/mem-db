@@ -48,7 +48,7 @@ namespace HatTrick.InMemDb
 
         #region read archive
         //TODO: private to hide until I figure out what to do with the archive reader...
-        private static void ReadArchive<T>(string datasetName) where T : class
+        public static void ReadArchive<T>(string datasetName) where T : class
         {
             MemDbConfiguration config = MemDb.Configurations.Find(r => r.DatasetName == datasetName);
 

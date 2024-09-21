@@ -9,7 +9,8 @@ namespace HatTrick.InMemDb
     internal sealed class MemDbMappedFile<T> : IMemDbPersister<T>, IDisposable where T : class
     {
         #region internals
-        private const int _flushInterval = (1000 * 2);//5 seconds
+        private const int _flushInterval = (1000 * 5);//5 seconds
+        private const int _initialQueueCapacity = 128;
 
         private readonly string _path;
         private readonly string _datasetName;
@@ -72,13 +73,13 @@ namespace HatTrick.InMemDb
 
             _fullDbPath = Path.Combine(path, $"htl.{datasetName}.db");
             _fullMapPath = Path.Combine(path, $"htl.{datasetName}.map");
-            _map = new MemDbMap(_fullMapPath);
+            //_map = new MemDbMap(_fullMapPath);
 
             _flushLock = new();
 
-            _insertQueue = new Queue<MemDbRecord<T>>(256);
+            _insertQueue = new Queue<MemDbRecord<T>>(_initialQueueCapacity);
             _insertSyncLock = new();
-            _stateChangeQueue = new Queue<MemDbRecord>(256);
+            _stateChangeQueue = new Queue<MemDbRecord>(_initialQueueCapacity);
             _stateChangeSyncLock = new();
 
             this.Initialize();
@@ -88,23 +89,19 @@ namespace HatTrick.InMemDb
         #region initialize
         private void Initialize()
         {
-            this.EnsureFiles(out bool dbCreated);
-
-            if (!dbCreated)//if the db is NOT brand new, read in the record map file
-            {
-                _map.InitializeExisting();
-            }
+            this.EnsureFiles();
 
             if (_mode != AccessMode.ReadOnly)
-                _fileSyncTimer = new Timer(new TimerCallback((this as IMemDbPersister<T>).Flush), null, _flushInterval, Timeout.Infinite); //5 seconds...
+            {
+                var callback = new TimerCallback((this as IMemDbPersister<T>).Flush);
+                _fileSyncTimer = new Timer(callback, null, _flushInterval, Timeout.Infinite);
+            }
         }
         #endregion
 
         #region ensure files
-        private void EnsureFiles(out bool dbCreated)
+        private void EnsureFiles()
         {
-            dbCreated = false;
-
             if (!Directory.Exists(_path))
                 Directory.CreateDirectory(_path);
 
@@ -119,16 +116,14 @@ namespace HatTrick.InMemDb
             if (mapExists && !dbExists)
                 throw new InvalidOperationException($"No Db file exists for map file: {Path.GetFileName(_fullMapPath)}");
 
+            _map = new MemDbMap(_fullMapPath);
+
             if (!dbExists)
             {
-                dbCreated = true;
                 lock (_flushLock)
                 {
-                    dbCreated = true;
                     using var fs = new FileStream(_fullDbPath, FileMode.CreateNew);
                 }
-
-                _map.InitializeNew();
             }
         }
         #endregion
@@ -279,11 +274,8 @@ namespace HatTrick.InMemDb
             if (state == null && _isClosed)
                 return;
 
-            if (_insertQueue.Count > 0 && (_mode == AccessMode.ReadWrite || _mode == AccessMode.AppendOnly))
-                this.AppendInsertedItems();
-
-            if (_stateChangeQueue.Count > 0 && _mode == AccessMode.ReadWrite)
-                this.UpdateItemStates();
+            this.FlushInsertQueue();
+            this.FlushStateChangeQueue();
 
             if (!_isClosed)
             {
@@ -292,55 +284,102 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region flush insert queue
+        private void FlushInsertQueue()
+        {
+            if (_insertQueue.Count > 0 && (_mode == AccessMode.ReadWrite || _mode == AccessMode.AppendOnly))
+            {
+                int qSizePreFlush = 0;
+                lock (_flushLock)
+                {
+                    qSizePreFlush = _insertQueue.Count;
+
+                    this.AppendInsertedItems();
+                }
+
+                if (!_isClosed && qSizePreFlush > (_initialQueueCapacity * 1.5))
+                {
+                    lock (_insertSyncLock)
+                    {
+                        if (qSizePreFlush > (_initialQueueCapacity * 1.5))
+                            _insertQueue.TrimExcess();
+                    }
+                }
+            }
+        }
+        #endregion
+
+        #region flush state change queue
+        private void FlushStateChangeQueue()
+        {
+            if (_stateChangeQueue.Count > 0 && _mode == AccessMode.ReadWrite)
+            {
+                int qSizePreFlush = 0;
+                lock (_flushLock)
+                {
+                    qSizePreFlush = _stateChangeQueue.Count;
+
+                    this.UpdateItemStates();
+                }
+
+                if (!_isClosed && qSizePreFlush > (_initialQueueCapacity * 1.5))
+                {
+                    lock (_stateChangeSyncLock)
+                    {
+                        if (qSizePreFlush > (_initialQueueCapacity * 1.5))
+                            _stateChangeQueue.TrimExcess();
+                    }
+                }
+            }
+        }
+        #endregion
+
         #region append inserted items
         private void AppendInsertedItems()
         {
-            lock (_flushLock)
+            MemDbRecord<T> record = null;
+            var fresh = RecordState.Fresh;
+            if (this.TryPopInsertRecord(out record))
             {
-                MemDbRecord<T> record = null;
-                var fresh = RecordState.Fresh;
-                if (this.TryPopInsertRecord(out record))
+                using var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.ReadWrite);
+                using var dbWriter = new BinaryWriter(fsDb, Encoding.UTF8, true);
+
+                fsDb.Position = fsDb.Length;
+                do
                 {
-                    using var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.ReadWrite);
-                    using var dbWriter = new BinaryWriter(fsDb, Encoding.UTF8, true);
+                    uint startPos = (uint)fsDb.Position;
 
-                    fsDb.Position = fsDb.Length;
-                    do
+                    try
                     {
-                        uint startPos = (uint)fsDb.Position;
+                        int length;
 
-                        try
+                        if (record.IsEncrypted)
                         {
-                            int length;
-
-                            if (record.IsEncrypted)
-                            {
-                                Span<byte> raw = _serializer.Serialize(record.Value);
-                                _encryptor.Encrypt(raw, fsDb);
-                                //we must record the RAW length of the record NOT crypto...we can calc crypto len on read
-                                length = raw.Length;
-                            }
-                            else
-                            {
-                                _serializer.Serialize(record.Value, dbWriter);
-                                length = (int)(fsDb.Position - startPos);
-                            }
-
-                            var pointer = new MemDbPointer(record.Id, fresh, record.StateSetAt, record.IsEncrypted, startPos, length);
-                            record.SetMapIndex(_map.Add(pointer));
+                            Span<byte> raw = _serializer.Serialize(record.Value);
+                            _encryptor.Encrypt(raw, fsDb);
+                            //we must record the RAW length of the record NOT crypto...we can calc crypto len on read
+                            length = raw.Length;
                         }
-                        catch
+                        else
                         {
-                            //reset the len of file back to position before this pass started.
-                            fsDb.SetLength(startPos);
-                            //ensure pointers successfully added get flushed before tossing the ex
-                            _map.Flush();
-                            throw;
+                            _serializer.Serialize(record.Value, dbWriter);
+                            length = (int)(fsDb.Position - startPos);
                         }
 
-                    } while (this.TryPopInsertRecord(out record));
-                    _map.Flush();
-                }
+                        var pointer = new MemDbPointer(record.Id, fresh, record.StateSetAt, record.IsEncrypted, startPos, length);
+                        record.SetMapIndex(_map.Add(pointer));
+                    }
+                    catch
+                    {
+                        //reset the len of file back to position before this pass started.
+                        fsDb.SetLength(startPos);
+                        //ensure pointers successfully added get flushed before tossing the ex
+                        _map.Flush();
+                        throw;
+                    }
+
+                } while (this.TryPopInsertRecord(out record));
+                _map.Flush();
             }
         }
         #endregion

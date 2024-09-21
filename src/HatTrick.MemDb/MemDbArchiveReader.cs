@@ -74,7 +74,7 @@ namespace HatTrick.InMemDb
                 foreach (var set in sets)
                 {
                     var mapEntry = set.entries.First(e => e.Comment == "map");
-                    MemDbMap map = new MemDbMap("xxx");
+                    MemDbMap map = new MemDbMap("xxx", false);//this is just tmp in mem only, don't init to disk...
 
                     using (var mapStream = mapEntry.Open())
                     {

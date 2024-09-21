@@ -73,11 +73,20 @@ namespace HatTrick.InMemDb
         public int Count()
         {
             //this count should be available in ANY AccessMode
+            bool canReadCache = _mode != AccessMode.AppendOnly;
             lock (_recSyncLock)
             {
+                if (canReadCache)
+                    return _records.Count(r => r.State == RecordState.Fresh);
+
                 //need to defer down into the persister for simple fresh record count...
-                //this allows for a count to be accessed even when running in AppendOnly mode...
-                //the count is pulled out of the always initialized MemDbMap
+                //this allows for a count to be assessed even when running in AppendOnly mode...
+                //the count is pulled out of the always initialized MemDbMap....however, this would
+                //cause a confusing read when Count() is called immediatelly after inserts as the newly
+                //inserted records may still be waiting in the append buffer queue within the persister...
+                //calling Flush prior to reading count ensures all inserted records have been flushed from the 
+                //queue and MemDbMap has accounted for them.
+                _persister.Flush(null);
                 return _persister.RecordCount;
             }
         }

@@ -29,6 +29,8 @@ namespace HatTrick.InMemDb
         private int _staleCount;
         private int _deletedCount;
 
+        private MemDbMap _archiveMap;
+
         private DateTime _now;
         #endregion
 
@@ -114,7 +116,6 @@ namespace HatTrick.InMemDb
         private void ReadFragmentedMap()
         {
             _map = new MemDbMap(_fullMapPath);
-            _map.InitializeExisting();
             _staleCount = _map.StaleCount;
             _deletedCount = _map.DeletedCount;
         }
@@ -160,7 +161,8 @@ namespace HatTrick.InMemDb
             if (File.Exists(_fullDbArchivePath))
                 File.Delete(_fullDbArchivePath);
 
-            File.Create(_fullMapArchivePath).Dispose();
+
+            _archiveMap = new MemDbMap(_fullMapArchivePath);//this creates the file internally...
             File.Create(_fullDbArchivePath).Dispose();
         }
         #endregion
@@ -168,10 +170,10 @@ namespace HatTrick.InMemDb
         #region write archive files
         private void WriteArchiveFiles()
         {
-            MemDbMap originalMap = _map;
-            List<MemDbPointer> pointers = new List<MemDbPointer>(_staleCount + _deletedCount);
+            MemDbMap origMap = _map;
+            MemDbMap archMap = _archiveMap;
 
-            int maxRecLength = Math.Max(originalMap.MaxStaleRecordSize, originalMap.MaxDeletedRecordSize);
+            int maxRecLength = Math.Max(origMap.MaxStaleRecordSize, origMap.MaxDeletedRecordSize);
 
             byte[] buffer = new byte[maxRecLength];
 
@@ -179,9 +181,9 @@ namespace HatTrick.InMemDb
             using var origDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read);
             using var archDb = new FileStream(_fullDbArchivePath, FileMode.Open, FileAccess.Write);
 
-            for (int i = 0; i < originalMap.Count; i++)
+            for (int i = 0; i < origMap.Count; i++)
             {
-                MemDbPointer oPtr = originalMap[i];
+                MemDbPointer oPtr = origMap[i];
 
                 if (oPtr.State == RecordState.Fresh)
                     continue;
@@ -193,16 +195,13 @@ namespace HatTrick.InMemDb
 
                 //the pointer should always store the un-encrypted length...
                 var nPtr = new MemDbPointer(oPtr.Id, oPtr.State, oPtr.StateSetAt, oPtr.IsEncrypted, (uint)archDb.Position, oPtr.Length);
-                pointers.Add(nPtr);
+                archMap.Add(nPtr);
 
                 archDb.Write(buffer, 0, actualLen);
             }
 
             //write the archive map file
-            var archMap = new MemDbMap(_fullMapArchivePath, originalMap.LastId, pointers);
-            using var fs = new FileStream(_fullMapArchivePath, FileMode.Open, FileAccess.Write);
-            using var writer = new BinaryWriter(fs, Encoding.UTF8, true);
-            archMap.SerializeTo(writer);
+            archMap.Flush();
         }
         #endregion
 
