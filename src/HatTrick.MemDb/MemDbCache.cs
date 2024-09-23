@@ -48,8 +48,8 @@ namespace HatTrick.InMemDb
             
             int recCount = _persister.RecordCount;
             int capacity = _mode == AccessMode.ReadOnly ? recCount : (int)(recCount * 1.1);
-            _records = new List<MemDbRecord<T>>(capacity);
-            _records.AddRange(_persister.InitializeMappedRecords());
+            _persister.InitializeMappedRecords(out IList<MemDbRecord<T>> records);
+            _records = records as List<MemDbRecord<T>>;
         }
         #endregion
 

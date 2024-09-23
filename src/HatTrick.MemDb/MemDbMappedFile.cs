@@ -73,7 +73,6 @@ namespace HatTrick.InMemDb
 
             _fullDbPath = Path.Combine(path, $"htl.{datasetName}.db");
             _fullMapPath = Path.Combine(path, $"htl.{datasetName}.map");
-            //_map = new MemDbMap(_fullMapPath);
 
             _flushLock = new();
 
@@ -140,16 +139,15 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region initialize mapped records
-        IList<MemDbRecord<T>> IMemDbPersister<T>.InitializeMappedRecords()
+        void IMemDbPersister<T>.InitializeMappedRecords(out IList<MemDbRecord<T>> records)
         {
             this.EnsureMode(AccessMode.ReadOnly | AccessMode.ReadWrite, nameof(IMemDbPersister<T>.InitializeMappedRecords));
 
-            //TODO: this should at most be called ONE time on read or readwrite initialization of cache...ensure that...
             int encrypted = 0;
-            List<MemDbRecord<T>> records = null;
+            int capacity = _mode == AccessMode.ReadOnly ? _map.FreshCount : (int)(_map.FreshCount * 1.1);
+            records = new List<MemDbRecord<T>>(capacity);
             lock (_flushLock)
             {
-                records = new List<MemDbRecord<T>>((int)(_map.FreshCount * 1.1));
                 using var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read);
                 using var reader = new BinaryReader(fsDb, Encoding.UTF8, true);
 
@@ -195,7 +193,6 @@ namespace HatTrick.InMemDb
                 }
             }
             _cryptoRecordCount = encrypted;
-            return records;
         }
         #endregion
 
@@ -287,13 +284,15 @@ namespace HatTrick.InMemDb
         #region flush insert queue
         private void FlushInsertQueue()
         {
-            if (_insertQueue.Count > 0 && (_mode == AccessMode.ReadWrite || _mode == AccessMode.AppendOnly))
+            //nothing can be inserted if running in readonly mode.
+            if (_mode == AccessMode.ReadOnly)
+                return;
+
+            int qSizePreFlush = _insertQueue.Count;
+            if (qSizePreFlush > 0)
             {
-                int qSizePreFlush = 0;
                 lock (_flushLock)
                 {
-                    qSizePreFlush = _insertQueue.Count;
-
                     this.AppendInsertedItems();
                 }
 
@@ -301,8 +300,7 @@ namespace HatTrick.InMemDb
                 {
                     lock (_insertSyncLock)
                     {
-                        if (qSizePreFlush > (_initialQueueCapacity * 1.5))
-                            _insertQueue.TrimExcess();
+                        _insertQueue.TrimExcess();
                     }
                 }
             }
@@ -312,13 +310,15 @@ namespace HatTrick.InMemDb
         #region flush state change queue
         private void FlushStateChangeQueue()
         {
-            if (_stateChangeQueue.Count > 0 && _mode == AccessMode.ReadWrite)
+            //only in read/write mode will any state changes be allowed to existing records.
+            if (_mode != AccessMode.ReadWrite)
+                return;
+
+            int qSizePreFlush = _stateChangeQueue.Count;
+            if (qSizePreFlush > 0)
             {
-                int qSizePreFlush = 0;
                 lock (_flushLock)
                 {
-                    qSizePreFlush = _stateChangeQueue.Count;
-
                     this.UpdateItemStates();
                 }
 
@@ -326,8 +326,7 @@ namespace HatTrick.InMemDb
                 {
                     lock (_stateChangeSyncLock)
                     {
-                        if (qSizePreFlush > (_initialQueueCapacity * 1.5))
-                            _stateChangeQueue.TrimExcess();
+                        _stateChangeQueue.TrimExcess();
                     }
                 }
             }

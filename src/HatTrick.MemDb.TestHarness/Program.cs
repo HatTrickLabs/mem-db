@@ -32,7 +32,7 @@ namespace TestHarness
                 //})
                 //.EncryptWithKey(() => new byte[] { 198, 1, 6, 8, 12, 1, 1, 1, 1, 88, 1, 1, 1, 1, 1, 9, 9, 9, 1, 1, 99, 1, 1, 1, 1, 1, 1, 1, 33, 1, 1, 77 })
                 .EncryptWithPassword(() => "Jerrod's super simple password...!!!!!!!!")
-                .SetMode(AccessMode.AppendOnly)
+                .SetMode(AccessMode.ReadWrite)
                 .ArchiveOnDefrag(Path.Combine(DbRoot, "archive"))
                 .Register();
 
@@ -48,35 +48,37 @@ namespace TestHarness
                 Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
                 _sw.Start();
 
-                //int total = _db.Count();
-                //int tmp = _db.Count(a => a.FullPath.StartsWith(@"D:\tmp"));
-                //int pics = _db.Count(a => a.FullPath.StartsWith(@"C:\Users\jerrod.eiman\Pictures"));
-                //int vids = _db.Count(a => a.FullPath.StartsWith(@"C:\Users\jerrod.eiman\Videos"));
-                //int assembla = _db.Count(a => a.FullPath.StartsWith(@"D:\assembla"));
-                //int sumTotal = tmp + pics + vids + assembla;
+                _db.Update(a => a.XXHash = 1, a => a.XXHash != 1 && a.FullPath.StartsWith(@"D:\tmp", StringComparison.OrdinalIgnoreCase));
 
-                //Console.WriteLine($"Total files:    {total}");
-                //Console.WriteLine($"tmp files:      {tmp}");
-                //Console.WriteLine($"Picture files:  {pics}");
-                //Console.WriteLine($"Video files:    {vids}");
-                //Console.WriteLine($"assembla files: {assembla}");
-                //Console.WriteLine($"Total files:    {sumTotal}");
+                int total = _db.Count();
+                int tmp = _db.Count(a => a.FullPath.StartsWith(@"D:\tmp", StringComparison.OrdinalIgnoreCase));
+                int pics = _db.Count(a => a.FullPath.StartsWith(@"C:\Users\jerrod.eiman\Pictures", StringComparison.OrdinalIgnoreCase));
+                int vids = _db.Count(a => a.FullPath.StartsWith(@"C:\Users\jerrod.eiman\Videos", StringComparison.OrdinalIgnoreCase));
+                int assembla = _db.Count(a => a.FullPath.StartsWith(@"D:\assembla", StringComparison.OrdinalIgnoreCase));
+                int sumTotal = tmp + pics + vids + assembla;
 
-                //Console.WriteLine($"Files containing xx hash of 1: {_db.Count(a => a.XXHash == 1)}");
+                Console.WriteLine($"Total files:    {total}");
+                Console.WriteLine($"tmp files:      {tmp}");
+                Console.WriteLine($"Picture files:  {pics}");
+                Console.WriteLine($"Video files:    {vids}");
+                Console.WriteLine($"assembla files: {assembla}");
+                Console.WriteLine($"Total files:    {sumTotal}");
 
-                List<DigitalAsset> assets = new List<DigitalAsset>(18000);
-                assets.AddRange(ResolveAssets(@"D:\tmp"));
-                assets.AddRange(ResolveAssets(@"C:\Users\jerrod.eiman\Pictures"));
-                assets.AddRange(ResolveAssets(@"C:\Users\jerrod.eiman\Videos"));
-                assets.AddRange(ResolveAssets(@"D:\assembla"));
+                Console.WriteLine($"Files containing xx hash of 1: {_db.Count(a => a.XXHash == 1)}");
 
-                _sw.Stop();
-                Console.WriteLine($"Resolved {assets.Count} assets @ {_sw.ElapsedMilliseconds}.");
-                Console.WriteLine("Press [Enter] to continue...");
-                Console.ReadLine();
-                _sw.Start();
+                //List<DigitalAsset> assets = new List<DigitalAsset>(18000);
+                //assets.AddRange(ResolveAssets(@"D:\tmp"));
+                //assets.AddRange(ResolveAssets(@"C:\Users\jerrod.eiman\Pictures"));
+                //assets.AddRange(ResolveAssets(@"C:\Users\jerrod.eiman\Videos"));
+                //assets.AddRange(ResolveAssets(@"D:\assembla"));
 
-                ImportAssets(assets);
+                //_sw.Stop();
+                //Console.WriteLine($"Resolved {assets.Count} assets @ {_sw.ElapsedMilliseconds}.");
+                //Console.WriteLine("Press [Enter] to continue...");
+                //Console.ReadLine();
+                //_sw.Start();
+
+                //ImportAssets(assets);
 
                 //Thread t1 = new Thread(() => { SimpleUpdate(_db.FindAll(a => a.FullPath.StartsWith(@"D:\tmp"))); });
                 //Thread t2 = new Thread(() => { SimpleUpdate(_db.FindAll(a => a.FullPath.StartsWith(@"C:\Users\jerrod.eiman\Pictures"))); });
@@ -96,11 +98,11 @@ namespace TestHarness
                 //ImportAssets(@"C:\Users\jerrod.eiman\Videos");
                 //UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Videos");
 
-                _sw.Stop();
-                Console.WriteLine($"Completed insert of {_db.Count()} assets @ {_sw.ElapsedMilliseconds} milliseconds.");
-                Console.WriteLine("Press [Enter] to continue.");
-                Console.ReadLine();
-                _sw.Start();
+                //_sw.Stop();
+                //Console.WriteLine($"Completed insert of {_db.Count()} assets @ {_sw.ElapsedMilliseconds} milliseconds.");
+                //Console.WriteLine("Press [Enter] to continue.");
+                //Console.ReadLine();
+                //_sw.Start();
             }
 
             _sw.Stop();
