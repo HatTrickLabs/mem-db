@@ -159,14 +159,6 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region deserialize
-        public T Deserialize(BinaryReader from, int length)
-        {
-            Span<byte> raw = length <= 2048 ? stackalloc byte[length] : new byte[length];
-            from.BaseStream.ReadExactly(raw);
-            T val = this.Deserialize(raw);
-            return val;
-        }
-
         public T Deserialize(ReadOnlySpan<byte> from)
         {
             T val = JsonSerializer.Deserialize<T>(from, _options);

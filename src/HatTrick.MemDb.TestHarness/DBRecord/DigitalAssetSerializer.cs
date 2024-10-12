@@ -4,7 +4,7 @@ using System.Text;
 
 namespace HatTrick.InMemDb
 {
-    public class DigitalAssetBinarySerializer : IMemDbSerializer<DigitalAsset>
+    public class DigitalAssetBinarySerializer : IBinaryReadMemDbSerializer<DigitalAsset>
     {
         #region ctors
         public DigitalAssetBinarySerializer()
@@ -45,7 +45,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region deserialize
-        public DigitalAsset Deserialize(BinaryReader from, int length)
+        public DigitalAsset Deserialize(BinaryReader from)
         {
             var type = (DigitalAssetType)from.ReadInt32();
             var record = DigitalAsset.CreateNew(type);
@@ -70,7 +70,7 @@ namespace HatTrick.InMemDb
             {
                 using (var reader = new BinaryReader(ms))
                 {
-                    record = this.Deserialize(reader, from.Length);
+                    record = this.Deserialize(reader);
                 }
             }
             return record;

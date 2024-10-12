@@ -16,6 +16,7 @@ namespace HatTrick.InMemDb
         private string _fullArchivePath;
 
         private IMemDbSerializer<T> _serializer;
+        private IBinaryReadMemDbSerializer<T> _binReadSerializer;//optional impl
         private IMemDbEncryptor _encryptor;
         #endregion
 
@@ -45,6 +46,9 @@ namespace HatTrick.InMemDb
             _datasetName = datasetName;
 
             _serializer = serializer;
+            if (serializer is IBinaryReadMemDbSerializer<T> binReadSer)
+                _binReadSerializer = binReadSer;
+
             _encryptor = encryptor;
 
             _fullArchivePath = Path.Combine(_archivePath, $"htl.{datasetName}.zip");
@@ -112,7 +116,9 @@ namespace HatTrick.InMemDb
                                 }
                                 else
                                 {
-                                    value = _serializer.Deserialize(dbReader, ptr.Length);//T value
+                                    //move deserialize into local func to take advantage of stackalloc within loop (although the yeild return may actually be enough to flush scope).
+                                    value = this.DeserializeRecord(dbReader, ptr.Length);
+                                    //value = _serializer.Deserialize(dbReader, ptr.Length);//T value
                                 }
 
                                 var record = new MemDbRecord<T>(ptr.Id, value, ptr.State, ptr.StateSetAt, ptr.IsEncrypted, -1, i);
@@ -124,6 +130,18 @@ namespace HatTrick.InMemDb
                     File.Delete(tmpArchFilePath);
                 }
             }
+        }
+        #endregion
+
+        #region deserialize record
+        private T DeserializeRecord(BinaryReader from, int length)
+        {
+            if (_binReadSerializer is not null)
+                return _binReadSerializer.Deserialize(from);
+
+            Span<byte> raw = length > 2048 ? new byte[length] : stackalloc byte[length];
+            from.BaseStream.ReadExactly(raw);
+            return _serializer.Deserialize(raw);
         }
         #endregion
     }

@@ -31,7 +31,7 @@ namespace TestHarness
                 //    return serializer;
                 //})
                 //.EncryptWithKey(() => new byte[] { 198, 1, 6, 8, 12, 1, 1, 1, 1, 88, 1, 1, 1, 1, 1, 9, 9, 9, 1, 1, 99, 1, 1, 1, 1, 1, 1, 1, 33, 1, 1, 77 })
-                .EncryptWithPassword(() => "Jerrod's super simple password...!!!!!!!!")
+                //.EncryptWithPassword(() => "Jerrod's super simple password...!!!!!!!!")
                 .SetMode(AccessMode.ReadWrite)
                 .ArchiveOnDefrag(Path.Combine(DbRoot, "archive"))
                 .Register();
@@ -47,8 +47,6 @@ namespace TestHarness
                 _sw.Stop();
                 Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
                 _sw.Start();
-
-                _db.Update(a => a.XXHash = 1, a => a.XXHash != 1 && a.FullPath.StartsWith(@"D:\tmp", StringComparison.OrdinalIgnoreCase));
 
                 int total = _db.Count();
                 int tmp = _db.Count(a => a.FullPath.StartsWith(@"D:\tmp", StringComparison.OrdinalIgnoreCase));
@@ -98,11 +96,11 @@ namespace TestHarness
                 //ImportAssets(@"C:\Users\jerrod.eiman\Videos");
                 //UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Videos");
 
-                //_sw.Stop();
-                //Console.WriteLine($"Completed insert of {_db.Count()} assets @ {_sw.ElapsedMilliseconds} milliseconds.");
-                //Console.WriteLine("Press [Enter] to continue.");
-                //Console.ReadLine();
-                //_sw.Start();
+                _sw.Stop();
+                Console.WriteLine($"Completed insert of {_db.Count()} assets @ {_sw.ElapsedMilliseconds} milliseconds.");
+                Console.WriteLine("Press [Enter] to continue.");
+                Console.ReadLine();
+                _sw.Start();
             }
 
             _sw.Stop();
@@ -189,7 +187,7 @@ namespace TestHarness
             Parallel.ForEach(assets, (asset =>
             //foreach(var file in files)
             {
-                _db.Insert(asset, (id) => asset.Id = id, true);
+                _db.Insert(asset, (id) => asset.Id = id, false);
 
             }));
         }
