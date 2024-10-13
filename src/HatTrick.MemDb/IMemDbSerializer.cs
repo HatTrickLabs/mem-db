@@ -9,8 +9,6 @@ namespace HatTrick.InMemDb
 
         byte[] Serialize(T record);
 
-        //T Deserialize(BinaryReader from);
-
         T Deserialize(ReadOnlySpan<byte> from);
     }
 
