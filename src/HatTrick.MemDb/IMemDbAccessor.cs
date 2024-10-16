@@ -4,6 +4,8 @@ namespace HatTrick.InMemDb
 {
     public interface IMemDbAcceessor<T> where T : class
     {
+        public bool Exists(Func<T, bool> where);
+
         public int Count();
 
         public int Count(Func<T, bool> selector);

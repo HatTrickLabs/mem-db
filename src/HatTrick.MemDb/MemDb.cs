@@ -162,6 +162,13 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region exists
+        public bool Exists(Func<T, bool> where)
+        {
+            return _cache.Exists(where);
+        }
+        #endregion
+
         #region count
         public int Count()
         {

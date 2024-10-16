@@ -69,6 +69,20 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region exists
+        public bool Exists(Func<T, bool> where)
+        {
+            this.EnsureReadMode(nameof(Exists));
+
+            bool exists;
+            lock (_recSyncLock)
+            {
+                exists = _records.Exists(r => r.State == RecordState.Fresh && where(r.Value));
+            }
+            return exists;
+        }
+        #endregion
+
         #region count
         public int Count()
         {
