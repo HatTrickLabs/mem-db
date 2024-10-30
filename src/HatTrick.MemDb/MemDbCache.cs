@@ -291,10 +291,14 @@ namespace HatTrick.InMemDb
                     for (int i = 0; i < matches.Count; i++)
                     {
                         var oldRec = matches[i];
-                        //no reason to deep copy here...the old cache value will get the update, but it will also be
-                        //marked stale...the update on old will never get persisted...the deep copy is pointless.
-                        var newRec = new MemDbRecord<T>(oldRec.Id, oldRec.Value, oldRec.IsEncrypted);
-                        //we know the MemDb instance is encryption ready if anything encrypted was ever read into or inserted into the cache.
+                        //We must deep copy here...if not, the old cache value(s) (that have not yet been flushed to disk)
+                        //will get the update.  We need a traceable / archiveable state for each update.  If we don't deep copy
+                        //and multi updates are done to the same record before a disk flush, then all the records done
+                        //between flushes receive all updates and look identical if archived.
+                        var newRec = new MemDbRecord<T>(oldRec.Id, _cloner.DeepCopy(oldRec.Value), oldRec.IsEncrypted);
+
+                        //we know the MemDb instance is encryption ready if anything encrypted was ever read into or inserted
+                        //into the cache (the cache will not contain encrypted data if not encryption ready).
 
                         oldRec.MarkStale(binaryUtcTimestamp);
                         apply(newRec.Value);
