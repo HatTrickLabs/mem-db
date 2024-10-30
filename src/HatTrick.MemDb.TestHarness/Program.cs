@@ -17,7 +17,7 @@ namespace TestHarness
         static Stopwatch _sw;
         static MemDb<DigitalAsset> _db;
         static string datasetName = "assets";
-        static string DbRoot = @"d:\tmp\mem-db\assets";
+        static string DbRoot = @"D:\_db\dev\mem-db-dev-assets";
 
         static void Main(string[] args)
         {
@@ -36,11 +36,28 @@ namespace TestHarness
                 .ArchiveOnDefrag(Path.Combine(DbRoot, "archive"))
                 .Register();
 
+            /**********************************************************************************************************/
+
+            int cnt = 0;
+            foreach (var itm in MemDb.ReadArchive<DigitalAsset>(datasetName))
+            {
+                cnt += 1;
+                if (itm.Id == 100)
+                {
+                    Console.WriteLine(itm.Value.Name + "\t\t" + itm.Value.XXHash);
+                }
+            }
+
+            Console.WriteLine("---------------------");
+            Console.WriteLine(cnt);
+            Console.ReadLine();
+            return;
+
+            /**********************************************************************************************************/
+
+
             _sw = new Stopwatch();
             _sw.Start();
-
-            //MemDb.Defrag(datasetName);
-            //return;
 
             using (_db = MemDb.Open<DigitalAsset>(datasetName))
             {
@@ -48,47 +65,32 @@ namespace TestHarness
                 Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
                 _sw.Start();
 
-                int total = _db.Count();
-                int tmp = _db.Count(a => a.FullPath.StartsWith(@"D:\tmp", StringComparison.OrdinalIgnoreCase));
-                int pics = _db.Count(a => a.FullPath.StartsWith(@"C:\Users\jerrod.eiman\Pictures", StringComparison.OrdinalIgnoreCase));
-                int vids = _db.Count(a => a.FullPath.StartsWith(@"C:\Users\jerrod.eiman\Videos", StringComparison.OrdinalIgnoreCase));
-                int assembla = _db.Count(a => a.FullPath.StartsWith(@"D:\assembla", StringComparison.OrdinalIgnoreCase));
-                int sumTotal = tmp + pics + vids + assembla;
-
-                Console.WriteLine($"Total files:    {total}");
-                Console.WriteLine($"tmp files:      {tmp}");
-                Console.WriteLine($"Picture files:  {pics}");
-                Console.WriteLine($"Video files:    {vids}");
-                Console.WriteLine($"assembla files: {assembla}");
-                Console.WriteLine($"Total files:    {sumTotal}");
-
-                Console.WriteLine($"Files containing xx hash of 1: {_db.Count(a => a.XXHash == 1)}");
-
                 //List<DigitalAsset> assets = new List<DigitalAsset>(18000);
                 //assets.AddRange(ResolveAssets(@"D:\tmp"));
                 //assets.AddRange(ResolveAssets(@"C:\Users\jerrod.eiman\Pictures"));
                 //assets.AddRange(ResolveAssets(@"C:\Users\jerrod.eiman\Videos"));
-                //assets.AddRange(ResolveAssets(@"D:\assembla"));
 
                 //_sw.Stop();
                 //Console.WriteLine($"Resolved {assets.Count} assets @ {_sw.ElapsedMilliseconds}.");
-                //Console.WriteLine("Press [Enter] to continue...");
-                //Console.ReadLine();
                 //_sw.Start();
-
                 //ImportAssets(assets);
 
-                //Thread t1 = new Thread(() => { SimpleUpdate(_db.FindAll(a => a.FullPath.StartsWith(@"D:\tmp"))); });
-                //Thread t2 = new Thread(() => { SimpleUpdate(_db.FindAll(a => a.FullPath.StartsWith(@"C:\Users\jerrod.eiman\Pictures"))); });
-                //Thread t3 = new Thread(() => { SimpleUpdate(_db.FindAll(a => a.FullPath.StartsWith(@"C:\Users\jerrod.eiman\Videos"))); });
-
-                //t1.Start();
-                //t2.Start();
-                //t3.Start();
-
-                //t1.Join();
-                //t2.Join();
-                //t3.Join();
+                //DigitalAsset asset = null;
+                //_db.Update(a => a.XXHash = 111, a => a.Id == 100);
+                //asset = _db.Find(a => a.Id == 100);
+                //Console.WriteLine(asset.Name + '\t' + asset.XXHash);
+                //_db.Update(a => a.XXHash = 666, a => a.Id == 100);
+                //asset = _db.Find(a => a.Id == 100);
+                //Console.WriteLine(asset.Name + '\t' + asset.XXHash);
+                //_db.Update(a => a.XXHash = 777, a => a.Id == 100);
+                //asset = _db.Find(a => a.Id == 100);
+                //Console.WriteLine(asset.Name + '\t' + asset.XXHash);
+                //_db.Update(a => a.XXHash = 888, a => a.Id == 100);
+                //asset = _db.Find(a => a.Id == 100);
+                //Console.WriteLine(asset.Name + '\t' + asset.XXHash);
+                //_db.Update(a => a.XXHash = 999, a => a.Id == 100);
+                //asset = _db.Find(a => a.Id == 100);
+                //Console.WriteLine(asset.Name + '\t' + asset.XXHash);
 
                 //UpdateAssetsWithXXHash(@"D:\tmp");
                 //ImportAssets(@"C:\Users\jerrod.eiman\Pictures");
@@ -97,9 +99,7 @@ namespace TestHarness
                 //UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Videos");
 
                 _sw.Stop();
-                Console.WriteLine($"Completed insert of {_db.Count()} assets @ {_sw.ElapsedMilliseconds} milliseconds.");
-                Console.WriteLine("Press [Enter] to continue.");
-                Console.ReadLine();
+                Console.WriteLine($"Completed @ {_sw.ElapsedMilliseconds} milliseconds.");
                 _sw.Start();
             }
 
@@ -107,14 +107,6 @@ namespace TestHarness
             Console.WriteLine("Process completed @ " + _sw.ElapsedMilliseconds + " milliseconds.");
             Console.WriteLine("Press [Enter] to exit.");
             Console.ReadLine();
-        }
-
-        static void SimpleUpdate(DigitalAsset[] assets)
-        {
-            for (int i = 0; i < assets.Length; i++)
-            {
-                _db.Update(a => a.XXHash = 1, a => a.Id == assets[i].Id);
-            }
         }
 
         static void ConcurrentQueryTest(int count)
@@ -187,7 +179,7 @@ namespace TestHarness
             Parallel.ForEach(assets, (asset =>
             //foreach(var file in files)
             {
-                _db.Insert(asset, (id) => asset.Id = id, false);
+                _db.Insert(asset, (id) => asset.Id = id, true);
 
             }));
         }

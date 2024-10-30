@@ -47,8 +47,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region read archive
-        //TODO: private to hide until I figure out what to do with the archive reader...
-        public static void ReadArchive<T>(string datasetName) where T : class
+        public static IEnumerable<MemDbArchivedRecord<T>> ReadArchive<T>(string datasetName) where T : class
         {
             MemDbConfiguration config = MemDb.Configurations.Find(r => r.DatasetName == datasetName);
 
@@ -60,7 +59,13 @@ namespace HatTrick.InMemDb
 
             var configOfT = config.EnsureGenericType<T>(config);
             var archReader = new MemDbArchiveReader<T>(config.DatasetName, config.ArchivePath, configOfT.GetSerializer(), configOfT.GetEncryptor());
-            var archives = archReader.ReadArchiveRecords().ToArray();
+
+            //we want this entire stack to be yeild return.  Archive record counts could be huge, so we
+            //let the consumer analyze each record to find the set they are looking for (and toss the rest).
+            foreach (MemDbRecord<T> r in archReader.ReadArchiveRecords())
+            {
+                yield return new MemDbArchivedRecord<T>(r.Id, r.State, r.StateSetAt, r.Value);
+            }
         }
         #endregion
 

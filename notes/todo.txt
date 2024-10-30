@@ -15,3 +15,4 @@ x Eliminate the 'Pointers' interface propery on MemDbMap...Make it all internal
 - Return some type of IMemDbConfiguration on the fluent configure methods to eliminate all the flak methods available in intellisense
 x Implement some type of block or guard against opening MemDb<T>("datasetName") more than 1 time within a process.
 - Research some type of block or guard against opening MemDb<T>("datasetName") across processes (maybe exclusive file lock)...
+- Research refactoring MemDb.Insert to eliminate the (uint i) => {} callback...Implement a marker type interface instead IMemDbIdentity.

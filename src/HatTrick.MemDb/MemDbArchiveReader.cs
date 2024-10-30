@@ -61,6 +61,8 @@ namespace HatTrick.InMemDb
         #region read archive records
         public IEnumerable<MemDbRecord<T>> ReadArchiveRecords()
         {
+            //TODO: refactor this down into safer chunks...Need to ensure the tmp files get cleaned
+            //up in a finally block.
             using (ZipArchive zip = ZipFile.Open(_fullArchivePath, ZipArchiveMode.Read))
             {
                 (string key, ZipArchiveEntry[] entries)[] sets = zip.Entries
