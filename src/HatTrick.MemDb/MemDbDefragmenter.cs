@@ -83,7 +83,7 @@ namespace HatTrick.InMemDb
         #region read fragmented map
         private void ReadFragmentedMap()
         {
-            _originalMap = new MemDbMap(_fullMapPath);
+            _originalMap = new MemDbMap(_fullMapPath, true);
             _staleCount = _originalMap.StaleCount;
             _deletedCount = _originalMap.DeletedCount;
         }
@@ -129,9 +129,8 @@ namespace HatTrick.InMemDb
             if (File.Exists(_fullTempDbPath))
                 File.Delete(_fullTempDbPath);
 
-            _freshMap = new MemDbMap(_fullTempMapPath);
+            _freshMap = new MemDbMap(_fullTempMapPath, true);
             File.Create(_fullTempDbPath).Dispose();
-
         }
         #endregion
 
@@ -140,6 +139,8 @@ namespace HatTrick.InMemDb
         {
             MemDbMap origMap = _originalMap;
             MemDbMap freshMap = _freshMap;
+
+            _freshMap.SetLastId(_originalMap.LastId);
 
             int maxRecLength = origMap.MaxFreshRecordSize;
 

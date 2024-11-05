@@ -119,7 +119,7 @@ namespace HatTrick.InMemDb
             if (mapExists && !dbExists)
                 throw new InvalidOperationException($"No Db file exists for map file: {Path.GetFileName(_fullMapPath)}");
 
-            _map = new MemDbMap(_fullMapPath);
+            _map = new MemDbMap(_fullMapPath, true);
 
             if (!dbExists)
             {

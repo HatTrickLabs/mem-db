@@ -38,20 +38,20 @@ namespace TestHarness
 
             /**********************************************************************************************************/
 
-            int cnt = 0;
-            foreach (var itm in MemDb.ReadArchive<DigitalAsset>(datasetName))
-            {
-                cnt += 1;
-                if (itm.Id == 100)
-                {
-                    Console.WriteLine(itm.Value.Name + "\t\t" + itm.Value.XXHash);
-                }
-            }
+            //int cnt = 0;
+            //foreach (var itm in MemDb.ReadArchive<DigitalAsset>(datasetName))
+            //{
+            //    cnt += 1;
+            //    if (itm.Id == 100)
+            //    {
+            //        Console.WriteLine(itm.Value.Name + "\t\t" + itm.Value.XXHash);
+            //    }
+            //}
 
-            Console.WriteLine("---------------------");
-            Console.WriteLine(cnt);
-            Console.ReadLine();
-            return;
+            //Console.WriteLine("---------------------");
+            //Console.WriteLine(cnt);
+            //Console.ReadLine();
+            //return;
 
             /**********************************************************************************************************/
 
@@ -65,32 +65,20 @@ namespace TestHarness
                 Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
                 _sw.Start();
 
-                //List<DigitalAsset> assets = new List<DigitalAsset>(18000);
+                //List<DigitalAsset> assets = new List<DigitalAsset>(3000);
                 //assets.AddRange(ResolveAssets(@"D:\tmp"));
                 //assets.AddRange(ResolveAssets(@"C:\Users\jerrod.eiman\Pictures"));
                 //assets.AddRange(ResolveAssets(@"C:\Users\jerrod.eiman\Videos"));
+
+                //Console.WriteLine(_db.Count());
 
                 //_sw.Stop();
                 //Console.WriteLine($"Resolved {assets.Count} assets @ {_sw.ElapsedMilliseconds}.");
                 //_sw.Start();
                 //ImportAssets(assets);
 
-                //DigitalAsset asset = null;
-                //_db.Update(a => a.XXHash = 111, a => a.Id == 100);
-                //asset = _db.Find(a => a.Id == 100);
-                //Console.WriteLine(asset.Name + '\t' + asset.XXHash);
-                //_db.Update(a => a.XXHash = 666, a => a.Id == 100);
-                //asset = _db.Find(a => a.Id == 100);
-                //Console.WriteLine(asset.Name + '\t' + asset.XXHash);
-                //_db.Update(a => a.XXHash = 777, a => a.Id == 100);
-                //asset = _db.Find(a => a.Id == 100);
-                //Console.WriteLine(asset.Name + '\t' + asset.XXHash);
-                //_db.Update(a => a.XXHash = 888, a => a.Id == 100);
-                //asset = _db.Find(a => a.Id == 100);
-                //Console.WriteLine(asset.Name + '\t' + asset.XXHash);
-                //_db.Update(a => a.XXHash = 999, a => a.Id == 100);
-                //asset = _db.Find(a => a.Id == 100);
-                //Console.WriteLine(asset.Name + '\t' + asset.XXHash);
+                //_db.Update(a => a.Name = a.Name + ".", a => a.Id == 3);
+
 
                 //UpdateAssetsWithXXHash(@"D:\tmp");
                 //ImportAssets(@"C:\Users\jerrod.eiman\Pictures");
@@ -176,12 +164,12 @@ namespace TestHarness
 
         static void ImportAssets(List<DigitalAsset> assets)
         {
-            Parallel.ForEach(assets, (asset =>
-            //foreach(var file in files)
+            //Parallel.ForEach(assets, (asset =>
+            foreach(var asset in assets)
             {
                 _db.Insert(asset, (id) => asset.Id = id, true);
 
-            }));
+            };
         }
     }
 }

@@ -49,15 +49,11 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region constructors
-        internal MemDbMap(string path) : this(path, true)
-        { }
-
         internal MemDbMap(string path, bool initialize)
         {
             _path = path ?? throw new ArgumentNullException(nameof(path));
             _lastId = 0;
             _nextFlushIdx = 0;
-            //_pointers = new List<MemDbPointer>(initialCapacity);
             _syncLock = new();
             _idSyncLock = new();
 
@@ -95,6 +91,23 @@ namespace HatTrick.InMemDb
             using var fsMap = new FileStream(_path, FileMode.Open, FileAccess.Read); ;
             using var reader = new BinaryReader(fsMap, Encoding.UTF8, true);
             this.DeserializeFrom(reader);
+        }
+        #endregion
+
+        #region set next id
+        internal void SetLastId(uint id)
+        {
+            bool outOfRange = false;
+            lock (_idSyncLock)
+            {
+                if (id < _lastId)
+                    outOfRange = true;
+                else
+                    _lastId = id;
+            }
+
+            if (outOfRange)
+                throw new ArgumentException("Provided id is less than the last allocated id.");
         }
         #endregion
 

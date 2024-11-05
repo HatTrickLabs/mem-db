@@ -115,7 +115,7 @@ namespace HatTrick.InMemDb
         #region read fragmented map
         private void ReadFragmentedMap()
         {
-            _map = new MemDbMap(_fullMapPath);
+            _map = new MemDbMap(_fullMapPath, true);
             _staleCount = _map.StaleCount;
             _deletedCount = _map.DeletedCount;
         }
@@ -162,7 +162,7 @@ namespace HatTrick.InMemDb
                 File.Delete(_fullDbArchivePath);
 
 
-            _archiveMap = new MemDbMap(_fullMapArchivePath);//this creates the file internally...
+            _archiveMap = new MemDbMap(_fullMapArchivePath, true);
             File.Create(_fullDbArchivePath).Dispose();
         }
         #endregion
