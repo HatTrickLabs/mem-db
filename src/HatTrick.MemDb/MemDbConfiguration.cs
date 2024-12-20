@@ -67,8 +67,21 @@ namespace HatTrick.InMemDb
     }
     #endregion
 
+    #region [interface] i mem db configuration builder
+    public interface IMemDBConfigurationBuilder<T> where T : class
+    {
+        IMemDBConfigurationBuilder<T> SetMode(AccessMode mode);
+        IMemDBConfigurationBuilder<T> SerializeWith(Func<IMemDbSerializer<T>> serializerProvider);
+        IMemDBConfigurationBuilder<T> CloneWith(Func<IMemDbCloner<T>> clonerProvider);
+        IMemDBConfigurationBuilder<T> EncryptWithKey(Func<byte[]> encryptionKeyProvider);
+        IMemDBConfigurationBuilder<T> EncryptWithPassword(Func<string> encryptionPasswordProvider);
+        IMemDBConfigurationBuilder<T> ArchiveOnDefrag(string archivePath);
+        void Register();
+    }
+    #endregion
+
     #region [class] mem db configuration of T
-    public class MemDbConfiguration<T> : MemDbConfiguration where T : class
+    public class MemDbConfiguration<T> : MemDbConfiguration, IMemDBConfigurationBuilder<T> where T : class
     {
         #region internals
         private Action<MemDbConfiguration<T>> _registerCallback;
@@ -104,7 +117,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region set mode
-        public MemDbConfiguration<T> SetMode(AccessMode mode)
+        public IMemDBConfigurationBuilder<T> SetMode(AccessMode mode)
         {
             _mode = mode;
             return this;
@@ -112,7 +125,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region serialize with
-        public MemDbConfiguration<T> SerializeWith(Func<IMemDbSerializer<T>> serializerProvider)
+        public IMemDBConfigurationBuilder<T> SerializeWith(Func<IMemDbSerializer<T>> serializerProvider)
         {
             _serializerProvider = serializerProvider ?? throw new ArgumentNullException(nameof(serializerProvider));
             return this;
@@ -120,7 +133,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region clone with
-        public MemDbConfiguration<T> CloneWith(Func<IMemDbCloner<T>> clonerProvider)
+        public IMemDBConfigurationBuilder<T> CloneWith(Func<IMemDbCloner<T>> clonerProvider)
         {
             _clonerProvider = clonerProvider ?? throw new ArgumentNullException(nameof(clonerProvider));
             return this;
@@ -128,7 +141,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region encrypt with key
-        public MemDbConfiguration<T> EncryptWithKey(Func<byte[]> encryptionKeyProvider)
+        public IMemDBConfigurationBuilder<T> EncryptWithKey(Func<byte[]> encryptionKeyProvider)
         {
             if (_encryptionKeyProvider is not null)
                 throw new InvalidOperationException("Encryption key already provided.");
@@ -139,7 +152,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region encrypt with password
-        public MemDbConfiguration<T> EncryptWithPassword(Func<string> encryptionPasswordProvider)
+        public IMemDBConfigurationBuilder<T> EncryptWithPassword(Func<string> encryptionPasswordProvider)
         {
             if (_encryptionKeyProvider is not null)
                 throw new InvalidOperationException("Encryption key already provided...Use one of password or key for encryption.");
@@ -173,7 +186,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region archive on defrag
-        public MemDbConfiguration<T> ArchiveOnDefrag(string archivePath)
+        public IMemDBConfigurationBuilder<T> ArchiveOnDefrag(string archivePath)
         {
             if (archivePath is null)
                 throw new ArgumentNullException(nameof(archivePath));

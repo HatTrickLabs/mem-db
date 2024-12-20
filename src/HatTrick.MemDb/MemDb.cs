@@ -70,7 +70,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region configure for
-        public static MemDbConfiguration<T> ConfigureFor<T>(string datasetName, string path) where T : class
+        public static IMemDBConfigurationBuilder<T> ConfigureFor<T>(string datasetName, string path) where T : class
         {
             return new MemDbConfiguration<T>(datasetName, path, MemDb.RegisterConfiguration);
         }
