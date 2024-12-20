@@ -5,8 +5,12 @@ using System.Text;
 namespace HatTrick.InMemDb
 {
     #region [class] mem db configuration
-    public class MemDbConfiguration
+    public abstract class MemDbConfiguration
     {
+        #region const
+        public const int MinPasswordLength = 10;
+        #endregion
+
         #region internals
         private string _datasetName;
         private string _path;
@@ -21,7 +25,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region constructors
-        public MemDbConfiguration(string datasetName, string path)
+        protected MemDbConfiguration(string datasetName, string path)
         {
             _datasetName = datasetName ?? throw new ArgumentNullException(nameof(datasetName));
             _path = path ?? throw new ArgumentNullException(nameof(path));
@@ -55,6 +59,10 @@ namespace HatTrick.InMemDb
 
             return configOfT;
         }
+        #endregion
+
+        #region clear [abstract]
+        internal abstract void Clear();
         #endregion
     }
     #endregion
@@ -139,25 +147,26 @@ namespace HatTrick.InMemDb
             if (encryptionPasswordProvider is null)
                 throw new ArgumentNullException(nameof(encryptionPasswordProvider));
 
-            string pw = encryptionPasswordProvider();
-            if (pw is null)
-                throw new InvalidOperationException($"Password provided via {nameof(encryptionPasswordProvider)} is null.");
-
-            if (pw == string.Empty)
-                throw new InvalidOperationException($"Password provided via {nameof(encryptionPasswordProvider)} is empty.");
-
-            if (pw.Length < 10)
-                throw new InvalidOperationException($"Password provided via {nameof(encryptionPasswordProvider)} must be at least 10 chars long.");
-
-            byte[] hash = null;
-            using (var sha256 = SHA256.Create())
+            _encryptionKeyProvider = () =>
             {
-                hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(pw));
-            }
+                string pw = encryptionPasswordProvider();
+                if (pw is null)
+                    throw new InvalidOperationException($"Password provided via {nameof(encryptionPasswordProvider)} from {nameof(MemDbConfiguration<T>)}.{nameof(EncryptWithPassword)} is null.");
 
-            {
-                _encryptionKeyProvider = () => hash;
-            }
+                if (pw == string.Empty)
+                    throw new InvalidOperationException($"Password provided via {nameof(encryptionPasswordProvider)} from {nameof(MemDbConfiguration<T>)}.{nameof(EncryptWithPassword)} is empty.");
+
+                if (pw.Length < MemDbConfiguration.MinPasswordLength)
+                    throw new InvalidOperationException($"Password provided via {nameof(encryptionPasswordProvider)} from {nameof(MemDbConfiguration<T>)}.{nameof(EncryptWithPassword)} must be at least {MemDbConfiguration.MinPasswordLength} chars long.");
+
+                byte[] hash = null;
+                using (var sha256 = SHA256.Create())
+                {
+                    hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(pw));
+                }
+
+                return hash;
+            };
 
             return this;
         }
@@ -200,6 +209,23 @@ namespace HatTrick.InMemDb
             _cache = new MemDbCache<T>(base.DatasetName, _cloner, _persister);
 
             _isInitialized = true;
+        }
+        #endregion
+
+        #region clear
+        internal override void Clear()
+        {
+            if (!_isInitialized)
+                return;
+
+            _encryptionKey = null;
+            _encryptor = null;
+            _serializer = null;
+            _cloner = null;
+            _persister = null;
+            _cache = null;
+
+            _isInitialized = false;
         }
         #endregion
 

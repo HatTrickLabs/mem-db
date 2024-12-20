@@ -104,12 +104,16 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
-        #region dispose
+        #region close
         protected static void Close(string datasetName)
         {
             lock (_lock)
             {
-                _openDatasets.Remove(datasetName);
+                if (_openDatasets.Remove(datasetName))
+                {
+                    var config = _configurations.Find(c => string.Compare(c.DatasetName, datasetName, true) == 0);
+                    config?.Clear();
+                }
             }
         }
         #endregion

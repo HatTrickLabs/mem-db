@@ -70,7 +70,7 @@ namespace TestHarness
                 //assets.AddRange(ResolveAssets(@"C:\Users\jerrod.eiman\Pictures"));
                 //assets.AddRange(ResolveAssets(@"C:\Users\jerrod.eiman\Videos"));
 
-                //Console.WriteLine(_db.Count());
+                Console.WriteLine(_db.Count());
 
                 //_sw.Stop();
                 //Console.WriteLine($"Resolved {assets.Count} assets @ {_sw.ElapsedMilliseconds}.");
@@ -88,7 +88,40 @@ namespace TestHarness
 
                 _sw.Stop();
                 Console.WriteLine($"Completed @ {_sw.ElapsedMilliseconds} milliseconds.");
+                //_sw.Start();
+            }
+
+            _sw.Restart();
+            using (_db = MemDb.Open<DigitalAsset>(datasetName))
+            {
+                _sw.Stop();
+                Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
                 _sw.Start();
+
+                //List<DigitalAsset> assets = new List<DigitalAsset>(3000);
+                //assets.AddRange(ResolveAssets(@"D:\tmp"));
+                //assets.AddRange(ResolveAssets(@"C:\Users\jerrod.eiman\Pictures"));
+                //assets.AddRange(ResolveAssets(@"C:\Users\jerrod.eiman\Videos"));
+
+                Console.WriteLine(_db.Count());
+
+                //_sw.Stop();
+                //Console.WriteLine($"Resolved {assets.Count} assets @ {_sw.ElapsedMilliseconds}.");
+                //_sw.Start();
+                //ImportAssets(assets);
+
+                //_db.Update(a => a.Name = a.Name + ".", a => a.Id == 3);
+
+
+                //UpdateAssetsWithXXHash(@"D:\tmp");
+                //ImportAssets(@"C:\Users\jerrod.eiman\Pictures");
+                //UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Pictures");
+                //ImportAssets(@"C:\Users\jerrod.eiman\Videos");
+                //UpdateAssetsWithXXHash(@"C:\Users\jerrod.eiman\Videos");
+
+                //_sw.Stop();
+                //Console.WriteLine($"Completed @ {_sw.ElapsedMilliseconds} milliseconds.");
+                //_sw.Start();
             }
 
             _sw.Stop();
