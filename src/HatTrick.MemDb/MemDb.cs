@@ -245,6 +245,7 @@ namespace HatTrick.InMemDb
         {
             _cache.Dispose();
             MemDb.Close(_datasetName);
+            _isClosed = true;
         }
         #endregion
 
