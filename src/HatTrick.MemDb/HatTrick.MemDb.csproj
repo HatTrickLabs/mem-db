@@ -6,6 +6,6 @@
     <Product>HatTrick.MemDb</Product>
     <Copyright>Copyright ©  2024</Copyright>
     <RootNamespace>HatTrick.InMemDb</RootNamespace>
-    <Version>3.3.1</Version>
+    <Version>3.4.0</Version>
   </PropertyGroup>
 </Project>
