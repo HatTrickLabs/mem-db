@@ -1,8 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Threading;
 using System.Text;
 using System.IO;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace HatTrick.InMemDb
 {
@@ -18,10 +19,10 @@ namespace HatTrick.InMemDb
         private string _path;
         private List<MemDbPointer> _pointers;
         private int _nextFlushIdx;
-        private object _syncLock;
+        private Lock _syncLock;
 
         private uint _lastId;
-        private object _idSyncLock;
+        private Lock _idSyncLock;
         #endregion
 
         #region interface

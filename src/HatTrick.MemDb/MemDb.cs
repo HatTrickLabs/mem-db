@@ -1,6 +1,6 @@
 ﻿using System;
+using System.Threading;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace HatTrick.InMemDb
 {
@@ -10,7 +10,7 @@ namespace HatTrick.InMemDb
         #region static internals
         private static List<MemDbConfiguration> _configurations;
         private static List<string> _openDatasets;
-        private static object _lock;
+        private static Lock _lock;
         #endregion
 
         #region static interface

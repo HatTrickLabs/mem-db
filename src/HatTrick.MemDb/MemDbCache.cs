@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Linq;
 using System.Collections.Generic;
 
@@ -9,7 +10,7 @@ namespace HatTrick.InMemDb
         #region internals
         private string _datasetName;
         private List<MemDbRecord<T>> _records;
-        private object _recSyncLock;
+        private Lock _lock;
 
         private IMemDbCloner<T> _cloner;
         private IMemDbPersister<T> _persister;
@@ -32,7 +33,7 @@ namespace HatTrick.InMemDb
             _datasetName = datasetName;
             _cloner = cloner;
             _persister = persister; 
-            _recSyncLock = new();
+            _lock = new();
 
             _mode = _persister.Mode;
 
@@ -75,7 +76,7 @@ namespace HatTrick.InMemDb
             this.EnsureReadMode(nameof(Exists));
 
             bool exists;
-            lock (_recSyncLock)
+            lock (_lock)
             {
                 exists = _records.Exists(r => r.State == RecordState.Fresh && where(r.Value));
             }
@@ -88,7 +89,7 @@ namespace HatTrick.InMemDb
         {
             //this count should be available in ANY AccessMode
             bool canReadCache = _mode != AccessMode.AppendOnly;
-            lock (_recSyncLock)
+            lock (_lock)
             {
                 if (canReadCache)
                     return _records.Count(r => r.State == RecordState.Fresh);
@@ -109,7 +110,7 @@ namespace HatTrick.InMemDb
         {
             this.EnsureReadMode(nameof(Count));
 
-            lock (_recSyncLock)
+            lock (_lock)
             {
                 return _records.Count(r => r.State == RecordState.Fresh && selector(r.Value));
             }
@@ -122,7 +123,7 @@ namespace HatTrick.InMemDb
             this.EnsureReadMode(nameof(Find));
 
             MemDbRecord<T> rec = null;
-            lock (_recSyncLock)
+            lock (_lock)
             {
                 for (int i = 0; i < _records.Count; i++)
                 {
@@ -143,7 +144,7 @@ namespace HatTrick.InMemDb
             this.EnsureReadMode(nameof(FindAll));
 
             T[] matches;
-            lock (_recSyncLock)
+            lock (_lock)
             {
                 matches = _records.Where(r => r.State == RecordState.Fresh && where(r.Value)).Select(r => r.Value).ToArray();
             }
@@ -171,7 +172,7 @@ namespace HatTrick.InMemDb
                 : (r) => r.State == RecordState.Fresh;
 
             T[] set = Array.Empty<T>();
-            lock (_recSyncLock)
+            lock (_lock)
             {
                 T[] matches = _records.Where(filter).Select(r => r.Value).ToArray();
 
@@ -212,7 +213,7 @@ namespace HatTrick.InMemDb
         private int ExecuteUpdateExpression(MemDbExpression<T> expression, Action<T> apply)
         {
             int cnt = 0;
-            lock (_recSyncLock)
+            lock (_lock)
             {
                 T[] set = this.ExecuteQueryExpression(expression, false);
                 cnt = (set.Length > 0)
@@ -227,7 +228,7 @@ namespace HatTrick.InMemDb
         private int ExecuteDeleteExpression(MemDbExpression<T> expression)
         {
             int cnt = 0;
-            lock (_recSyncLock)
+            lock (_lock)
             {
                 T[] set = this.ExecuteQueryExpression(expression, false);
                 cnt = (set.Length > 0) 
@@ -258,7 +259,7 @@ namespace HatTrick.InMemDb
 
             if (_mode != AccessMode.AppendOnly)
             {
-                lock (_recSyncLock)
+                lock (_lock)
                 {
                     rec.SetCacheIndex(_records.Count);
                     _records.Add(rec);
@@ -281,7 +282,7 @@ namespace HatTrick.InMemDb
                 throw new ArgumentNullException(nameof(where));
 
             List<MemDbRecord<T>> matches = null;
-            lock (_recSyncLock)
+            lock (_lock)
             {
                 long binaryUtcTimestamp = DateTime.UtcNow.ToBinary();
                 matches = _records.FindAll(r => r.State == RecordState.Fresh && where(r.Value));
@@ -325,7 +326,7 @@ namespace HatTrick.InMemDb
                 throw new ArgumentNullException(nameof(where));
 
             int cnt = 0;
-            lock (_recSyncLock)
+            lock (_lock)
             {
                 long binaryUtcTimestamp = DateTime.UtcNow.ToBinary();
                 var set = _records.Where(r => r.State == RecordState.Fresh && where(r.Value));

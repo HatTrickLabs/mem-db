@@ -21,14 +21,14 @@ namespace HatTrick.InMemDb
         private Timer _fileSyncTimer;
 
         private Queue<MemDbRecord<T>> _insertQueue;
-        private object _insertSyncLock;
+        private Lock _insertSyncLock;
 
         private Queue<MemDbRecord> _stateChangeQueue;
-        private object _stateChangeSyncLock;
+        private Lock _stateChangeSyncLock;
 
         private MemDbMap _map;
 
-        private object _flushLock;
+        private Lock _flushLock;
 
         private IMemDbSerializer<T> _serializer;
         private IBinaryReadMemDbSerializer<T> _binReadSerializer;//optional impl
