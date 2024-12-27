@@ -34,7 +34,7 @@ namespace HatTrick.InMemDb
         /// The 'MemDbAESEncryptor.Decrypt' method requires that we know the unencrypted length of the raw data.
         /// During the 'Decrypt' process we want to read directly from the mem-db data file stream by providing 
         /// that data stream into the constructor of the crypto stream.   We then read from the crypto stream until
-        /// we get the exact number of bytes we know is the enencrypted length of the serailized object.  See the notes
+        /// we get the exact number of bytes we know is the unencrypted length of the serailized object.  See the notes
         /// at the end of the 'MemDbAESEncrytor.Decrypt' method for more info.
         /// </summary>
         /// <param name="byteLength">The length of an unencrypted span, array or stream of bytes.</param>
