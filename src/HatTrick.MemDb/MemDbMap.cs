@@ -218,25 +218,28 @@ namespace HatTrick.InMemDb
         {
             lock (_syncLock)
             {
-                using var fsMap = new FileStream(_path, FileMode.Open, FileAccess.ReadWrite);
-                using var mapWriter = new BinaryWriter(fsMap, Encoding.UTF8, true);
-
-                //overwrite count and last id at the beginning
-                mapWriter.Write(_pointers.Count);
-                mapWriter.Write(_lastId);
-
-                fsMap.Position = fsMap.Length;
-
-                //start this for loop at the next index after prev flush
-                //...we are only flushing newly added records
-                for (int i = _nextFlushIdx; i < _pointers.Count; i++)
+                if (_nextFlushIdx < _pointers.Count)
                 {
-                    var p = _pointers[i];
-                    if (!p.Flushed)//technically don't need this check anymore...we are now tracking next flush idx
-                        p.SerializeTo(mapWriter);
-                }
+                    using var fsMap = new FileStream(_path, FileMode.Open, FileAccess.ReadWrite);
+                    using var mapWriter = new BinaryWriter(fsMap, Encoding.UTF8, true);
 
-                _nextFlushIdx = _pointers.Count;
+                    //overwrite count and last id at the beginning
+                    mapWriter.Write(_pointers.Count);
+                    mapWriter.Write(_lastId);
+
+                    fsMap.Position = fsMap.Length;
+
+                    //start this for loop at the next index after prev flush
+                    //...we are only flushing newly added records
+                    for (int i = _nextFlushIdx; i < _pointers.Count; i++)
+                    {
+                        var p = _pointers[i];
+                        if (!p.Flushed)//technically don't need this check anymore...we are now tracking next flush idx
+                            p.SerializeTo(mapWriter);
+                    }
+
+                    _nextFlushIdx = _pointers.Count;
+                }
             }
         }
         #endregion
@@ -275,6 +278,12 @@ namespace HatTrick.InMemDb
             {
                 int count = reader.ReadInt32();
                 _lastId = reader.ReadUInt32();
+
+                //check for corruption...
+                long pointerLength = (int)reader.BaseStream.Length - (sizeof(int) + sizeof(uint));
+                long persisted = pointerLength / MemDbPointer.Size;
+                if (persisted < count)//TODO: after the integrity checker / corrupt file fixer util is built, reference the util in this exception.
+                    throw new MemDbCorruptException($"Mismatch between persisted pointer count '{persisted}' vs expected pointer count '{count}'.");
 
                 _pointers = new List<MemDbPointer>((int)(count * 1.1));
 

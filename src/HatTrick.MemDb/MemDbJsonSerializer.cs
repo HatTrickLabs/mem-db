@@ -75,7 +75,6 @@ namespace HatTrick.InMemDb
     public class MemDbJsonSerializer<T> : MemDbJsonSerializer, IMemDbSerializer<T> where T : class
     {
         #region internals
-        private MemDbJsonSerializer<T> _instance;
         private JsonSerializerOptions _options;
         #endregion
 
