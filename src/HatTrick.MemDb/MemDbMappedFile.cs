@@ -28,6 +28,7 @@ namespace HatTrick.InMemDb
 
         private MemDbMap _map;
 
+        private bool _isFlushing;
         private Lock _flushLock;
 
         private IMemDbSerializer<T> _serializer;
@@ -295,17 +296,27 @@ namespace HatTrick.InMemDb
         #region flush
         void IMemDbPersister<T>.Flush(object state)
         {
+            //possible last call to flush is still flushing
+            if (_isFlushing)
+                return;
+
             //this is to avoid the timer 'flush' from getting in after
             //the 'close' flush has already entered...
             if (state == null && _isClosed)
                 return;
 
-            this.FlushInsertQueue();
-            this.FlushStateChangeQueue();
-
-            if (!_isClosed)
+            _isFlushing = true;
+            try
             {
-                _fileSyncTimer.Change(_flushInterval, Timeout.Infinite);
+                this.FlushInsertQueue();
+                this.FlushStateChangeQueue();
+
+                if (!_isClosed)
+                    _fileSyncTimer.Change(_flushInterval, Timeout.Infinite);
+            }
+            finally
+            {
+                _isFlushing = false;
             }
         }
         #endregion
@@ -325,11 +336,11 @@ namespace HatTrick.InMemDb
                     this.AppendInsertedItems();
                 }
 
-                if (!_isClosed && qSizePreFlush > (_initialQueueCapacity * 1.5))
+                if (!_isClosed && qSizePreFlush > (_initialQueueCapacity * 4))
                 {
                     lock (_insertSyncLock)
                     {
-                        _insertQueue.TrimExcess();
+                        _insertQueue.TrimExcess(_initialQueueCapacity);
                     }
                 }
             }
@@ -351,11 +362,11 @@ namespace HatTrick.InMemDb
                     this.UpdateItemStates();
                 }
 
-                if (!_isClosed && qSizePreFlush > (_initialQueueCapacity * 1.5))
+                if (!_isClosed && qSizePreFlush > (_initialQueueCapacity * 4))
                 {
                     lock (_stateChangeSyncLock)
                     {
-                        _stateChangeQueue.TrimExcess();
+                        _stateChangeQueue.TrimExcess(_initialQueueCapacity);
                     }
                 }
             }
@@ -366,49 +377,52 @@ namespace HatTrick.InMemDb
         private void AppendInsertedItems()
         {
             MemDbRecord<T> record = null;
-            var fresh = RecordState.Fresh;
-            if (this.TryPopInsertRecord(out record))
+            if (!this.TryPopInsertRecord(out record))
+                return;
+
+            using (var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.ReadWrite))
             {
-                using var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.ReadWrite);
-                using var dbWriter = new BinaryWriter(fsDb, Encoding.UTF8, true);
-
-                fsDb.Position = fsDb.Length;
-                do
+                using (var dbWriter = new BinaryWriter(fsDb, Encoding.UTF8, true))
                 {
-                    uint startPos = (uint)fsDb.Position;
+                    fsDb.Position = fsDb.Length;
 
-                    try
+                    do
                     {
-                        int length;
+                        uint startPos = (uint)fsDb.Position;
 
-                        if (record.IsEncrypted)
+                        try
                         {
-                            Span<byte> raw = this.SerializeRecord(record.Value);
-                            _encryptor.Encrypt(raw, fsDb);
-                            //we must record the RAW length of the record NOT crypto...we can calc crypto len on read
-                            length = raw.Length;
+                            int length;
+
+                            if (record.IsEncrypted)
+                            {
+                                Span<byte> raw = this.SerializeRecord(record.Value);
+                                _encryptor.Encrypt(raw, fsDb);
+                                //we must record the RAW length of the record NOT crypto...we can calc crypto len on read
+                                length = raw.Length;
+                            }
+                            else
+                            {
+                                this.SerializeRecord(record.Value, dbWriter);
+                                length = (int)(fsDb.Position - startPos);
+                            }
+
+                            var pointer = new MemDbPointer(record.Id, RecordState.Fresh, record.StateSetAt, record.IsEncrypted, startPos, length);
+                            record.SetMapIndex(_map.Add(pointer));
                         }
-                        else
+                        catch
                         {
-                            this.SerializeRecord(record.Value, dbWriter);
-                            length = (int)(fsDb.Position - startPos);
+                            //reset the len of file back to position before this pass started.
+                            fsDb.SetLength(startPos);
+                            //ensure pointers successfully added get flushed before tossing the ex
+                            _map.Flush();
+                            throw;
                         }
 
-                        var pointer = new MemDbPointer(record.Id, fresh, record.StateSetAt, record.IsEncrypted, startPos, length);
-                        record.SetMapIndex(_map.Add(pointer));
-                    }
-                    catch
-                    {
-                        //reset the len of file back to position before this pass started.
-                        fsDb.SetLength(startPos);
-                        //ensure pointers successfully added get flushed before tossing the ex
-                        _map.Flush();
-                        throw;
-                    }
-
-                } while (this.TryPopInsertRecord(out record));
-                _map.Flush();
+                    } while (this.TryPopInsertRecord(out record));
+                }
             }
+            _map.Flush();
         }
         #endregion
 
