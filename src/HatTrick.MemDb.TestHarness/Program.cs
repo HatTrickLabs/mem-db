@@ -46,12 +46,28 @@ namespace TestHarness
                 Console.WriteLine("initialized " + _db.Count() + " records @ " + _sw.ElapsedMilliseconds + " milliseconds.");
                 _sw.Start();
 
-                //List<DigitalAsset> assets = new List<DigitalAsset>(3000);
-                //assets.AddRange(ResolveAssets(@"D:\tmp"));
-                //assets.AddRange(ResolveAssets(@"C:\Users\jerrod.eiman\Pictures"));
-                //assets.AddRange(ResolveAssets(@"C:\Users\jerrod.eiman\Videos"));
+                //List<DigitalAsset> assets = new List<DigitalAsset>(24_000);
+                //assets.AddRange(ResolveAssets(@"D:\tmp", DigitalAssetType.Doc));
+                //assets.AddRange(ResolveAssets(@"C:\Users\jerrod.eiman\Pictures", DigitalAssetType.Image));
+                //assets.AddRange(ResolveAssets(@"C:\Users\jerrod.eiman\Videos", DigitalAssetType.Video));
+                //assets.AddRange(ResolveAssets(@"D:\svn", DigitalAssetType.Repo));
 
-                Console.WriteLine(_db.Count(a => string.Compare(a.Extension, ".png", true) == 0));
+                //Console.WriteLine("Image: " + _db.Count(a => a.AssetType == DigitalAssetType.Image));
+                //Console.WriteLine("Video: " + _db.Count(a => a.AssetType == DigitalAssetType.Video));
+                //Console.WriteLine("Doc:   " + _db.Count(a => a.AssetType == DigitalAssetType.Doc));
+                //Console.WriteLine("Repo:  " + _db.Count(a => a.AssetType == DigitalAssetType.Repo));
+
+                //var vids = _db.FindAll(a => a.AssetType == DigitalAssetType.Video && a.Length >= 5_242_880);
+
+                //Console.WriteLine("Vids >= 5MB: " + vids.Length);
+
+                while (true)
+                {
+                    var set = _db.FindAll(a => a.AssetType == DigitalAssetType.Image);
+                    var input = Console.ReadLine();
+                    if (input == "x" || input == "X")
+                        break;
+                }
 
                 //_sw.Stop();
                 //Console.WriteLine($"Resolved {assets.Count} assets @ {_sw.ElapsedMilliseconds}.");
@@ -79,9 +95,13 @@ namespace TestHarness
         {
             Parallel.For(0, count, (i) =>
             {
-                var sets = _db.Query().GroupBy(a => a.Extension.ToLower()).Having(g => g.Count() > 100).Select(g => (g.Key, g.Count())).ToArray();
+                var sets = _db.Query()
+                .GroupBy(a => a.Extension.ToLower())
+                .Having(g => g.Count() > 250)
+                .Select(g => (g.Key, g.Count()))
+                .ToArray();
                 Array.Sort<(string key, int cnt)>(sets, (a, b) => b.cnt.CompareTo(a.cnt));
-                Console.WriteLine(sets[0]);
+                Console.WriteLine(sets[^10]);
             });
         }
 
@@ -105,7 +125,7 @@ namespace TestHarness
             });
         }
 
-        static DigitalAsset[] ResolveAssets(string root)
+        static DigitalAsset[] ResolveAssets(string root, DigitalAssetType assetType)
         {
             DateTime now = DateTime.Now;
 
@@ -125,7 +145,7 @@ namespace TestHarness
                 string file = files[i];
 
                 FileInfo fi = new FileInfo(file);
-                DigitalAsset asset = DigitalAsset.CreateNew(DigitalAssetType.Doc);
+                DigitalAsset asset = DigitalAsset.CreateNew(assetType);
                 asset.Name = fi.Name;
                 asset.Directory = Path.GetDirectoryName(file);
                 asset.Created = fi.CreationTime;
@@ -142,12 +162,22 @@ namespace TestHarness
 
         static void ImportAssets(List<DigitalAsset> assets)
         {
+            Parallel.For(0, assets.Count, (i) => {
+                var a = assets[i];
+                _db.Insert(a, (id) => a.Id = id, false);
+                if (i % 10_000 == 0)
+                {
+                    _db.Flush();
+                    //Console.Write('.');
+                }
+            });
+            Console.WriteLine(string.Empty);
             //Parallel.ForEach(assets, (asset =>
-            foreach(var asset in assets)
-            {
-                _db.Insert(asset, (id) => asset.Id = id, true);
-
-            };
+            ////foreach(var asset in assets)
+            //{
+            //    _db.Insert(asset, (id) => asset.Id = id, true);
+            //
+            //}));
         }
     }
 }

@@ -27,6 +27,7 @@ namespace HatTrick.InMemDb
     [JsonDerivedType(typeof(ImageAsset), typeDiscriminator: (int)DigitalAssetType.Image)]
     [JsonDerivedType(typeof(VideoAsset), typeDiscriminator: (int)DigitalAssetType.Video)]
     [JsonDerivedType(typeof(DocAsset), typeDiscriminator: (int)DigitalAssetType.Doc)]
+    [JsonDerivedType(typeof(RepoAsset), typeDiscriminator: (int)DigitalAssetType.Repo)]
     public abstract class DigitalAsset : IDigitalAsset
     {
         private DigitalAssetType _type;
@@ -58,7 +59,9 @@ namespace HatTrick.InMemDb
                 ? new ImageAsset()
                 : type == DigitalAssetType.Video
                     ? new VideoAsset()
-                    : new DocAsset();
+                    : type == DigitalAssetType.Doc
+                    ? new DocAsset()
+                        : new RepoAsset();
         }
 
         public override string ToString()
@@ -85,11 +88,18 @@ namespace HatTrick.InMemDb
         { }
     }
 
+    public class RepoAsset : DigitalAsset
+    {
+        public RepoAsset() : base(DigitalAssetType.Repo)
+        { }
+    }
+
     public enum DigitalAssetType
     {
         Doc,
         Image,
-        Video
+        Video,
+        Repo
     }
 
     //Asset, DocAsset, ImageAsset, VideoAsset, 
