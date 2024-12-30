@@ -45,14 +45,17 @@ namespace HatTrick.InMemDb
         internal MemDbExpression(ExecuteQuery query, ExecuteUpdate update, ExecuteDelete delete)
         {
             _query = query ?? throw new ArgumentNullException(nameof(query));
-            _update = update ?? throw new ArgumentNullException(nameof(update)); ;
-            _delete = delete ?? throw new ArgumentNullException(nameof(delete)); ;
+            _update = update ?? throw new ArgumentNullException(nameof(update));
+            _delete = delete ?? throw new ArgumentNullException(nameof(delete));
         }
         #endregion
 
         #region where
         public MemDbExpression<T> Where(Func<T, bool> predicate)
         {
+            if (_filter is not null)
+                throw new InvalidOperationException($"{nameof(MemDbException)} already already contains a {nameof(Where)} predicate.");
+
             _filter = predicate;
             return this;
         }
@@ -61,6 +64,9 @@ namespace HatTrick.InMemDb
         #region order by
         public MemDbExpression<T> OrderBy(Comparison<T> comparison)
         {
+            if (_orderBy is not null)
+                throw new InvalidOperationException($"{nameof(MemDbException)} already already contains a {nameof(OrderBy)} comparison.");
+
             _orderBy = comparison;
             return this;
         }
@@ -79,6 +85,9 @@ namespace HatTrick.InMemDb
         #region skip
         public MemDbExpression<T> Skip(int count)
         {
+            if (_skip is not null)
+                throw new InvalidOperationException($"{nameof(MemDbException)} already already contains a {nameof(Skip)} count.");
+
             _skip = count;
             return this;
         }
@@ -87,6 +96,9 @@ namespace HatTrick.InMemDb
         #region limit
         public MemDbExpression<T> Limit(int count)
         {
+            if (_skip is not null)
+                throw new InvalidOperationException($"{nameof(MemDbException)} already already contains a {nameof(Limit)} count.");
+
             _limit = count;
             return this;
         }
