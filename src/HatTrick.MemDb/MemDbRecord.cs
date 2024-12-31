@@ -5,7 +5,7 @@ namespace HatTrick.InMemDb
     internal abstract class MemDbRecord
     {
         #region read only
-        internal static readonly int Size = sizeof(uint) + sizeof(RecordState) + + sizeof(long) + sizeof(bool) + sizeof(int) + sizeof(int);
+        internal static readonly int Size = sizeof(uint) + sizeof(RecordState) + sizeof(long) + sizeof(bool) + sizeof(int) + sizeof(int);
         #endregion
 
         #region internals

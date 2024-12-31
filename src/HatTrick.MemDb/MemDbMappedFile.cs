@@ -20,11 +20,11 @@ namespace HatTrick.InMemDb
         private string _fullDbPath;
         private Timer _fileSyncTimer;
 
-        private Queue<MemDbRecord<T>> _insertQueue;
-        private Lock _insertSyncLock;
+        private ObservableQueue<MemDbRecord<T>> _insertQ;
+        private Lock _insertQLock;
 
-        private Queue<MemDbRecord> _stateChangeQueue;
-        private Lock _stateChangeSyncLock;
+        private ObservableQueue<MemDbRecord> _stateModQ;
+        private Lock _stateModQLock;
 
         private MemDbMap _map;
 
@@ -81,10 +81,10 @@ namespace HatTrick.InMemDb
 
             _flushLock = new();
 
-            _insertQueue = new Queue<MemDbRecord<T>>(_initialQueueCapacity);
-            _insertSyncLock = new();
-            _stateChangeQueue = new Queue<MemDbRecord>(_initialQueueCapacity);
-            _stateChangeSyncLock = new();
+            _insertQ = new ObservableQueue<MemDbRecord<T>>(_initialQueueCapacity);
+            _insertQLock = new();
+            _stateModQ = new ObservableQueue<MemDbRecord>(_initialQueueCapacity);
+            _stateModQLock = new();
 
             this.Initialize();
         }
@@ -238,9 +238,9 @@ namespace HatTrick.InMemDb
         {
             this.EnsureMode(AccessMode.AppendOnly | AccessMode.ReadWrite, nameof(IMemDbPersister<T>.Insert));
 
-            lock (_insertSyncLock)
+            lock (_insertQLock)
             {
-                _insertQueue.Enqueue(record);
+                _insertQ.Enqueue(record);
             }
         }
         #endregion
@@ -250,9 +250,9 @@ namespace HatTrick.InMemDb
         {
             this.EnsureMode(AccessMode.ReadWrite, nameof(IMemDbPersister<T>.MarkStale));
 
-            lock (_stateChangeSyncLock)
+            lock (_stateModQLock)
             {
-                _stateChangeQueue.Enqueue(record);//deletes and updates both go to the same queue
+                _stateModQ.Enqueue(record);//deletes and updates both go to the same queue
             }
         }
         #endregion
@@ -262,9 +262,9 @@ namespace HatTrick.InMemDb
         {
             this.EnsureMode(AccessMode.ReadWrite, nameof(IMemDbPersister<T>.MarkDeleted));
 
-            lock (_stateChangeSyncLock)
+            lock (_stateModQLock)
             {
-                _stateChangeQueue.Enqueue(record);//deletes and updates both go to the same queue.
+                _stateModQ.Enqueue(record);//deletes and updates both go to the same queue.
             }
         }
         #endregion
@@ -273,9 +273,9 @@ namespace HatTrick.InMemDb
         private bool TryPopInsertRecord(out MemDbRecord<T> record)
         {
             bool found = false;
-            lock (_insertSyncLock)
+            lock (_insertQLock)
             {
-                found = _insertQueue.TryDequeue(out record);
+                found = _insertQ.TryDequeue(out record);
             }
             return found;
         }
@@ -284,10 +284,15 @@ namespace HatTrick.InMemDb
         #region try pop state change record
         private bool TryPopStateChangeRecord(out MemDbRecord record)
         {
+            record = null;
             bool found = false;
-            lock (_stateChangeSyncLock)
+            lock (_stateModQLock)
             {
-                found = _stateChangeQueue.TryDequeue(out record);
+                //we must ensure we don't process any updates that need to be applied to records still
+                //sitting in the insert queue...we can simply check that the record to update has a map index.
+                found = _stateModQ.CanProcessHead((rec) => rec.MapIndex > -1);
+                if (found)
+                    record = _stateModQ.Dequeue();
             }
             return found;
         }
@@ -328,19 +333,19 @@ namespace HatTrick.InMemDb
             if (_mode == AccessMode.ReadOnly)
                 return;
 
-            int qSizePreFlush = _insertQueue.Count;
-            if (qSizePreFlush > 0)
+            if (_insertQ.Count > 0)
             {
                 lock (_flushLock)
                 {
                     this.AppendInsertedItems();
                 }
 
-                if (!_isClosed && qSizePreFlush > (_initialQueueCapacity * 4))
+                if (!_isClosed && _insertQ.Capacity > (_initialQueueCapacity * 4))
                 {
-                    lock (_insertSyncLock)
+                    lock (_insertQLock)
                     {
-                        _insertQueue.TrimExcess(_initialQueueCapacity);
+                        if (_insertQ.Count < _initialQueueCapacity)//Q may may be currently growing...
+                            _insertQ.TrimExcess(_initialQueueCapacity);
                     }
                 }
             }
@@ -354,19 +359,19 @@ namespace HatTrick.InMemDb
             if (_mode != AccessMode.ReadWrite)
                 return;
 
-            int qSizePreFlush = _stateChangeQueue.Count;
-            if (qSizePreFlush > 0)
+            if (_stateModQ.Count > 0)
             {
                 lock (_flushLock)
                 {
                     this.UpdateItemStates();
                 }
 
-                if (!_isClosed && qSizePreFlush > (_initialQueueCapacity * 4))
+                if (!_isClosed && _stateModQ.Capacity > (_initialQueueCapacity * 4))
                 {
-                    lock (_stateChangeSyncLock)
+                    lock (_stateModQLock)
                     {
-                        _stateChangeQueue.TrimExcess(_initialQueueCapacity);
+                        if (_stateModQ.Count < _initialQueueCapacity)//Q may be currently growing...
+                            _stateModQ.TrimExcess(_initialQueueCapacity);
                     }
                 }
             }
@@ -438,15 +443,12 @@ namespace HatTrick.InMemDb
         {
             _isClosed = true;
 
-            _fileSyncTimer.Change(Timeout.Infinite, Timeout.Infinite);
             _fileSyncTimer.Dispose();
 
             (this as IMemDbPersister<T>).Flush(new());
 
             if (!isFinalizer)
-            {
                 GC.SuppressFinalize(this);
-            }
         }
         #endregion
 
@@ -464,9 +466,7 @@ namespace HatTrick.InMemDb
         ~MemDbMappedFile()
         {
             if (!_isClosed)
-            {
                 this.Close(true); //emergency catch all to save un-flushed records if not properly disposed...
-            }
         }
         #endregion
     }

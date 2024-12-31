@@ -52,27 +52,35 @@ namespace TestHarness
                 //assets.AddRange(ResolveAssets(@"C:\Users\jerrod.eiman\Videos", DigitalAssetType.Video));
                 //assets.AddRange(ResolveAssets(@"D:\svn", DigitalAssetType.Repo));
 
-                //Console.WriteLine("Image: " + _db.Count(a => a.AssetType == DigitalAssetType.Image));
-                //Console.WriteLine("Video: " + _db.Count(a => a.AssetType == DigitalAssetType.Video));
-                //Console.WriteLine("Doc:   " + _db.Count(a => a.AssetType == DigitalAssetType.Doc));
-                //Console.WriteLine("Repo:  " + _db.Count(a => a.AssetType == DigitalAssetType.Repo));
+                Console.WriteLine("Image: " + _db.Count(a => a.AssetType == DigitalAssetType.Image));
+                Console.WriteLine("Video: " + _db.Count(a => a.AssetType == DigitalAssetType.Video));
+                Console.WriteLine("Doc:   " + _db.Count(a => a.AssetType == DigitalAssetType.Doc));
+                Console.WriteLine("Repo:  " + _db.Count(a => a.AssetType == DigitalAssetType.Repo));
 
-                //var vids = _db.FindAll(a => a.AssetType == DigitalAssetType.Video && a.Length >= 5_242_880);
+                var vids = _db.FindAll(a => a.AssetType == DigitalAssetType.Video && a.Length >= 5_242_880);
 
-                //Console.WriteLine("Vids >= 5MB: " + vids.Length);
+                Console.WriteLine("Vids >= 5MB: " + vids.Length);
 
-                while (true)
-                {
-                    var set = _db.FindAll(a => a.AssetType == DigitalAssetType.Image);
-                    var input = Console.ReadLine();
-                    if (input == "x" || input == "X")
-                        break;
-                }
+                Console.WriteLine("1: " + _db.Find(a => a.Id == 1).XXHash);
+                Console.WriteLine("2: " + _db.Find(a => a.Id == 2).XXHash);
+                Console.WriteLine("3: " + _db.Find(a => a.Id == 3).XXHash);
+                Console.WriteLine("4: " + _db.Find(a => a.Id == 4).XXHash);
+                Console.WriteLine("5: " + _db.Find(a => a.Id == 5).XXHash);
+                Console.WriteLine("6: " + _db.Find(a => a.Id == 6).XXHash);
+                Console.WriteLine("7: " + _db.Find(a => a.Id == 7).XXHash);
+                Console.WriteLine("8: " + _db.Find(a => a.Id == 8).XXHash);
+                Console.WriteLine("100: " + _db.Find(a => a.Id == 100).XXHash);
 
                 //_sw.Stop();
                 //Console.WriteLine($"Resolved {assets.Count} assets @ {_sw.ElapsedMilliseconds}.");
                 //_sw.Start();
+
                 //ImportAssets(assets);
+
+                //UpdateAssetsWithXXHash();
+                _sw.Stop();
+                Console.WriteLine("Updates completed at " + _sw.ElapsedMilliseconds + " milliseconds.");
+                _sw.Start();
 
                 //UpdateAssetsWithXXHash(@"D:\tmp");
                 //ImportAssets(@"C:\Users\jerrod.eiman\Pictures");
@@ -105,24 +113,39 @@ namespace TestHarness
             });
         }
 
-        static void UpdateAssetsWithXXHash(DigitalAsset[] assets)
+        static void UpdateAssetsWithXXHash(/*DigitalAsset[] assets*/)
         {
-            Parallel.ForEach(assets, (asset) =>
-            {
-                ulong hash = 0;
-                using (var fs = new FileStream(asset.FullPath, FileMode.Open, FileAccess.Read))
-                {
-                    XxHash64 xx64 = new XxHash64(fs.Length);
-                    xx64.Append(fs);
-                    hash = xx64.GetCurrentHashAsUInt64();
-                }
+            ulong hash = 200;
+            int cnt = _db.Update(
+                    apply: (a) => a.XXHash = hash = (hash + 1),
+                    where: (a) => true
+            );
 
-                int cnt = _db.Update(
-                    apply: (a) => a.XXHash = hash, 
-                    where: (a) => a.Id == asset.Id
-                );
+            Console.WriteLine($"Updated {cnt} records..");
 
-            });
+            ////Parallel.For(0, assets.Length, (i) =>
+            //for (int i = 0; i < assets.Length; i++)
+            //{
+            //    var asset = assets[i];
+            //    ulong hash = 2;
+            //    //using (var fs = new FileStream(asset.FullPath, FileMode.Open, FileAccess.Read))
+            //    //{
+            //    //    XxHash64 xx64 = new XxHash64(fs.Length);
+            //    //    xx64.Append(fs);
+            //    //    hash = xx64.GetCurrentHashAsUInt64();
+            //    //}
+
+            //    int cnt = _db.Update(
+            //        apply: (a) => a.XXHash = hash, 
+            //        where: (a) => a.Id == asset.Id
+            //    );
+
+            //    if (i % 1_000 == 0)
+            //        Console.Write('*');
+
+            //}//);
+
+            Console.WriteLine(string.Empty);
         }
 
         static DigitalAsset[] ResolveAssets(string root, DigitalAssetType assetType)
@@ -162,15 +185,19 @@ namespace TestHarness
 
         static void ImportAssets(List<DigitalAsset> assets)
         {
-            Parallel.For(0, assets.Count, (i) => {
+            Parallel.For(0, assets.Count, (i) =>
+            {
                 var a = assets[i];
                 _db.Insert(a, (id) => a.Id = id, false);
+                if (i % 1_000 == 0)
+                    Console.Write('.');
+
                 if (i % 10_000 == 0)
                 {
                     _db.Flush();
-                    //Console.Write('.');
                 }
             });
+
             Console.WriteLine(string.Empty);
             //Parallel.ForEach(assets, (asset =>
             ////foreach(var asset in assets)
