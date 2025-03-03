@@ -1,14 +1,11 @@
 ﻿using System;
+using System.Linq;
+using System.IO;
+using System.IO.Hashing;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 using System.Diagnostics;
 using HatTrick.InMemDb;
-using System.IO.Hashing;
-using System.IO;
-using System.Threading.Tasks;
-using System.Threading;
-using System.Security.Cryptography;
-using System.Text;
-using System.Linq;
-using System.Collections.Generic;
 
 namespace TestHarness
 {
@@ -36,7 +33,6 @@ namespace TestHarness
                 .ArchiveOnDefrag(Path.Combine(DbRoot, "archive"))
                 .Register();
 
-
             _sw = new Stopwatch();
             _sw.Start();
 
@@ -52,24 +48,17 @@ namespace TestHarness
                 //assets.AddRange(ResolveAssets(@"C:\Users\jerrod.eiman\Videos", DigitalAssetType.Video));
                 //assets.AddRange(ResolveAssets(@"D:\svn", DigitalAssetType.Repo));
 
-                Console.WriteLine("Image: " + _db.Count(a => a.AssetType == DigitalAssetType.Image));
-                Console.WriteLine("Video: " + _db.Count(a => a.AssetType == DigitalAssetType.Video));
-                Console.WriteLine("Doc:   " + _db.Count(a => a.AssetType == DigitalAssetType.Doc));
-                Console.WriteLine("Repo:  " + _db.Count(a => a.AssetType == DigitalAssetType.Repo));
+                //Console.WriteLine("Image: " + _db.Count(a => a.AssetType == DigitalAssetType.Image));
+                //Console.WriteLine("Video: " + _db.Count(a => a.AssetType == DigitalAssetType.Video));
+                //Console.WriteLine("Doc:   " + _db.Count(a => a.AssetType == DigitalAssetType.Doc));
+                //Console.WriteLine("Repo:  " + _db.Count(a => a.AssetType == DigitalAssetType.Repo));
 
-                var vids = _db.FindAll(a => a.AssetType == DigitalAssetType.Video && a.Length >= 5_242_880);
+                //Console.WriteLine("Max Image Len: " + _db.Query().Where(a => a.AssetType == DigitalAssetType.Image).Max(a => a.Length));
+                //Console.WriteLine("Max Video Len: " + _db.Query().Where(a => a.AssetType == DigitalAssetType.Video).Max(a => a.Length));
+                //Console.WriteLine("Max Doc Len:   " + _db.Query().Where(a => a.AssetType == DigitalAssetType.Doc).Max(a => a.Length));
+                //Console.WriteLine("Max Repo Len:  " + _db.Query().Where(a => a.AssetType == DigitalAssetType.Repo).Max(a => a.Length));
 
-                Console.WriteLine("Vids >= 5MB: " + vids.Length);
-
-                Console.WriteLine("1: " + _db.Find(a => a.Id == 1).XXHash);
-                Console.WriteLine("2: " + _db.Find(a => a.Id == 2).XXHash);
-                Console.WriteLine("3: " + _db.Find(a => a.Id == 3).XXHash);
-                Console.WriteLine("4: " + _db.Find(a => a.Id == 4).XXHash);
-                Console.WriteLine("5: " + _db.Find(a => a.Id == 5).XXHash);
-                Console.WriteLine("6: " + _db.Find(a => a.Id == 6).XXHash);
-                Console.WriteLine("7: " + _db.Find(a => a.Id == 7).XXHash);
-                Console.WriteLine("8: " + _db.Find(a => a.Id == 8).XXHash);
-                Console.WriteLine("100: " + _db.Find(a => a.Id == 100).XXHash);
+                //ConcurrentQueryTest(100);
 
                 //_sw.Stop();
                 //Console.WriteLine($"Resolved {assets.Count} assets @ {_sw.ElapsedMilliseconds}.");
@@ -77,10 +66,24 @@ namespace TestHarness
 
                 //ImportAssets(assets);
 
-                //UpdateAssetsWithXXHash();
-                _sw.Stop();
-                Console.WriteLine("Updates completed at " + _sw.ElapsedMilliseconds + " milliseconds.");
-                _sw.Start();
+                //var set = _db.Query()
+                //    .GroupBy(a => a.XXHash)
+                //    .Having(g => g.Count() > 1)
+                //    .Select(g => (g.Key, g.Count())).ToArray();
+
+                //Console.WriteLine(set.Length);
+
+                //foreach (var itm in set)
+                //{
+                //    Console.WriteLine(itm.Key + "\t\t" + itm.Item2);
+                //}
+
+                //UpdateAssetsWithXXHash(_db.FindAll(a => a is DocAsset));
+                //UpdateAssetsWithXXHash(_db.FindAll(a => a is ImageAsset));
+                //UpdateAssetsWithXXHash(_db.FindAll(a => a is VideoAsset));
+                //_sw.Stop();
+                //Console.WriteLine("Updates completed at " + _sw.ElapsedMilliseconds + " milliseconds.");
+                //_sw.Start();
 
                 //UpdateAssetsWithXXHash(@"D:\tmp");
                 //ImportAssets(@"C:\Users\jerrod.eiman\Pictures");
@@ -105,45 +108,38 @@ namespace TestHarness
             {
                 var sets = _db.Query()
                 .GroupBy(a => a.Extension.ToLower())
-                .Having(g => g.Count() > 250)
+                .Having(g => g.Count() > 5_000)
                 .Select(g => (g.Key, g.Count()))
                 .ToArray();
                 Array.Sort<(string key, int cnt)>(sets, (a, b) => b.cnt.CompareTo(a.cnt));
-                Console.WriteLine(sets[^10]);
+                Console.WriteLine(sets[^1]);
             });
         }
 
-        static void UpdateAssetsWithXXHash(/*DigitalAsset[] assets*/)
+        static void UpdateAssetsWithXXHash(DigitalAsset[] assets)
         {
-            ulong hash = 200;
-            int cnt = _db.Update(
-                    apply: (a) => a.XXHash = hash = (hash + 1),
-                    where: (a) => true
-            );
+            Console.WriteLine($"Hashing {assets.Length} assets.");
+            ulong hash;
+            //Parallel.For(0, assets.Length, (i) =>
+            for (int i = 0; i < assets.Length; i++)
+            {
+                var asset = assets[i];
+                using (var fs = new FileStream(asset.FullPath, FileMode.Open, FileAccess.Read))
+                {
+                    XxHash64 xx64 = new XxHash64(fs.Length);
+                    xx64.Append(fs);
+                    hash = xx64.GetCurrentHashAsUInt64();
+                }
 
-            Console.WriteLine($"Updated {cnt} records..");
+                int cnt = _db.Update(
+                    apply: (a) => a.XXHash = hash,
+                    where: (a) => a.Id == asset.Id
+                );
 
-            ////Parallel.For(0, assets.Length, (i) =>
-            //for (int i = 0; i < assets.Length; i++)
-            //{
-            //    var asset = assets[i];
-            //    ulong hash = 2;
-            //    //using (var fs = new FileStream(asset.FullPath, FileMode.Open, FileAccess.Read))
-            //    //{
-            //    //    XxHash64 xx64 = new XxHash64(fs.Length);
-            //    //    xx64.Append(fs);
-            //    //    hash = xx64.GetCurrentHashAsUInt64();
-            //    //}
+                if (i % 1_000 == 0)
+                    Console.Write('*');
 
-            //    int cnt = _db.Update(
-            //        apply: (a) => a.XXHash = hash, 
-            //        where: (a) => a.Id == asset.Id
-            //    );
-
-            //    if (i % 1_000 == 0)
-            //        Console.Write('*');
-
-            //}//);
+            }//);
 
             Console.WriteLine(string.Empty);
         }
@@ -188,12 +184,14 @@ namespace TestHarness
             Parallel.For(0, assets.Count, (i) =>
             {
                 var a = assets[i];
-                _db.Insert(a, (id) => a.Id = id, false);
-                if (i % 1_000 == 0)
-                    Console.Write('.');
+                if (i % 2 == 0)
+                    _db.Insert(a, (id) => a.Id = id, true);
+                else
+                    _db.Insert(a, (id) => a.Id = id, false);
 
-                if (i % 10_000 == 0)
+                if (i % 1_000 == 0)
                 {
+                    Console.Write('.');
                     _db.Flush();
                 }
             });

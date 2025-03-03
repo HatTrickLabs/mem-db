@@ -7,7 +7,7 @@ using System.Text.Json.Serialization;
 namespace HatTrick.InMemDb
 {
     #region [class] mem db json serializer
-    public class MemDbJsonSerializer
+    public abstract class MemDbJsonSerializer
     {
         #region static internals
         private static List<MemDbJsonSerializer> _instances;

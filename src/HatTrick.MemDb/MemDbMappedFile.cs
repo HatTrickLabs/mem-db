@@ -149,6 +149,7 @@ namespace HatTrick.InMemDb
             this.EnsureMode(AccessMode.ReadOnly | AccessMode.ReadWrite, nameof(IMemDbPersister<T>.InitializeMappedRecords));
 
             int encrypted = 0;
+            bool isEncryptionReady = this.IsEncryptionReady;
             int capacity = _mode == AccessMode.ReadOnly ? _map.FreshCount : (int)(_map.FreshCount * 1.1);
             records = new List<MemDbRecord<T>>(capacity);
             lock (_flushLock)
@@ -174,7 +175,7 @@ namespace HatTrick.InMemDb
                         continue;
                     }
 
-                    if (ptr.IsEncrypted && !this.IsEncryptionReady)
+                    if (ptr.IsEncrypted && !isEncryptionReady)
                     {
                         fsDb.Position += MemDbAESEncryptor.CalculateCryptoByteLength(ptr.Length);
                         encrypted += 1;

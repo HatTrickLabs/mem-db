@@ -283,6 +283,7 @@ namespace HatTrick.InMemDb
                 //check for corruption...
                 long pointerLength = (int)reader.BaseStream.Length - (sizeof(int) + sizeof(uint));
                 long persisted = pointerLength / MemDbPointer.Size;
+                //TODO: why did i do a lt here vs a !eq ???
                 if (persisted < count)//TODO: after the integrity checker / corrupt file fixer util is built, reference the util in this exception.
                     throw new MemDbCorruptException($"Mismatch between persisted pointer count '{persisted}' vs expected pointer count '{count}'.");
 
