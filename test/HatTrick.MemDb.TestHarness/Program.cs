@@ -15,7 +15,7 @@ namespace HatTrick.InMemDb.TestHarness
         static void Main(string[] args)
         {
             AssetResolver resolver = new AssetResolver();
-            DefaultOptionTests dot = new DefaultOptionTests(resolver);
+            DefaultOptionBaselineTests dot = new DefaultOptionBaselineTests(resolver);
 
             dot.Go();
 
@@ -26,6 +26,10 @@ namespace HatTrick.InMemDb.TestHarness
                 {
                     Console.WriteLine($"Failed: {f.Target}...{f.Exception.Message}");
                 }
+            }
+            else
+            {
+                Console.WriteLine("Tests complete with 0 failures");
             }
 
             Console.WriteLine(string.Empty);

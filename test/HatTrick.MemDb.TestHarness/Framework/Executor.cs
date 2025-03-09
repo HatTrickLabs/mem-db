@@ -25,13 +25,18 @@ namespace HatTrick.InMemDb.TestHarness
         #region execute
         public void Execute(BaseTests against)
         {
+            Console.WriteLine("Starting resolving test methods.");
             _tests = this.ReflectTestMethods(against);
+            Console.WriteLine($"Resolved {_tests.Length} test methods.");
 
-            foreach (var test in _tests)
+            Console.WriteLine("Starting test method execution.");
+            for (int i = 0; i < _tests.Length; i++)
             {
+                var test = _tests[i];
                 against.Cleanup();
                 this.ExecuteTest(test);
             }
+            Console.WriteLine("Completed test method excetion");
         }
         #endregion
 
@@ -50,7 +55,6 @@ namespace HatTrick.InMemDb.TestHarness
             return actions.ToArray();
         }
         #endregion
-
 
         #region get failures
         public Failure[] GetFailures()

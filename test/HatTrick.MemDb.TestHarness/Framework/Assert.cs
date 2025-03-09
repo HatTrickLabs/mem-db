@@ -19,5 +19,20 @@ namespace HatTrick.InMemDb.TestHarness
             if (!isEqual)
                 throw new NotEqualException<string>(a, b);
         }
+
+        public static void IsNull(object o)
+        {
+            bool isNull = o is null;
+            if (!isNull)
+                throw new NotNullException(o.GetType(), o);
+
+        }
+
+        public static void IsNotNull(object o)
+        {
+            bool isNotNull = o is not null;
+            if (!isNotNull)
+                throw new IsNullException(o.GetType(), o);
+        }
     }
 }
