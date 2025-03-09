@@ -31,6 +31,12 @@ namespace HatTrick.InMemDb.TestHarness
             var rcast = new RegisteredCloneAndSerializeBaselineTests(resolver);
             rcast.Go(ref _failures);
 
+            var aket = new AESKeyEncryptedTests(resolver);
+            aket.Go(ref _failures);
+
+            var akfpt = new AESKeyFromPasswordEncryptedTests(resolver);
+            akfpt.Go(ref _failures);
+
             if (_failures.Count > 0)
             {
                 foreach (var f in _failures)

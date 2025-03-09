@@ -9,8 +9,8 @@ namespace HatTrick.InMemDb.TestHarness
     public abstract class BaselineTests : TestBase
     {
         #region internals
-        private static readonly string _dbPath = @"..\..\..\..\_db\baseline";
         private static readonly string _dataset = $"assets";
+        private static readonly string _dbPath = @"..\..\..\..\_db\baseline";
         #endregion
 
         #region interface
@@ -19,7 +19,7 @@ namespace HatTrick.InMemDb.TestHarness
         #endregion
 
         #region ctors
-        public BaselineTests(AssetResolver assetResolver) : base(_dbPath, _dataset, assetResolver)
+        public BaselineTests(AssetResolver assetResolver) : base(_dataset, _dbPath, assetResolver)
         { } 
         #endregion
 

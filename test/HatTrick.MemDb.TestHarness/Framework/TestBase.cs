@@ -7,8 +7,8 @@ namespace HatTrick.InMemDb.TestHarness
     public abstract class TestBase
     {
         #region internals
-        private string _dbPath;
         private string _dataset;
+        private string _dbPath;
         private AssetResolver _assetResolver;
         private Failure[] _failures;
         #endregion
@@ -20,10 +20,10 @@ namespace HatTrick.InMemDb.TestHarness
         #endregion
 
         #region ctors
-        public TestBase(string dbPath, string datasetName, AssetResolver assetResolver)
+        public TestBase(string datasetName, string dbPath, AssetResolver assetResolver)
         {
-            _dbPath = dbPath ?? throw new ArgumentNullException(nameof(dbPath));
             _dataset = datasetName ?? throw new ArgumentNullException(nameof(datasetName));
+            _dbPath = dbPath ?? throw new ArgumentNullException(nameof(dbPath));
             _assetResolver = assetResolver ?? throw new ArgumentNullException(nameof(assetResolver));
         }
         #endregion
