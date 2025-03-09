@@ -1,10 +1,20 @@
 ﻿using System;
+using System.Threading;
 using System.Collections.Generic;
 
 namespace HatTrick.InMemDb
 {
     public class DigitalAssetCloner : IMemDbCloner<DigitalAsset>
     {
+        #region internals
+        private int _deepCopyCount;
+        #endregion
+
+        #region interface
+        public int DeepCopyCount => _deepCopyCount;
+        #endregion
+
+        #region deep copy
         public DigitalAsset DeepCopy(DigitalAsset value)
         {
             var asset = DigitalAsset.CreateNew(value.AssetType);
@@ -19,6 +29,8 @@ namespace HatTrick.InMemDb
             asset.XXHash = value.XXHash;
             asset.Imported = value.Imported;
 
+            Interlocked.Increment(ref _deepCopyCount);
+
             return asset;
         }
 
@@ -32,5 +44,6 @@ namespace HatTrick.InMemDb
             }
             return assets;
         }
+        #endregion
     }
 }

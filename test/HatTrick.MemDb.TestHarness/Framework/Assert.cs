@@ -34,5 +34,11 @@ namespace HatTrick.InMemDb.TestHarness
             if (!isNotNull)
                 throw new IsNullException(o.GetType(), o);
         }
+
+        public static void IsTrue(bool result)
+        {
+            if (result == false)
+                throw new NotTrueException();
+        }
     }
 }

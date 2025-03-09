@@ -1,9 +1,10 @@
 ﻿using System;
 using System.IO;
+using System.Collections.Generic;
 
 namespace HatTrick.InMemDb.TestHarness
 {
-    public abstract class BaseTests
+    public abstract class TestBase
     {
         #region internals
         private string _dbPath;
@@ -19,7 +20,7 @@ namespace HatTrick.InMemDb.TestHarness
         #endregion
 
         #region ctors
-        public BaseTests(string dbPath, string datasetName, AssetResolver assetResolver)
+        public TestBase(string dbPath, string datasetName, AssetResolver assetResolver)
         {
             _dbPath = dbPath ?? throw new ArgumentNullException(nameof(dbPath));
             _dataset = datasetName ?? throw new ArgumentNullException(nameof(datasetName));
@@ -28,12 +29,17 @@ namespace HatTrick.InMemDb.TestHarness
         #endregion
 
         #region go
-        public void Go()
+        public void Go(ref List<Failure> failures)
         {
             Executor exe = new Executor();
             exe.Execute(this);
             if (exe.HasFailures)
+            {
                 _failures = exe.GetFailures();
+                failures.AddRange(_failures);
+            }
+
+            MemDb.RemoveConfiguationFor(_dataset);
         }
         #endregion
 

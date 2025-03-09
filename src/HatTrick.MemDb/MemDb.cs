@@ -76,6 +76,23 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region remove configuration for
+        public static void RemoveConfiguationFor(string datasetName)
+        {
+            lock (_lock)
+            {
+                int at = _configurations.FindIndex(c => string.Compare(c.DatasetName, datasetName, true) == 0);
+                if (at < 0)
+                    throw new ArgumentException($"No cinfiguration currently registered for provided dataset name '{datasetName}'", nameof(datasetName));
+
+                if (_openDatasets.Contains(datasetName))
+                    throw new InvalidOperationException($"Cannot remove configuration for dataset '{datasetName}', the dataset is currently open.");
+
+                _configurations.RemoveAt(at);
+            }
+        }
+        #endregion
+
         #region register
         private static void RegisterConfiguration<T>(MemDbConfiguration<T> configuration) where T : class
         {

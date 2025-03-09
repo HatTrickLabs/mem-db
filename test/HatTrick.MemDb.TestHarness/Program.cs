@@ -11,18 +11,29 @@ namespace HatTrick.InMemDb.TestHarness
 {
     class Program
     {
+        private static List<Failure> _failures;
 
         static void Main(string[] args)
         {
+            _failures = new List<Failure>();
+
             AssetResolver resolver = new AssetResolver();
-            DefaultOptionBaselineTests dot = new DefaultOptionBaselineTests(resolver);
 
-            dot.Go();
+            var dot = new DefaultOptionBaselineTests(resolver);
+            dot.Go(ref _failures);
 
-            if (dot.HasFailures)
+            var rct = new RegisteredCloneBaselineTests(resolver);
+            rct.Go(ref _failures);
+
+            var rst = new RegisterdSerializeBaselineTests(resolver);
+            rst.Go(ref _failures);
+
+            var rcast = new RegisteredCloneAndSerializeBaselineTests(resolver);
+            rcast.Go(ref _failures);
+
+            if (_failures.Count > 0)
             {
-                var failures = dot.Failures;
-                foreach (var f in failures)
+                foreach (var f in _failures)
                 {
                     Console.WriteLine($"Failed: {f.Target}...{f.Exception.Message}");
                 }
