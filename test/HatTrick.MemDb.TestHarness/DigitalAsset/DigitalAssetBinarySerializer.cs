@@ -1,14 +1,27 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using System.Threading;
 
 namespace HatTrick.InMemDb
 {
     public class DigitalAssetBinarySerializer : IBinaryReadMemDbSerializer<DigitalAsset>
     {
+        #region internals
+        private int _serializerCount;
+        private int _deserializeCount;
+        #endregion
+
+        #region interface
+        public int SerializeCount => _serializerCount;
+        public int DeserializeCount => _deserializeCount;
+        #endregion
+
         #region ctors
         public DigitalAssetBinarySerializer()
         {
+            _serializerCount = 0;
+            _deserializeCount = 0;
         }
         #endregion
 
@@ -25,6 +38,8 @@ namespace HatTrick.InMemDb
             to.Write(record.Length);
             to.Write(record.Imported.ToBinary());
             to.Write(record.XXHash);
+
+            Interlocked.Increment(ref _serializerCount);
         }
 
         public byte[] Serialize(DigitalAsset record)
@@ -59,6 +74,8 @@ namespace HatTrick.InMemDb
             record.Length = from.ReadInt64();
             record.Imported = DateTime.FromBinary(from.ReadInt64());
             record.XXHash = from.ReadUInt64();
+
+            Interlocked.Increment(ref _deserializeCount);
 
             return record;
         }

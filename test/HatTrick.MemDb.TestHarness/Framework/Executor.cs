@@ -23,7 +23,7 @@ namespace HatTrick.InMemDb.TestHarness
         #endregion
 
         #region execute
-        public void Execute(BaseTests against)
+        public void Execute(TestBase against)
         {
             Console.WriteLine("Starting resolving test methods.");
             _tests = this.ReflectTestMethods(against);
@@ -41,7 +41,7 @@ namespace HatTrick.InMemDb.TestHarness
         #endregion
 
         #region reflect test methods
-        private Action[] ReflectTestMethods(BaseTests target)
+        private Action[] ReflectTestMethods(TestBase target)
         {
             MethodInfo[] methods = target.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance);
             MethodInfo[] tests = Array.FindAll(methods, m => m.Name.StartsWith("Test_"));
