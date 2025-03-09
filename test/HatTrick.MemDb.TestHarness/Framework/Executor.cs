@@ -25,18 +25,18 @@ namespace HatTrick.InMemDb.TestHarness
         #region execute
         public void Execute(TestBase against)
         {
-            Console.WriteLine("Starting resolving test methods.");
+            Console.WriteLine($"{against.GetType().Name}: Starting resolve test methods.");
             _tests = this.ReflectTestMethods(against);
-            Console.WriteLine($"Resolved {_tests.Length} test methods.");
+            Console.WriteLine($"{against.GetType().Name}: Resolved {_tests.Length} test methods.");
 
-            Console.WriteLine("Starting test method execution.");
+            Console.WriteLine($"{against.GetType().Name}: Starting test method execution.");
             for (int i = 0; i < _tests.Length; i++)
             {
                 var test = _tests[i];
                 against.Cleanup();
                 this.ExecuteTest(test);
             }
-            Console.WriteLine("Completed test method excetion");
+            Console.WriteLine($"{against.GetType().Name}: Completed test method excetion");
         }
         #endregion
 

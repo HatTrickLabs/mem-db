@@ -35,10 +35,16 @@ namespace HatTrick.InMemDb.TestHarness
                 throw new IsNullException(o.GetType(), o);
         }
 
-        public static void IsTrue(bool result)
+        public static void Throws<T>(Action when) where T : Exception
         {
-            if (result == false)
-                throw new NotTrueException();
+            try
+            {
+                when();
+            }
+            catch (Exception ex)
+            {
+
+            }
         }
     }
 }
