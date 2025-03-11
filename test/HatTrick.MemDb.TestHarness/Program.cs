@@ -37,6 +37,9 @@ namespace HatTrick.InMemDb.TestHarness
             var akfpt = new AESKeyFromPasswordEncryptedTests(resolver);
             akfpt.Go(ref _failures);
 
+            var romt = new ReadOnlyModeTests(resolver);
+            romt.Go(ref _failures);
+
             if (_failures.Count > 0)
             {
                 foreach (var f in _failures)
