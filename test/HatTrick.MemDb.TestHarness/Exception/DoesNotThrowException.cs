@@ -6,7 +6,12 @@ using System.Threading.Tasks;
 
 namespace HatTrick.InMemDb.TestHarness
 {
-    public class DoesNotThrowException
+    public class DoesNotThrowException : Exception
     {
+        #region ctors
+        public DoesNotThrowException()
+        {
+        }
+        #endregion
     }
 }

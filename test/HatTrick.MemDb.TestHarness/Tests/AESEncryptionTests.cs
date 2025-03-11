@@ -1,12 +1,13 @@
 ﻿using System;
+using System.IO;
 
 namespace HatTrick.InMemDb.TestHarness
 {
     public class AESEncryptionTests : TestBase
     {
         #region internals
-        private static readonly string _dbPath = @"..\..\..\..\_db\aes_key_encrypted";
         private static readonly string _dataset = $"assets";
+        private static readonly string _dbPath = @"..\..\..\..\_db\aes_key_encrypted";
         #endregion
 
         #region interface
@@ -49,6 +50,7 @@ namespace HatTrick.InMemDb.TestHarness
                 }
             }
 
+            int length;
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
                 var asset500 = db.Find(a => a.Name.StartsWith("0500"));

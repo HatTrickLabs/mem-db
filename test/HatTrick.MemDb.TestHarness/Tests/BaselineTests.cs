@@ -14,8 +14,8 @@ namespace HatTrick.InMemDb.TestHarness
         #endregion
 
         #region interface
-        protected string DbPath => _dbPath;
         protected string Dataset => _dataset;
+        protected string DbPath => _dbPath;
         #endregion
 
         #region ctors

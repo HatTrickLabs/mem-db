@@ -500,7 +500,7 @@ namespace HatTrick.InMemDb
         {
             _isClosed = true;
 
-            _fileSyncTimer.Dispose();
+            _fileSyncTimer?.Dispose();
 
             (this as IMemDbPersister<T>).Flush(new());
 

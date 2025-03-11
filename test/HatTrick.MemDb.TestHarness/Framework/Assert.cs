@@ -35,15 +35,30 @@ namespace HatTrick.InMemDb.TestHarness
                 throw new IsNullException(o.GetType(), o);
         }
 
-        public static void Throws<T>(Action when) where T : Exception
+        public static Exception Throws<T>(Action when) where T : Exception
         {
             try
             {
                 when();
+                throw new DoesNotThrowException();
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex.GetType() == typeof(T))
             {
+                return ex;
+            }
+        }
 
+        public static Exception Throws<T>(Action when, string messageContains) where T : Exception
+        {
+            try
+            {
+                when();
+                throw new DoesNotThrowException();
+            }
+            catch (Exception ex) 
+            when (ex.GetType() == typeof(T) && ex.Message.Contains(messageContains, StringComparison.OrdinalIgnoreCase))
+            {
+                return ex;
             }
         }
     }
