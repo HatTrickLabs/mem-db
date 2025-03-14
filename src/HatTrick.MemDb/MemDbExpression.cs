@@ -95,7 +95,7 @@ namespace HatTrick.InMemDb
         #region limit
         public MemDbExpression<T> Limit(int count)
         {
-            if (_skip is not null)
+            if (_limit is not null)
                 throw new InvalidOperationException($"{nameof(MemDbException)} already already contains a {nameof(Limit)} count.");
 
             _limit = count;

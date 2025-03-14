@@ -50,7 +50,6 @@ namespace HatTrick.InMemDb.TestHarness
                 }
             }
 
-            int length;
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
                 var asset500 = db.Find(a => a.Name.StartsWith("0500"));

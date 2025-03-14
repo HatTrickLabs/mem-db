@@ -27,7 +27,7 @@ namespace HatTrick.InMemDb.TestHarness
         }
         #endregion
 
-        #region read only allows read
+        #region read only allows read and throws on write
         public void Test_ReadOnlyAllowsReadAndThrowsOnWrite()
         {
             //configure for read/write
