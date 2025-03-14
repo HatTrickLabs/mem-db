@@ -83,6 +83,9 @@ namespace HatTrick.InMemDb.TestHarness
                 assets[i] = asset;
             }
 
+            //ensure the order as 'GetFiles' does not guarantee order will always be the same...
+            Array.Sort(assets, (a, b) => a.Name.CompareTo(b.Name));
+
             return assets;
         }
         #endregion

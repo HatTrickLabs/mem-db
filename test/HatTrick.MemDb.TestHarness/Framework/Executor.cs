@@ -36,7 +36,8 @@ namespace HatTrick.InMemDb.TestHarness
                 against.Cleanup();
                 this.ExecuteTest(test);
             }
-            Console.WriteLine($"{against.GetType().Name}: Completed test method excetion");
+            against.Cleanup();
+            Console.WriteLine($"{against.GetType().Name}: Completed test method execution");
         }
         #endregion
 
