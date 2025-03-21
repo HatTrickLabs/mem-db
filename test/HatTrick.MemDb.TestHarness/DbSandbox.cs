@@ -22,12 +22,6 @@ namespace HatTrick.InMemDb.TestHarness
             MemDb.ConfigureFor<DigitalAsset>(datasetName, DbRoot)
                 .SerializeWith(() => new DigitalAssetBinarySerializer())
                 .CloneWith(() => new DigitalAssetCloner())
-                //.SerializeWith(() =>
-                //{
-                //    var serializer = MemDbJsonSerializer<IDigitalAsset>.GetInstance();
-                //    serializer.ApplyConverterFor<IDigitalAsset>(new IDigitalAssetConverter<DigitalAsset>());
-                //    return serializer;
-                //})
                 //.EncryptWithKey(() => new byte[] { 198, 1, 6, 8, 12, 1, 1, 1, 1, 88, 1, 1, 1, 1, 1, 9, 9, 9, 1, 1, 99, 1, 1, 1, 1, 1, 1, 1, 33, 1, 1, 77 })
                 .EncryptWithPassword(() => "Jerrod's super simple password...!!!!!!!!")
                 .SetMode(AccessMode.ReadWrite)

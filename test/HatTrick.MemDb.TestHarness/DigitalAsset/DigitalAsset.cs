@@ -4,6 +4,10 @@ using System.Text.Json.Serialization;
 
 namespace HatTrick.InMemDb
 {
+    #region i digital asset
+    [JsonDerivedType(typeof(TextAsset), typeDiscriminator: (int)DigitalAssetType.Text)]
+    [JsonDerivedType(typeof(JsonAsset), typeDiscriminator: (int)DigitalAssetType.Json)]
+    [JsonDerivedType(typeof(ExtensionlessAsset), typeDiscriminator: (int)DigitalAssetType.Unknown)]
     public interface IDigitalAsset
     {
         uint Id { get; set; }
@@ -22,7 +26,9 @@ namespace HatTrick.InMemDb
         string FullPath { get; }
         string Extension { get; }
     }
+    #endregion
 
+    #region digital asset [abstract]
     [JsonDerivedType(typeof(TextAsset), typeDiscriminator: (int)DigitalAssetType.Text)]
     [JsonDerivedType(typeof(JsonAsset), typeDiscriminator: (int)DigitalAssetType.Json)]
     [JsonDerivedType(typeof(ExtensionlessAsset), typeDiscriminator: (int)DigitalAssetType.Unknown)]
@@ -74,31 +80,38 @@ namespace HatTrick.InMemDb
             return this.Name;
         }
     }
+    #endregion
 
+    #region text asset
     public class TextAsset : DigitalAsset
     {
         public TextAsset() : base(DigitalAssetType.Text)
         { }
     }
+    #endregion
 
+    #region json asset
     public class JsonAsset : DigitalAsset
     {
         public JsonAsset() : base(DigitalAssetType.Json)
         { }
     }
+    #endregion
 
+    #region extensionless asset
     public class ExtensionlessAsset : DigitalAsset
     {
         public ExtensionlessAsset() : base(DigitalAssetType.Unknown)
         { }
     }
+    #endregion
 
+    #region digital asset type [enum]
     public enum DigitalAssetType
     {
         Unknown,
         Text,
         Json,
     }
-
-    //Asset, DocAsset, ImageAsset, VideoAsset, 
+    #endregion
 }

@@ -10,7 +10,7 @@ namespace HatTrick.InMemDb.TestHarness
     {
         #region internals
         private static readonly string _dataset = $"assets";
-        private static readonly string _dbPath = @"..\..\..\..\_db\baseline";
+        private static readonly string _dbPath = @"..\..\..\..\_db\statistics";
         #endregion
 
         #region ctors

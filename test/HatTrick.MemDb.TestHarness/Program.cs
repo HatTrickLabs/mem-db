@@ -49,8 +49,11 @@ namespace HatTrick.InMemDb.TestHarness
             var qebt = new QueryExpressionBuilderTests(resolver);
             qebt.Go(ref _failures);
 
-            //var hct = new HighConcurrencyTests(resolver);
-            //hct.Go(ref _failures);
+            var hct = new HighConcurrencyTests(resolver);
+            hct.Go(ref _failures);
+
+            var ibrt = new InterfaceBasedRecordTests(resolver);
+            ibrt.Go(ref _failures);
 
             var st = new StatisticsTests(resolver);
             st.Go(ref _failures);
