@@ -279,6 +279,7 @@ namespace HatTrick.InMemDb
             if (!_isClosed)
             {
                 this.Close();
+                GC.SuppressFinalize(this);
             }
         }
         #endregion
