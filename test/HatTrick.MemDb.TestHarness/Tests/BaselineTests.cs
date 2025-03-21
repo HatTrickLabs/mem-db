@@ -51,15 +51,19 @@ namespace HatTrick.InMemDb.TestHarness
         public void Test_EnsureDeepCopy()
         {
             using var db = MemDb.Open<DigitalAsset>(_dataset);
+
             DigitalAsset[] assets = base.ResolveAssetSet();
             var asset = assets[0];
             string origName = asset.Name;
             db.Insert(asset);
+
             asset.Name = "aaa";
             var assetOut1 = db.Find(a => true);
             Assert.IsEqual(assetOut1.Name, origName);
+
             db.Update(a => a.Name = "bbb", a => true);
             Assert.IsEqual(assetOut1.Name, origName);
+
             var assetOut2 = db.Find(a => true);
             Assert.IsEqual(assetOut2.Name, "bbb");
         }
@@ -221,10 +225,11 @@ namespace HatTrick.InMemDb.TestHarness
                 Assert.IsEqual<int>(db.Count(a => a.XXHash != 0), i + 1);
             }
 
-            //the following should NOT exist
+            //the following should NOT exist as it is 1 above the last inserted
             namePrefix = (db.Count()).ToString("0000");
             a = db.Find(a => a.Name.StartsWith(namePrefix));
             Assert.IsNull(a);
+
             set = db.FindAll(a => a.Name.StartsWith(namePrefix));
             Assert.IsEqual<int>(set.Length, 0);
             cnt = db.Count(a => a.Name.StartsWith(namePrefix));

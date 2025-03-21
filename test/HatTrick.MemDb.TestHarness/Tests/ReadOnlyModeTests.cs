@@ -62,13 +62,19 @@ namespace HatTrick.InMemDb.TestHarness
 
                 Assert.Throws<InvalidOperationException>(
                     when: () => db.Insert(newAsset), 
-                    messageContains: nameof(AccessMode.ReadOnly)
+                    messageContains: $"'{nameof(AccessMode.ReadOnly)}' mode"
                 );
 
                 Assert.Throws<InvalidOperationException>(
-                    when: () => db.Update(a => a.XXHash = 1, (a) => a.Name.StartsWith("0001")), 
-                    messageContains: nameof(AccessMode.ReadOnly)
+                    when: () => db.Update(a => a.XXHash = 1, (a) => true), 
+                    messageContains: $"'{nameof(AccessMode.ReadOnly)}' mode"
                 );
+
+                Assert.Throws<InvalidOperationException>(
+                    when: () => db.Delete(a => true),
+                    messageContains: $"'{nameof(AccessMode.ReadOnly)}' mode"
+                );
+
             }
         }
         #endregion

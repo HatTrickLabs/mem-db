@@ -68,7 +68,7 @@ namespace HatTrick.InMemDb.TestHarness
 
             //we should have 5,000 records, each with a unique auto incremented Id
             int length = assets1.Length + assets2.Length + assets3.Length + assets4.Length + assets5.Length;
-            Assert.IsEqual<int>(length, db.Count());
+            Assert.IsEqual<int>(db.Count(), length);
             for (int i = 0; i < length; i++)
             {
                 int id = i + 1;
@@ -181,6 +181,7 @@ namespace HatTrick.InMemDb.TestHarness
 
             if (flush)
                 db.Flush();
+
             int deleted65 = 0;
             int deleted43 = 0;
             int deleted21 = 0;
@@ -204,6 +205,125 @@ namespace HatTrick.InMemDb.TestHarness
             Assert.IsEqual<int>(deleted65, assets6.Length + assets5.Length);
             Assert.IsEqual<int>(deleted43, assets4.Length + assets3.Length);
             Assert.IsEqual<int>(deleted21, assets2.Length + assets1.Length);
+        }
+        #endregion
+
+        #region high concurrency chaos
+        public void Test_HighConcurrencyChaosNoFlush()
+        {
+            this.HighConcurrencyChaosTarget(false);
+        }
+
+        public void Test_HighConcurrencyChaosWithFlush()
+        {
+            this.HighConcurrencyChaosTarget(true);
+        }
+
+        public void HighConcurrencyChaosTarget(bool flush)
+        {
+            using var db = MemDb.Open<DigitalAsset>(_dataset);
+
+            //build up 10,000 asset set
+            DigitalAsset[] assets1 = base.ResolveAssetSet();
+            DigitalAsset[] assets2 = base.ResolveAssetSet();
+            DigitalAsset[] assets3 = base.ResolveAssetSet();
+            DigitalAsset[] assets4 = base.ResolveAssetSet();
+            DigitalAsset[] assets5 = base.ResolveAssetSet();
+            DigitalAsset[] assets6 = base.ResolveAssetSet();
+            DigitalAsset[] assets7 = base.ResolveAssetSet();
+            DigitalAsset[] assets8 = base.ResolveAssetSet();
+            DigitalAsset[] assets9 = base.ResolveAssetSet();
+            DigitalAsset[] assets10 = base.ResolveAssetSet();
+
+
+            var assets = assets1.Concat(assets2).Concat(assets3).Concat(assets4)
+                                .Concat(assets5).Concat(assets6).Concat(assets7)
+                                .Concat(assets8).Concat(assets9).Concat(assets10)
+                                .ToArray();
+
+            //insert all 10000 records in a parallel loop
+            Parallel.For(0, assets.Length, (int i) =>
+            {
+                var asset = assets[i];
+                db.Insert(asset, (id) => asset.Id = id, false);
+            });
+
+            if (flush)
+                db.Flush();
+
+            //ensure correct number of records
+            Assert.IsEqual<int>(db.Count(), assets.Length);
+            //ensure each record has unique / distinct Id
+            Assert.IsEqual<int>(db.Query().SelectDistinct(a => a.Id).Count(), assets.Length);
+            //ensure min id is 1
+            Assert.IsEqual<uint>(db.Query().Min(a => a.Id), 1);
+            //ensure max id is total record length
+            Assert.IsEqual<uint>(db.Query().Max(a => a.Id), (uint)assets.Length);
+
+            //t1 will update even number id records xxhash value (increment by 1)
+            Thread t1 = new Thread(() => { db.Update(a => a.XXHash += 1, a => a.Id % 2 == 0 && a.Id <= assets.Length); });
+            //t2 will update odd number id records xxhash value (increment by 1)
+            Thread t2 = new Thread(() => { db.Update(a => a.XXHash += 1, a => a.Id % 2 == 1 && a.Id <= assets.Length); });
+            //t3 will update every original record xxhash value (increment by 1) original being the original set of 10,000
+            Thread t3 = new Thread(() => { 
+                Parallel.For(1, (assets.Length) + 1, (int i) => { db.Update(a => a.XXHash += 1, a => a.Id == i && i <= assets.Length); }); 
+            });
+
+            //t4 will insert 1000 new records
+            DigitalAsset[] assets11 = base.ResolveAssetSet();
+            Thread t4 = new Thread(() => {
+                Parallel.For(0, assets11.Length, (int i) =>
+                {
+                    var asset = assets[i];
+                    db.Insert(asset, (id) => asset.Id = id, false);
+                });
+            });
+
+            //t5 will attempt to delete the 1000 newly inserted records in a loop until all 1000 show up, are found and deleted.
+            int deleted = 0;
+            Thread t5 = new Thread(() => {
+                do
+                {
+                    Parallel.For(assets.Length + 1, (assets.Length + assets11.Length) + 1, (int i) => 
+                    {  
+                        int cnt = db.Delete(a => a.Id == i);
+                        if (cnt > 0)
+                            Interlocked.Increment(ref deleted);
+                    });
+
+                } while (deleted < assets11.Length);
+            });
+
+            t1.Start();
+            t2.Start();
+            t3.Start();
+            t4.Start();
+            t5.Start();
+
+            if (flush)
+                db.Flush();
+
+            t1.Join();
+            t2.Join();
+            t3.Join();
+            t4.Join();
+            t5.Join();
+
+            if (flush)
+                db.Flush();
+
+            //ensure correct number of records (original set)
+            Assert.IsEqual<int>(db.Count(), assets.Length);
+            //ensure each record has unique / distinct Id
+            Assert.IsEqual<int>(db.Query().SelectDistinct(a => a.Id).Count(), assets.Length);
+            //ensure min id is 1
+            Assert.IsEqual<uint>(db.Query().Min(a => a.Id), 1);
+            //ensure max id is total record length
+            Assert.IsEqual<uint>(db.Query().Max(a => a.Id), (uint)assets.Length);
+            //ensure all updates actually happened
+            Assert.IsEqual<int>(db.Count(a => a.XXHash == 2), assets.Length);
+            //ensure the final 1000 inserted after initial set were deleted.
+            Assert.IsEqual<int>(deleted, assets11.Length);
         }
         #endregion
     }

@@ -35,6 +35,15 @@ namespace HatTrick.InMemDb.TestHarness
                 throw new IsNullException(o.GetType(), o);
         }
 
+        //public static void TrueForAll<T>(T[] set, Func<T, bool> condition)
+        //{
+        //    for (int i = 0; i < set.Length; i++)
+        //    {
+        //        if (!condition(set[i]))
+        //            throw new NotTrueException($"Condition NOT true for index {i} within set.");
+        //    }
+        //}
+
         public static Exception Throws<T>(Action when) where T : Exception
         {
             try
