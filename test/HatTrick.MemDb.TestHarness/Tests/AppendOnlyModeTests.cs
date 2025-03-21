@@ -63,19 +63,26 @@ namespace HatTrick.InMemDb.TestHarness
                 //should allow an insert
                 db.Insert(newAsset);
 
+                db.Flush();
+
                 Assert.Throws<InvalidOperationException>(
                     when: () => { var a = db.Find(a => a.Name.StartsWith("0001")); },
-                    messageContains: nameof(AccessMode.AppendOnly)
+                    messageContains: $"'{nameof(AccessMode.AppendOnly)}' mode"
+                );
+
+                Assert.Throws<InvalidOperationException>(
+                    when: () => { var a = db.FindAll(a => true); },
+                    messageContains: $"'{nameof(AccessMode.AppendOnly)}' mode"
                 );
 
                 Assert.Throws<InvalidOperationException>(
                     when: () => db.Update(a => a.XXHash = 1, (a) => a.Name.StartsWith("0001")),
-                    messageContains: nameof(AccessMode.AppendOnly)
+                    messageContains: $"'{nameof(AccessMode.AppendOnly)}' mode"
                 );
 
                 Assert.Throws<InvalidOperationException>(
                     when: () => db.Delete((a) => a.Name.StartsWith("0001")),
-                    messageContains: nameof(AccessMode.AppendOnly)
+                    messageContains: $"'{nameof(AccessMode.AppendOnly)}' mode"
                 );
             }
 

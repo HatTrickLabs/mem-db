@@ -47,11 +47,11 @@ namespace HatTrick.InMemDb.TestHarness
             //var aiit = new AutoIncrementIdentityTests(resolver);
             //aiit.Go(ref _failures);
 
-            //var qebt = new QueryExpressionBuilderTests(resolver);
-            //qebt.Go(ref _failures);
+            var qebt = new QueryExpressionBuilderTests(resolver);
+            qebt.Go(ref _failures);
 
-            var hct = new HighConcurrencyTests(resolver);
-            hct.Go(ref _failures);
+            //var hct = new HighConcurrencyTests(resolver);
+            //hct.Go(ref _failures);
 
             if (_failures.Count > 0)
             {

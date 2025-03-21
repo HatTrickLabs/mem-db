@@ -44,7 +44,7 @@ namespace HatTrick.InMemDb.TestHarness
         }
         #endregion
 
-        #region where tests
+        #region where
         public void Test_WhereExpression()
         {
             using var db = MemDb.Open<DigitalAsset>(_dataset);
@@ -126,7 +126,7 @@ namespace HatTrick.InMemDb.TestHarness
         }
         #endregion
 
-        #region skip
+        #region skip / limit
         public void Test_SkipAndSkipLimitExpressions()
         {
             using var db = MemDb.Open<DigitalAsset>(_dataset);
@@ -160,6 +160,26 @@ namespace HatTrick.InMemDb.TestHarness
             //sum expression should calc the same result
             Assert.IsEqual<long>(db.Query().Sum(a => a.Length), totalLen);
         }
+
+        public void Test_FilteredSumExpression()
+        {
+            using var db = MemDb.Open<DigitalAsset>(_dataset);
+            this.LoadDb(db, out int txtCnt, out int jsonCnt, out int unknownCnt);
+
+            long jsonLength = db.Query().Where(a => a.AssetType == DigitalAssetType.Json).Sum(a => a.Length);
+
+            Assert.IsEqual(jsonLength, (jsonCnt * 64));
+        }
+
+        public void Test_RestrictedSumExpression()
+        {
+            using var db = MemDb.Open<DigitalAsset>(_dataset);
+            this.LoadDb(db, out int txtCnt, out int jsonCnt, out int unknownCnt);
+
+            long length = db.Query().Skip(100).Limit(100).Sum(a => a.Length);
+
+            Assert.IsEqual(length, (100 * 64));
+        }
         #endregion
 
         #region max
@@ -173,6 +193,24 @@ namespace HatTrick.InMemDb.TestHarness
 
             int extLen = db.Query().Max(a => a.Extension.Length);
             Assert.IsEqual<int>(extLen, ".json".Length);
+        }
+
+        public void Test_FilteredMaxExpression()
+        {
+            using var db = MemDb.Open<DigitalAsset>(_dataset);
+            this.LoadDb(db, out int txtCnt, out int jsonCnt, out int unknownCnt);
+
+            string highest = db.Query().Where(a => a.AssetType == DigitalAssetType.Text).Max(a => a.Name);
+            Assert.IsEqual("0499.txt", highest);
+        }
+
+        public void Test_RestrictedMaxExpression()
+        {
+            using var db = MemDb.Open<DigitalAsset>(_dataset);
+            this.LoadDb(db, out int txtCnt, out int jsonCnt, out int unknownCnt);
+
+            string highest = db.Query().Skip(txtCnt).Limit(jsonCnt).Max(a => a.Name);
+            Assert.IsEqual("0899.json", highest);
         }
         #endregion
 
@@ -283,6 +321,22 @@ namespace HatTrick.InMemDb.TestHarness
             Assert.IsEqual(jsonSet.Length, jsonCnt);
             Assert.IsEqual(Array.TrueForAll(jsonSet, a => a.XXHash == 9), true);
         }
+
+        public void Test_OrderedAndRestrictedUpdateExpression()
+        {
+            using var db = MemDb.Open<DigitalAsset>(_dataset);
+            this.LoadDb(db, out int txtCnt, out int jsonCnt, out int unknownCnt);
+
+            //the natural order of the loaded data is txt, json, unknown...lets run a update expression off of a re-ordered set.
+
+            //order by name desc and delete the unknown count (which should now be the first 100)
+            int updated = db.Query().OrderBy((a, b) => b.Name.CompareTo(a.Name)).Skip(0).Limit(unknownCnt).Update(a => a.XXHash = 101);
+
+            Assert.IsEqual(updated, unknownCnt);
+            Assert.IsEqual(db.Count(), txtCnt + jsonCnt + unknownCnt);
+            Assert.IsEqual(db.Count(a => a.XXHash == 101), unknownCnt);
+            Assert.IsEqual(db.FindAll(a => a.XXHash == 101).All(a => a.AssetType == DigitalAssetType.Unknown), true);
+        }
         #endregion
 
         #region delete
@@ -307,6 +361,21 @@ namespace HatTrick.InMemDb.TestHarness
             Assert.IsEqual(cnt3, txtCnt - 1);
             Assert.IsEqual(db.Count(a => a.Extension == ".txt"), 0);
             Assert.IsEqual(db.Count(a => a.Extension == ".json"), jsonCnt);//all json assets should remain
+        }
+
+        public void Test_OrderedAndRestrictedDeleteExpression()
+        {
+            using var db = MemDb.Open<DigitalAsset>(_dataset);
+            this.LoadDb(db, out int txtCnt, out int jsonCnt, out int unknownCnt);
+
+            //the natural order of the loaded data is txt, json, unknown...lets run a delete expression off of a re-ordered set.
+
+            //order by id desc, skip 0 limit unkown count (which should now be the first 100) and delete the results.
+            int deleted = db.Query().OrderBy((a, b) => b.Id.CompareTo(a.Id)).Skip(0).Limit(unknownCnt).Delete();
+
+            Assert.IsEqual(deleted, unknownCnt);
+            Assert.IsEqual(db.Count(), txtCnt + jsonCnt);
+            Assert.IsEqual(db.FindAll(a => true).All(a => a.AssetType != DigitalAssetType.Unknown), true);
         }
         #endregion
     }
