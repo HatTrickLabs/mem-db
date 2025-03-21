@@ -439,6 +439,62 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region resolve statistics
+        public MemDbStatistics ResolveStatistics(Stats statistics) 
+        {
+            var stats = new MemDbStatistics();
+            if ((statistics & Stats.FreshCount) == Stats.FreshCount)
+                stats.FreshCount = _map.FreshCount;
+
+            if ((statistics & Stats.StaleCount) == Stats.StaleCount)
+                stats.StaleCount = _map.StaleCount;
+
+            if ((statistics & Stats.DeletedCount) == Stats.DeletedCount)
+                stats.DeletedCount = _map.DeletedCount;
+
+            if ((statistics & Stats.FreshSize) == Stats.FreshSize)
+                stats.FreshSize = _map.TotalFreshSize;
+
+            if ((statistics & Stats.StaleSize) == Stats.StaleSize)
+                stats.StaleSize = _map.TotalStaleSize;
+
+            if ((statistics & Stats.DeletedSize) == Stats.DeletedSize)
+                stats.DeletedSize = _map.TotalDeletedSize;
+
+            if ((statistics & Stats.MaxFreshSize) == Stats.MaxFreshSize)
+                stats.MaxFreshSize = _map.MaxFreshRecordSize;
+
+            if ((statistics & Stats.MaxStaleSize) == Stats.MaxStaleSize)
+                stats.MaxStaleSize = _map.MaxStaleRecordSize;
+
+            if ((statistics & Stats.MaxDeletedSize) == Stats.MaxDeletedSize)
+                stats.MaxDeletedSize = _map.MaxDeletedRecordSize;
+
+            if ((statistics & Stats.MinFreshSize) == Stats.MinFreshSize)
+                stats.MinFreshSize = _map.MinFreshRecordSize;
+
+            if ((statistics & Stats.MinStaleSize) == Stats.MinStaleSize)
+                stats.MinStaleSize = _map.MinStaleRecordSize;
+
+            if ((statistics & Stats.MinDeletedSize) == Stats.MinDeletedSize)
+                stats.MinDeletedSize = _map.MinDeletedRecordSize;
+
+            if ((statistics & Stats.AvgFreshSize) == Stats.AvgFreshSize)
+                stats.AvgFreshSize = _map.AvgFreshRecordSize;
+
+            if ((statistics & Stats.AvgStaleSize) == Stats.AvgStaleSize)
+                stats.AvgStaleSize = _map.AvgStaleRecordSize;
+
+            if ((statistics & Stats.AvgDeletedSize) == Stats.AvgDeletedSize)
+                stats.AvgDeletedSize = _map.AvgDeletedRecordSize;
+
+            if ((statistics & Stats.LastId) == Stats.LastId)
+                stats.LastId = _map.LastId;
+
+            return stats;
+        }
+        #endregion
+
         #region close
         private void Close(bool isFinalizer = false)
         {

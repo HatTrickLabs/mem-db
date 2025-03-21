@@ -47,6 +47,10 @@ namespace HatTrick.InMemDb
         internal int MinFreshRecordSize => this.GetMinRecordSize(RecordState.Fresh);
         internal int MinStaleRecordSize => this.GetMinRecordSize(RecordState.Stale);
         internal int MinDeletedRecordSize => this.GetMinRecordSize(RecordState.Deleted);
+
+        internal double AvgFreshRecordSize => this.GetAvgRecordSize(RecordState.Fresh);
+        internal double AvgStaleRecordSize => this.GetAvgRecordSize(RecordState.Stale);
+        internal double AvgDeletedRecordSize => this.GetAvgRecordSize(RecordState.Deleted);
         #endregion
 
         #region constructors
@@ -170,6 +174,20 @@ namespace HatTrick.InMemDb
             lock (_syncLock)
             {
                 return _pointers.Where(p => p.State == state).Select(selector).DefaultIfEmpty().Min();
+            }
+        }
+        #endregion
+
+        #region get avg record size
+        private double GetAvgRecordSize(RecordState state)
+        {
+            Func<MemDbPointer, int> selector = (p) => p.IsEncrypted
+                ? MemDbAESEncryptor.CalculateCryptoByteLength(p.Length)
+                : p.Length;
+
+            lock (_syncLock)
+            {
+                return _pointers.Where(p => p.State == state).Select(selector).DefaultIfEmpty().Average();
             }
         }
         #endregion

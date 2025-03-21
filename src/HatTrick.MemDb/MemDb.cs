@@ -240,6 +240,13 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region resolve statistics
+        public MemDbStatistics ResolveStatistics(Stats statistics)
+        {
+            return _cache.ResolveStatistics(statistics);
+        }
+        #endregion
+
         #region close
         private void Close(bool isFinalizer = false)
         {

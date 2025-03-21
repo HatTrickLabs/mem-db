@@ -25,5 +25,7 @@ namespace HatTrick.InMemDb
         public MemDbExpression<T> Query();
 
         public void Flush();
+
+        public MemDbStatistics ResolveStatistics(Stats statistics);
     }
 }

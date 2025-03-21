@@ -294,7 +294,7 @@ namespace HatTrick.InMemDb
                         var oldRec = matches[i];
                         //We must deep copy here...if not, the old cache value(s) (that have not yet been flushed to disk)
                         //will get the update.  We need a traceable / archiveable state for each update.  If we don't deep copy
-                        //and multi updates are done to the same record before a disk flush, then all the records done
+                        //and multi updates are applied to the same record before a disk flush, then all the records updated
                         //between flushes receive all updates and look identical if archived.
                         var newRec = new MemDbRecord<T>(oldRec.Id, _cloner.DeepCopy(oldRec.Value), oldRec.IsEncrypted);
 
@@ -339,6 +339,13 @@ namespace HatTrick.InMemDb
             }
 
             return cnt;
+        }
+        #endregion
+
+        #region resolve statistics
+        public MemDbStatistics ResolveStatistics(Stats statistics)
+        {
+            return _persister.ResolveStatistics(statistics);
         }
         #endregion
 
