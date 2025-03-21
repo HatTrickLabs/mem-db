@@ -15,7 +15,6 @@ namespace HatTrick.InMemDb.TestHarness
 
         static void Main(string[] args)
         {
-
             _failures = new List<Failure>();
 
             AssetResolver resolver = new AssetResolver();
@@ -47,11 +46,14 @@ namespace HatTrick.InMemDb.TestHarness
             //var aiit = new AutoIncrementIdentityTests(resolver);
             //aiit.Go(ref _failures);
 
-            var qebt = new QueryExpressionBuilderTests(resolver);
-            qebt.Go(ref _failures);
+            //var qebt = new QueryExpressionBuilderTests(resolver);
+            //qebt.Go(ref _failures);
 
             //var hct = new HighConcurrencyTests(resolver);
             //hct.Go(ref _failures);
+
+            var st = new StatisticsTests(resolver);
+            st.Go(ref _failures);
 
             if (_failures.Count > 0)
             {

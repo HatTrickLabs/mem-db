@@ -73,7 +73,9 @@ namespace HatTrick.InMemDb.TestHarness
             }
             catch (Exception ex)
             {
-                string target = test.Method.ReflectedType.Name + "." + test.Method.Name;
+                var frame = new System.Diagnostics.StackTrace(ex, 1, true).GetFrame(0);
+                int line = frame.GetFileLineNumber();
+                string target = $"{test.Method.ReflectedType.Name}.{test.Method.Name} at line {line}";
                 _failures.Add(new Failure(target, ex));
             }
         }

@@ -5,21 +5,21 @@ namespace HatTrick.InMemDb
     [Flags]
     public enum Stats : int
     {
-        FreshCount = 0,
-        StaleCount = 1,
-        DeletedCount = 2,
-        FreshSize = 4,
-        StaleSize = 8,
-        DeletedSize = 16,
-        MaxFreshSize = 32,
-        MaxStaleSize = 64,
-        MaxDeletedSize = 128,
-        MinFreshSize = 256,
-        MinStaleSize = 512,
-        MinDeletedSize = 1024,
-        AvgFreshSize = 2048,
-        AvgStaleSize = 4096,
-        AvgDeletedSize = 8192,
-        LastId = 16384
+        FreshCount = 1,
+        StaleCount = 2,
+        DeletedCount = 4,
+        FreshSize = 8,
+        StaleSize = 16,
+        DeletedSize = 32,
+        MaxFreshSize = 64,
+        MaxStaleSize = 128,
+        MaxDeletedSize = 256,
+        MinFreshSize = 512,
+        MinStaleSize = 1024,
+        MinDeletedSize = 2048,
+        AvgFreshSize = 4096,
+        AvgStaleSize = 8192,
+        AvgDeletedSize = 16384,
+        LastId = 32768
     }
 }
