@@ -29,10 +29,10 @@ namespace HatTrick.InMemDb.TestHarness
         #endregion
 
         #region go
-        public void Go(ref List<Failure> failures)
+        public void Go(ref List<Failure> failures, out int count)
         {
             Executor exe = new Executor();
-            exe.Execute(this);
+            exe.Execute(this, out count);
             if (exe.HasFailures)
             {
                 _failures = exe.GetFailures();
@@ -60,8 +60,8 @@ namespace HatTrick.InMemDb.TestHarness
         #region delete db files
         private void DeleteDbFiles()
         {
-            try
-            {
+            //try
+            //{
                 string map = Path.Combine(_dbPath, "htl." + _dataset + ".map");
                 string db = Path.Combine(_dbPath, "htl." + _dataset + ".db");
 
@@ -70,9 +70,9 @@ namespace HatTrick.InMemDb.TestHarness
 
                 if (File.Exists(db))
                     File.Delete(db);
-            }
-            catch (IOException)
-            {}
+            //}
+            //catch (IOException)
+            //{}
         }
         #endregion
     }

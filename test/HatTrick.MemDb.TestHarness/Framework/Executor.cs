@@ -1,6 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Reflection;
+using System.Diagnostics;
+using System.Collections.Generic;
 
 namespace HatTrick.InMemDb.TestHarness
 {
@@ -23,13 +24,15 @@ namespace HatTrick.InMemDb.TestHarness
         #endregion
 
         #region execute
-        public void Execute(TestBase against)
+        public void Execute(TestBase against, out int count)
         {
-            Console.WriteLine($"{against.GetType().Name}: Starting resolve test methods.");
+            Type t = against.GetType();
+            Console.WriteLine($"{t.Name}: Starting resolve test methods.");
             _tests = this.ReflectTestMethods(against);
-            Console.WriteLine($"{against.GetType().Name}: Resolved {_tests.Length} test methods.");
+            count = _tests.Length;
+            Console.WriteLine($"{t.Name}: Resolved {count} test methods.");
 
-            Console.WriteLine($"{against.GetType().Name}: Starting test method execution.");
+            Console.WriteLine($"{t.Name}: Starting test method execution.");
             for (int i = 0; i < _tests.Length; i++)
             {
                 var test = _tests[i];
@@ -37,7 +40,7 @@ namespace HatTrick.InMemDb.TestHarness
                 this.ExecuteTest(test);
             }
             against.Cleanup();
-            Console.WriteLine($"{against.GetType().Name}: Completed test method execution");
+            Console.WriteLine($"{t.Name}: Completed test method execution");
         }
         #endregion
 
@@ -73,7 +76,7 @@ namespace HatTrick.InMemDb.TestHarness
             }
             catch (Exception ex)
             {
-                var frame = new System.Diagnostics.StackTrace(ex, 1, true).GetFrame(0);
+                var frame = new StackTrace(ex, 1, true).GetFrame(0);
                 int line = frame.GetFileLineNumber();
                 string target = $"{test.Method.ReflectedType.Name}.{test.Method.Name} at line {line}";
                 _failures.Add(new Failure(target, ex));
