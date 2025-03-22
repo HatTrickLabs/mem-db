@@ -352,7 +352,7 @@ namespace HatTrick.InMemDb
         #region flush
         public void Flush()
         {
-            _persister.Flush(true);
+            _persister.Flush(false);
         }
         #endregion
 

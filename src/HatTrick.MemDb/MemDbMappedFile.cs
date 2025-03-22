@@ -28,7 +28,6 @@ namespace HatTrick.InMemDb
 
         private MemDbMap _map;
 
-        private bool _isFlushing;
         private Lock _flushLock;
 
         private IMemDbSerializer<T> _serializer;
@@ -302,28 +301,21 @@ namespace HatTrick.InMemDb
         #region flush
         void IMemDbPersister<T>.Flush(object state)
         {
-            //possible last call to flush is still flushing
-            if (_isFlushing)
-                return;
+            //state will be:
+            //null if called from timer
+            //false if flush manually called through cache
+            //true if called from close/dispose
 
             //this is to avoid the timer 'flush' from getting in after
             //the 'close' flush has already entered...
             if (state == null && _isClosed)
                 return;
 
-            _isFlushing = true;
-            try
-            {
-                this.FlushInsertQueue();
-                this.FlushStateChangeQueue();
+            this.FlushInsertQueue();
+            this.FlushStateChangeQueue();
 
-                if (!_isClosed)
-                    _fileSyncTimer.Change(_flushInterval, Timeout.Infinite);
-            }
-            finally
-            {
-                _isFlushing = false;
-            }
+            if (!_isClosed)
+                _fileSyncTimer.Change(_flushInterval, Timeout.Infinite);
         }
         #endregion
 
@@ -502,7 +494,7 @@ namespace HatTrick.InMemDb
 
             _fileSyncTimer?.Dispose();
 
-            (this as IMemDbPersister<T>).Flush(new());
+            (this as IMemDbPersister<T>).Flush(true);
 
             if (!isFinalizer)
                 GC.SuppressFinalize(this);
