@@ -60,14 +60,19 @@ namespace HatTrick.InMemDb.TestHarness
         #region delete db files
         private void DeleteDbFiles()
         {
-            string map = Path.Combine(_dbPath, "htl." + _dataset + ".map");
-            string db =  Path.Combine(_dbPath, "htl." + _dataset + ".db");
+            try
+            {
+                string map = Path.Combine(_dbPath, "htl." + _dataset + ".map");
+                string db = Path.Combine(_dbPath, "htl." + _dataset + ".db");
 
-            if (File.Exists(map))
-                File.Delete(map);
+                if (File.Exists(map))
+                    File.Delete(map);
 
-            if (File.Exists(db))
-                File.Delete(db);
+                if (File.Exists(db))
+                    File.Delete(db);
+            }
+            catch (IOException)
+            {}
         }
         #endregion
     }

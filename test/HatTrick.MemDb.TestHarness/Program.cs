@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Diagnostics;
 using HatTrick.InMemDb;
+using System.Reflection;
 
 namespace HatTrick.InMemDb.TestHarness
 {
@@ -19,44 +20,53 @@ namespace HatTrick.InMemDb.TestHarness
 
             AssetResolver resolver = new AssetResolver();
 
-            var dot = new DefaultOptionBaselineTests(resolver);
-            dot.Go(ref _failures);
+            Assembly assembly = Assembly.GetExecutingAssembly();
+            var tests = assembly.GetTypes().Where(t => t.Name.EndsWith("Tests") && !t.IsAbstract).ToArray();
 
-            var rct = new RegisteredCloneBaselineTests(resolver);
-            rct.Go(ref _failures);
+            for (int i = 0; i < tests.Length; i++)
+            {
+                var test = (TestBase)Activator.CreateInstance(tests[i], resolver);
+                test.Go(ref _failures);
+            }
 
-            var rst = new RegisterdSerializeBaselineTests(resolver);
-            rst.Go(ref _failures);
+            //var dot = new DefaultOptionBaselineTests(resolver);
+            //dot.Go(ref _failures);
 
-            var rcast = new RegisteredCloneAndSerializeBaselineTests(resolver);
-            rcast.Go(ref _failures);
+            //var rct = new RegisteredCloneBaselineTests(resolver);
+            //rct.Go(ref _failures);
 
-            var aket = new AESKeyEncryptedTests(resolver);
-            aket.Go(ref _failures);
+            //var rst = new RegisterdSerializeBaselineTests(resolver);
+            //rst.Go(ref _failures);
 
-            var akfpt = new AESKeyFromPasswordEncryptedTests(resolver);
-            akfpt.Go(ref _failures);
+            //var rcast = new RegisteredCloneAndSerializeBaselineTests(resolver);
+            //rcast.Go(ref _failures);
 
-            var romt = new ReadOnlyModeTests(resolver);
-            romt.Go(ref _failures);
+            //var aket = new AESKeyEncryptedTests(resolver);
+            //aket.Go(ref _failures);
 
-            var aomt = new AppendOnlyModeTests(resolver);
-            aomt.Go(ref _failures);
+            //var akfpt = new AESKeyFromPasswordEncryptedTests(resolver);
+            //akfpt.Go(ref _failures);
 
-            var aiit = new AutoIncrementIdentityTests(resolver);
-            aiit.Go(ref _failures);
+            //var romt = new ReadOnlyModeTests(resolver);
+            //romt.Go(ref _failures);
 
-            var qebt = new QueryExpressionBuilderTests(resolver);
-            qebt.Go(ref _failures);
+            //var aomt = new AppendOnlyModeTests(resolver);
+            //aomt.Go(ref _failures);
 
-            var hct = new HighConcurrencyTests(resolver);
-            hct.Go(ref _failures);
+            //var aiit = new AutoIncrementIdentityTests(resolver);
+            //aiit.Go(ref _failures);
 
-            var ibrt = new InterfaceBasedRecordTests(resolver);
-            ibrt.Go(ref _failures);
+            //var qebt = new QueryExpressionBuilderTests(resolver);
+            //qebt.Go(ref _failures);
 
-            var st = new StatisticsTests(resolver);
-            st.Go(ref _failures);
+            //var hct = new HighConcurrencyTests(resolver);
+            //hct.Go(ref _failures);
+
+            //var ibrt = new InterfaceBasedRecordTests(resolver);
+            //ibrt.Go(ref _failures);
+
+            //var st = new StatisticsTests(resolver);
+            //st.Go(ref _failures);
 
             if (_failures.Count > 0)
             {

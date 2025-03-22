@@ -8,7 +8,6 @@ namespace HatTrick.InMemDb.TestHarness
 {
     public class AESKeyEncryptedTests : AESEncryptionTests
     {
-
         #region ctors
         public AESKeyEncryptedTests(AssetResolver assetResolver) : base(assetResolver)
         {

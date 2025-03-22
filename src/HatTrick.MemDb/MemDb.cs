@@ -265,11 +265,11 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region close
-        private void Close(bool isFinalizer = false)
+        private void Close()
         {
+            _isClosed = true;
             _cache.Dispose();
             MemDb.Close(_datasetName);
-            _isClosed = true;
         }
         #endregion
 
@@ -289,7 +289,7 @@ namespace HatTrick.InMemDb
         {
             if (!_isClosed)
             {
-                this.Close(true); //emergency catch all to save un-synced records if process dies...
+                this.Close(); //emergency catch all to save un-synced records if process dies...
             }
         }
         #endregion

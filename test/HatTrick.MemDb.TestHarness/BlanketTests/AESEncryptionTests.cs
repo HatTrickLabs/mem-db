@@ -4,11 +4,11 @@ using System.Linq;
 
 namespace HatTrick.InMemDb.TestHarness
 {
-    public class AESEncryptionTests : TestBase
+    public abstract class AESEncryptionTests : TestBase
     {
         #region internals
         private static readonly string _dataset = $"assets";
-        private static readonly string _dbPath = @"..\..\..\..\_db\aes_key_encrypted";
+        private static readonly string _dbPath = @"..\..\..\..\_db\aes_encryption";
         #endregion
 
         #region interface

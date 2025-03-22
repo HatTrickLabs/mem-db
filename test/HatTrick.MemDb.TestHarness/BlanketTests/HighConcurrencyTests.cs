@@ -40,52 +40,53 @@ namespace HatTrick.InMemDb.TestHarness
             DigitalAsset[] assets4 = base.ResolveAssetSet();
             DigitalAsset[] assets5 = base.ResolveAssetSet();
 
-            using var db = MemDb.Open<DigitalAsset>(_dataset);
-
-            Thread t1 = new Thread(() => Array.ForEach(assets1, (asset) => db.Insert(asset, (id) => asset.Id = id)));
-            Thread t2 = new Thread(() => Array.ForEach(assets2, (asset) => db.Insert(asset, (id) => asset.Id = id)));
-            Thread t3 = new Thread(() => Array.ForEach(assets3, (asset) => db.Insert(asset, (id) => asset.Id = id)));
-            Thread t4 = new Thread(() => Array.ForEach(assets4, (asset) => db.Insert(asset, (id) => asset.Id = id)));
-            Thread t5 = new Thread(() => Array.ForEach(assets5, (asset) => db.Insert(asset, (id) => asset.Id = id)));
-
-            t1.Start();
-            t2.Start();
-            t3.Start();
-            t4.Start();
-            t5.Start();
-
-            if (flush)
-                db.Flush();
-
-            t1.Join();
-            t2.Join();
-            t3.Join();
-            t4.Join();
-            t5.Join();
-
-            if (flush)
-                db.Flush();
-
-            //we should have 5,000 records, each with a unique auto incremented Id
-            int length = assets1.Length + assets2.Length + assets3.Length + assets4.Length + assets5.Length;
-            Assert.IsEqual<int>(db.Count(), length);
-            for (int i = 0; i < length; i++)
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
-                int id = i + 1;
-                Assert.IsNotNull(db.Find(a => a.Id == id));
+                Thread t1 = new Thread(() => Array.ForEach(assets1, (asset) => db.Insert(asset, (id) => asset.Id = id)));
+                Thread t2 = new Thread(() => Array.ForEach(assets2, (asset) => db.Insert(asset, (id) => asset.Id = id)));
+                Thread t3 = new Thread(() => Array.ForEach(assets3, (asset) => db.Insert(asset, (id) => asset.Id = id)));
+                Thread t4 = new Thread(() => Array.ForEach(assets4, (asset) => db.Insert(asset, (id) => asset.Id = id)));
+                Thread t5 = new Thread(() => Array.ForEach(assets5, (asset) => db.Insert(asset, (id) => asset.Id = id)));
+
+                t1.Start();
+                t2.Start();
+                t3.Start();
+                t4.Start();
+                t5.Start();
+
+                if (flush)
+                    db.Flush();
+
+                t1.Join();
+                t2.Join();
+                t3.Join();
+                t4.Join();
+                t5.Join();
+
+                if (flush)
+                    db.Flush();
+
+                //we should have 5,000 records, each with a unique auto incremented Id
+                int length = assets1.Length + assets2.Length + assets3.Length + assets4.Length + assets5.Length;
+                Assert.IsEqual<int>(db.Count(), length);
+                for (int i = 0; i < length; i++)
+                {
+                    int id = i + 1;
+                    Assert.IsNotNull(db.Find(a => a.Id == id));
+                }
+
+                //query distinct ids
+                uint[] ids = db.Query().SelectDistinct<uint>(a => a.Id);
+                Assert.IsEqual<int>(ids.Length, length);
+
+                //we should have 5 sets of the same assets.
+                var sets = db.Query().GroupBy(a => a.Name).Select(g => (g.Key, g.Count())).ToArray();
+
+                //every set should have a count of 5
+                Array.ForEach(sets,
+                    ((string name, int count) itm) => Assert.IsEqual<int>(itm.count, 5)
+                );
             }
-
-            //query distinct ids
-            uint[] ids = db.Query().SelectDistinct<uint>(a => a.Id);
-            Assert.IsEqual<int>(ids.Length, length);
-
-            //we should have 5 sets of the same assets.
-            var sets = db.Query().GroupBy(a => a.Name).Select(g => (g.Key, g.Count())).ToArray();
-
-            //every set should have a count of 5
-            Array.ForEach(sets, 
-                ((string name, int count) itm) => Assert.IsEqual<int>(itm.count, 5)
-            );
         }
         #endregion
 
@@ -102,109 +103,110 @@ namespace HatTrick.InMemDb.TestHarness
 
         public void HighConcurrencyUpdatesTarget(bool flush)
         {
-            using var db = MemDb.Open<DigitalAsset>(_dataset);
-
-            //build up 6000 asset set
-            DigitalAsset[] assets1 = base.ResolveAssetSet();
-            DigitalAsset[] assets2 = base.ResolveAssetSet();
-            DigitalAsset[] assets3 = base.ResolveAssetSet();
-            DigitalAsset[] assets4 = base.ResolveAssetSet();
-            DigitalAsset[] assets5 = base.ResolveAssetSet();
-            DigitalAsset[] assets6 = base.ResolveAssetSet();
-
-
-            var assets = assets1.Concat(assets2).Concat(assets3).Concat(assets4).Concat(assets5).Concat(assets6).ToArray();
-            Parallel.For(0, assets.Length, (int i) =>
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
-                var asset = assets[i];
-                db.Insert(asset, (id) => asset.Id = id, false);
-            });
+                //build up 6000 asset set
+                DigitalAsset[] assets1 = base.ResolveAssetSet();
+                DigitalAsset[] assets2 = base.ResolveAssetSet();
+                DigitalAsset[] assets3 = base.ResolveAssetSet();
+                DigitalAsset[] assets4 = base.ResolveAssetSet();
+                DigitalAsset[] assets5 = base.ResolveAssetSet();
+                DigitalAsset[] assets6 = base.ResolveAssetSet();
 
-            if (flush)
-                db.Flush();
 
-            Thread t1 = new Thread(() => { Array.ForEach(assets6, (a6) => db.Update(a => a.XXHash = 6, a => a.Id == a6.Id)); });
-            Thread t2 = new Thread(() => { Array.ForEach(assets5, (a5) => db.Update(a => a.XXHash = 5, a => a.Id == a5.Id)); });
-            Thread t3 = new Thread(() => { Array.ForEach(assets4, (a4) => db.Update(a => a.XXHash = 4, a => a.Id == a4.Id)); });
-            Thread t4 = new Thread(() => { Array.ForEach(assets3, (a3) => db.Update(a => a.XXHash = 3, a => a.Id == a3.Id)); });
-            Thread t5 = new Thread(() => { Array.ForEach(assets2, (a2) => db.Update(a => a.XXHash = 2, a => a.Id == a2.Id)); });
-            Thread t6 = new Thread(() => { Array.ForEach(assets1, (a1) => db.Update(a => a.XXHash = 1, a => a.Id == a1.Id)); });
+                var assets = assets1.Concat(assets2).Concat(assets3).Concat(assets4).Concat(assets5).Concat(assets6).ToArray();
+                Parallel.For(0, assets.Length, (int i) =>
+                {
+                    var asset = assets[i];
+                    db.Insert(asset, (id) => asset.Id = id, false);
+                });
 
-            t1.Start();
-            t2.Start();
-            t3.Start();
-            t4.Start();
-            t5.Start();
-            t6.Start();
+                if (flush)
+                    db.Flush();
 
-            t1.Join();
-            t2.Join();
-            t3.Join();
-            t4.Join();
-            t5.Join();
-            t6.Join();
+                Thread t1 = new Thread(() => { Array.ForEach(assets6, (a6) => db.Update(a => a.XXHash = 6, a => a.Id == a6.Id)); });
+                Thread t2 = new Thread(() => { Array.ForEach(assets5, (a5) => db.Update(a => a.XXHash = 5, a => a.Id == a5.Id)); });
+                Thread t3 = new Thread(() => { Array.ForEach(assets4, (a4) => db.Update(a => a.XXHash = 4, a => a.Id == a4.Id)); });
+                Thread t4 = new Thread(() => { Array.ForEach(assets3, (a3) => db.Update(a => a.XXHash = 3, a => a.Id == a3.Id)); });
+                Thread t5 = new Thread(() => { Array.ForEach(assets2, (a2) => db.Update(a => a.XXHash = 2, a => a.Id == a2.Id)); });
+                Thread t6 = new Thread(() => { Array.ForEach(assets1, (a1) => db.Update(a => a.XXHash = 1, a => a.Id == a1.Id)); });
 
-            if (flush)
-                db.Flush();
+                t1.Start();
+                t2.Start();
+                t3.Start();
+                t4.Start();
+                t5.Start();
+                t6.Start();
 
-            Assert.IsEqual(db.Count(), assets.Length);
+                t1.Join();
+                t2.Join();
+                t3.Join();
+                t4.Join();
+                t5.Join();
+                t6.Join();
 
-            Assert.IsEqual<int>(db.Count(a => a.XXHash == 1), assets1.Length);
-            Assert.IsEqual<int>(db.Count(a => a.XXHash == 2), assets2.Length);
-            Assert.IsEqual<int>(db.Count(a => a.XXHash == 3), assets3.Length);
-            Assert.IsEqual<int>(db.Count(a => a.XXHash == 4), assets4.Length);
-            Assert.IsEqual<int>(db.Count(a => a.XXHash == 5), assets5.Length);
-            Assert.IsEqual<int>(db.Count(a => a.XXHash == 6), assets6.Length);
+                if (flush)
+                    db.Flush();
+
+                Assert.IsEqual(db.Count(), assets.Length);
+
+                Assert.IsEqual<int>(db.Count(a => a.XXHash == 1), assets1.Length);
+                Assert.IsEqual<int>(db.Count(a => a.XXHash == 2), assets2.Length);
+                Assert.IsEqual<int>(db.Count(a => a.XXHash == 3), assets3.Length);
+                Assert.IsEqual<int>(db.Count(a => a.XXHash == 4), assets4.Length);
+                Assert.IsEqual<int>(db.Count(a => a.XXHash == 5), assets5.Length);
+                Assert.IsEqual<int>(db.Count(a => a.XXHash == 6), assets6.Length);
+            }
         }
         #endregion
 
         #region high concurrency deletes
         public void HighConcurrencyDeletesTarget(bool flush)
         {
-            using var db = MemDb.Open<DigitalAsset>(_dataset);
-
-            //build up 6000 asset set
-            DigitalAsset[] assets1 = base.ResolveAssetSet();
-            DigitalAsset[] assets2 = base.ResolveAssetSet();
-            DigitalAsset[] assets3 = base.ResolveAssetSet();
-            DigitalAsset[] assets4 = base.ResolveAssetSet();
-            DigitalAsset[] assets5 = base.ResolveAssetSet();
-            DigitalAsset[] assets6 = base.ResolveAssetSet();
-
-
-            var assets = assets1.Concat(assets2).Concat(assets3).Concat(assets4).Concat(assets5).Concat(assets6).ToArray();
-            Parallel.For(0, assets.Length, (int i) =>
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
-                var asset = assets[i];
-                db.Insert(asset, (id) => asset.Id = id, false);
-            });
+                //build up 6000 asset set
+                DigitalAsset[] assets1 = base.ResolveAssetSet();
+                DigitalAsset[] assets2 = base.ResolveAssetSet();
+                DigitalAsset[] assets3 = base.ResolveAssetSet();
+                DigitalAsset[] assets4 = base.ResolveAssetSet();
+                DigitalAsset[] assets5 = base.ResolveAssetSet();
+                DigitalAsset[] assets6 = base.ResolveAssetSet();
 
-            if (flush)
-                db.Flush();
+                var assets = assets1.Concat(assets2).Concat(assets3).Concat(assets4).Concat(assets5).Concat(assets6).ToArray();
+                Parallel.For(0, assets.Length, (int i) =>
+                {
+                    var asset = assets[i];
+                    db.Insert(asset, (id) => asset.Id = id, false);
+                });
 
-            int deleted65 = 0;
-            int deleted43 = 0;
-            int deleted21 = 0;
-            Thread t1 = new Thread(() => { Array.ForEach(assets6.Concat(assets5).ToArray(), (a65) => deleted65 = db.Delete(a => a.Id == a65.Id)); });
-            Thread t2 = new Thread(() => { Array.ForEach(assets4.Concat(assets3).ToArray(), (a43) => deleted43 = db.Delete(a => a.Id == a43.Id)); });
-            Thread t3 = new Thread(() => { Array.ForEach(assets2.Concat(assets1).ToArray(), (a21) => deleted21 = db.Delete(a => a.Id == a21.Id)); });
+                if (flush)
+                    db.Flush();
 
-            t1.Start();
-            t2.Start();
-            t3.Start();
+                int deleted65 = 0;
+                int deleted43 = 0;
+                int deleted21 = 0;
+                Thread t1 = new Thread(() => { Array.ForEach(assets6.Concat(assets5).ToArray(), (a65) => deleted65 = db.Delete(a => a.Id == a65.Id)); });
+                Thread t2 = new Thread(() => { Array.ForEach(assets4.Concat(assets3).ToArray(), (a43) => deleted43 = db.Delete(a => a.Id == a43.Id)); });
+                Thread t3 = new Thread(() => { Array.ForEach(assets2.Concat(assets1).ToArray(), (a21) => deleted21 = db.Delete(a => a.Id == a21.Id)); });
 
-            t1.Join();
-            t2.Join();
-            t3.Join();
+                t1.Start();
+                t2.Start();
+                t3.Start();
 
-            if (flush)
-                db.Flush();
+                t1.Join();
+                t2.Join();
+                t3.Join();
 
-            Assert.IsEqual<int>(db.Count(), 0);
+                if (flush)
+                    db.Flush();
 
-            Assert.IsEqual<int>(deleted65, assets6.Length + assets5.Length);
-            Assert.IsEqual<int>(deleted43, assets4.Length + assets3.Length);
-            Assert.IsEqual<int>(deleted21, assets2.Length + assets1.Length);
+                Assert.IsEqual<int>(db.Count(), 0);
+
+                Assert.IsEqual<int>(deleted65, assets6.Length + assets5.Length);
+                Assert.IsEqual<int>(deleted43, assets4.Length + assets3.Length);
+                Assert.IsEqual<int>(deleted21, assets2.Length + assets1.Length);
+            }
         }
         #endregion
 

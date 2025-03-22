@@ -11,7 +11,9 @@ namespace HatTrick.InMemDb.TestHarness
 
         #region ctors
         public DefragTests(AssetResolver assetResolver) : base(_dataset, _dbPath, assetResolver)
-        { }
+        {
+            MemDb.ConfigureFor<DigitalAsset>(_dataset, _dbPath).Register();
+        }
         #endregion
 
         #region load db
