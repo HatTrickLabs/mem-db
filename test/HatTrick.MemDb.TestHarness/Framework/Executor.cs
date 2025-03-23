@@ -2,6 +2,7 @@
 using System.Reflection;
 using System.Diagnostics;
 using System.Collections.Generic;
+using HatTrick.CommandLine;
 
 namespace HatTrick.InMemDb.TestHarness
 {
@@ -24,6 +25,30 @@ namespace HatTrick.InMemDb.TestHarness
         #endregion
 
         #region execute
+        public void Execute(TestBase against, string methodName)
+        {
+            Type t = against.GetType();
+            Console.WriteLine($"{t.Name}: Starting resolve test methods.");
+            var action = this.ReflectTestMethod(against, methodName);
+
+            if (action is null)
+                throw new CommandExecutionException("No test method found for provided for provided input.");
+
+            _tests = [action];
+
+            Console.WriteLine($"{t.Name}: Resolved test method: " + methodName);
+
+            Console.WriteLine($"{t.Name}: Starting test method execution.");
+            for (int i = 0; i < _tests.Length; i++)
+            {
+                var test = _tests[i];
+                against.Cleanup();
+                this.ExecuteTest(test);
+            }
+            against.Cleanup();
+            Console.WriteLine($"{t.Name}: Completed test method execution");
+        }
+
         public void Execute(TestBase against, out int count)
         {
             Type t = against.GetType();
@@ -57,6 +82,16 @@ namespace HatTrick.InMemDb.TestHarness
             }
 
             return actions.ToArray();
+        }
+        #endregion
+
+        #region reflect test method
+        private Action ReflectTestMethod(TestBase target, string methodName)
+        {
+            MethodInfo[] methods = target.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance);
+            MethodInfo test = Array.Find(methods, m => m.Name == methodName);
+            Action action = test is null ? null : test.CreateDelegate<Action>(target);
+            return action;
         }
         #endregion
 

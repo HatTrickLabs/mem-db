@@ -44,6 +44,19 @@ namespace HatTrick.InMemDb.TestHarness
 
             MemDb.RemoveConfiguationFor(_dataset);
         }
+
+        public void Go(ref List<Failure> failures, string method)
+        {
+            Executor exe = new Executor();
+            exe.Execute(this, method);
+            if (exe.HasFailures)
+            {
+                _failures = exe.GetFailures();
+                failures.AddRange(_failures);
+            }
+
+            MemDb.RemoveConfiguationFor(_dataset);
+        }
         #endregion
 
         #region resolve asset set
@@ -54,7 +67,7 @@ namespace HatTrick.InMemDb.TestHarness
         #endregion
 
         #region cleanup
-        public void Cleanup()
+        public virtual void Cleanup()
         {
             this.DeleteDbFiles();
         }

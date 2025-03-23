@@ -50,6 +50,7 @@ namespace HatTrick.InMemDb.TestHarness
             Stats resolve = Stats.FreshCount | Stats.StaleCount | Stats.DeletedCount | Stats.FreshSize | Stats.StaleSize | Stats.DeletedSize;
             MemDbStatistics stats = null;
 
+            //we know the constant size of each type of binary serialized asset record.
             int txtSize = 104;
             int jsonSize = 105;
             int unknownSize = 100;
@@ -72,28 +73,33 @@ namespace HatTrick.InMemDb.TestHarness
                 stats = db.ResolveStatistics(resolve);
             }
 
-            Assert.IsEqual(stats.FreshCount, (txtCnt + jsonCnt));
-            Assert.IsEqual(stats.StaleCount, txtCnt);
-            Assert.IsEqual(stats.DeletedCount, unknownCnt);
+            Assert.IsEqual(stats.FreshCount, (txtCnt + jsonCnt));//we deleted the unknown assets
+            Assert.IsEqual(stats.StaleCount, txtCnt);//we updated all the txt assets leaving all the original txt assets marked stale
+            Assert.IsEqual(stats.DeletedCount, unknownCnt);//we deleted all the unknown assets marking all as deleted
 
             Assert.IsEqual(stats.FreshSize, ((txtCnt * txtSize) + (jsonCnt * jsonSize)));
             Assert.IsEqual(stats.StaleSize, (txtCnt * txtSize));
             Assert.IsEqual(stats.DeletedSize, (unknownCnt * unknownSize));
 
+            //defrag (removes all deleted and stale data from the map and db files)
             MemDb.Defrag(_dataset);
 
+            //when we re-open the db, all stale and deleted map pointers and db records should be gone.
             MemDbStatistics stats2 = null;            
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
                 stats2 = db.ResolveStatistics(resolve);
             }
 
+            //all fresh data should be maintained
             Assert.IsEqual(stats2.FreshCount, (txtCnt + jsonCnt));
             Assert.IsEqual(stats.FreshSize, ((txtCnt * txtSize) + (jsonCnt * jsonSize)));
 
+            //no stale data should exist
             Assert.IsEqual(stats2.StaleCount, 0);
             Assert.IsEqual(stats2.StaleSize, 0);
 
+            //no deleted data should exist
             Assert.IsEqual(stats2.DeletedCount, 0);
             Assert.IsEqual(stats2.DeletedSize, 0);
         }
