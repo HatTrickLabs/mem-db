@@ -21,7 +21,7 @@ namespace HatTrick.InMemDb.TestHarness
             AssetResolver resolver = new AssetResolver();
 
             Assembly assembly = Assembly.GetExecutingAssembly();
-            var tests = assembly.GetTypes().Where(t => t.Name.EndsWith("Tests") && !t.IsAbstract).ToArray();
+            var tests = assembly.GetTypes().Where(t => t.Name.EndsWith("Tests") && !t.IsAbstract && t.IsPublic).ToArray();
 
             int total = 0;
             for (int i = 0; i < tests.Length; i++)

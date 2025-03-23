@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.IO;
 
 namespace HatTrick.InMemDb.TestHarness
 {
@@ -10,7 +7,7 @@ namespace HatTrick.InMemDb.TestHarness
     {
         #region internals
         private static readonly string _dataset = $"assets";
-        private static readonly string _dbPath = @"..\..\..\..\_db\identity";
+        private static readonly string _dbPath = Path.Combine(TestBase.DbBasePath, "identity");
         #endregion
 
         #region ctors

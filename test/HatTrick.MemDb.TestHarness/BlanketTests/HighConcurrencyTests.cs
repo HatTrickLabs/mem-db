@@ -1,7 +1,7 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace HatTrick.InMemDb.TestHarness
@@ -10,7 +10,7 @@ namespace HatTrick.InMemDb.TestHarness
     {
         #region internals
         private static readonly string _dataset = $"assets";
-        private static readonly string _dbPath = @"..\..\..\..\_db\high_concurrency";
+        private static readonly string _dbPath = Path.Combine(TestBase.DbBasePath, "high_concurrency");
         #endregion
 
         #region ctors

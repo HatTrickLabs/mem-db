@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 
 namespace HatTrick.InMemDb.TestHarness
@@ -7,7 +8,7 @@ namespace HatTrick.InMemDb.TestHarness
     {
         #region internals
         private static readonly string _dataset = $"assets";
-        private static readonly string _dbPath = @"..\..\..\..\_db\expression_builder";
+        private static readonly string _dbPath = Path.Combine(TestBase.DbBasePath, "expression_builder");
         #endregion
 
         #region ctors

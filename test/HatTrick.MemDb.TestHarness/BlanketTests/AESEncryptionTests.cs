@@ -8,7 +8,7 @@ namespace HatTrick.InMemDb.TestHarness
     {
         #region internals
         private static readonly string _dataset = $"assets";
-        private static readonly string _dbPath = @"..\..\..\..\_db\aes_encryption";
+        private static readonly string _dbPath = Path.Combine(TestBase.DbBasePath, "aes_encryption");
         #endregion
 
         #region interface

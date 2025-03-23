@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 
 namespace HatTrick.InMemDb.TestHarness
 {
@@ -6,7 +7,7 @@ namespace HatTrick.InMemDb.TestHarness
     {
         #region internals
         private static readonly string _dataset = $"assets";
-        private static readonly string _dbPath = @"..\..\..\..\_db\readonly_mode";
+        private static readonly string _dbPath = Path.Combine(TestBase.DbBasePath, "readonly_mode");
         #endregion
 
         #region ctors

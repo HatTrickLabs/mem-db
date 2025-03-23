@@ -7,6 +7,7 @@ namespace HatTrick.InMemDb.TestHarness
     public abstract class TestBase
     {
         #region internals
+        private static readonly string _dbBasePath = Path.Combine("..", "..", "..", "..", "_db");
         private string _dataset;
         private string _dbPath;
         private AssetResolver _assetResolver;
@@ -14,6 +15,8 @@ namespace HatTrick.InMemDb.TestHarness
         #endregion
 
         #region interface
+        public static string DbBasePath => _dbBasePath;
+
         public bool HasFailures => _failures is not null;
 
         public Failure[] Failures => _failures is null ? Array.Empty<Failure>() : _failures;
