@@ -33,11 +33,8 @@ namespace HatTrick.InMemDb.TestHarness
         #endregion
 
         #region run tests
-        static void RunTests(ICommand cmd)
+        static void RunTests(string container = null)
         {
-            string container = cmd["container"].GetValue<string>();
-            string method = cmd["method"].GetValue<string>();
-
             Assembly assembly = Assembly.GetExecutingAssembly();
             var tests = assembly.GetTypes().Where(t => t.Name.EndsWith("Tests") && !t.IsAbstract && t.IsPublic).ToArray();
             if (container is not null)
@@ -47,19 +44,15 @@ namespace HatTrick.InMemDb.TestHarness
                     throw new CommandExecutionException("No test methods found for provided for provided input.");
             }
 
-            List<Failure> failures = null;
-            int total = method is null ? 0 : 1;
+            int total = 0;
+            List<Failure> failures = new List<Failure>();
+            AssetResolver resolver = new AssetResolver();
 
-            if (method is not null)
-                failures = ExecuteSingleTest(tests[0], method);
-
-            else
-                failures = ExecuteTestSet(tests, out total);
-
-            if (failures.Count == 0)
+            for (int i = 0; i < tests.Length; i++)
             {
-                Console.WriteLine($"Executed {total} tests with 0 failures");
-                return;
+                var test = (TestBase)Activator.CreateInstance(tests[i], resolver);
+                test.Go(ref failures, out int count);
+                total += count;
             }
 
             Console.WriteLine($"Executed {total} tests with {failures.Count} failures");
@@ -70,32 +63,29 @@ namespace HatTrick.InMemDb.TestHarness
         }
         #endregion
 
-        #region execute single test
-        static List<Failure> ExecuteSingleTest(Type target, string method)
+        #region run test
+        static void RunTest(string container, string method)
         {
+            Assembly assembly = Assembly.GetExecutingAssembly();
+            var tests = assembly.GetTypes()
+                .Where(t => t.Name.EndsWith("Tests") && t.Name == container && !t.IsAbstract && t.IsPublic)
+                .ToArray();
+
+            if (tests is null || tests.Length == 0)
+                throw new CommandExecutionException("No test methods found for provided for provided input.");
+
             List<Failure> failures = new List<Failure>();
             AssetResolver resolver = new AssetResolver();
 
+            var target = tests[0];
             var test = (TestBase)Activator.CreateInstance(target, resolver);
-            test.Go(ref failures, method);
-            return failures;
-        }
-        #endregion
+            test.Go(ref failures, method);//pass in the single method name to execute
 
-        #region execute test set
-        static List<Failure> ExecuteTestSet(Type[] containers, out int total)
-        {
-            total = 0;
-            List<Failure> failures = new List<Failure>();
-            AssetResolver resolver = new AssetResolver();
-
-            for (int i = 0; i < containers.Length; i++)
+            Console.WriteLine($"Executed 1 tests with {failures.Count} failures");
+            foreach (var f in failures)
             {
-                var test = (TestBase)Activator.CreateInstance(containers[i], resolver);
-                test.Go(ref failures, out int count);
-                total += count;
+                Console.WriteLine($"Failed: {f.Target}...{f.Exception.Message}");
             }
-            return failures;
         }
         #endregion
 
@@ -120,9 +110,9 @@ namespace HatTrick.InMemDb.TestHarness
                         Console.Write("\t");
                         Console.WriteLine(method.Name);
                     }
-                    Console.WriteLine(string.Empty);
                 }
             }
+            Console.WriteLine(string.Empty);
         }
         #endregion
 
@@ -155,7 +145,15 @@ namespace HatTrick.InMemDb.TestHarness
         {
             var cmdDef = new CommandDefinition(name: "run");
             cmdDef.Help = "Runs all (or a subset) of the blanket tests...execute '--help list' to view the container and method filter options.";
-            cmdDef.Handler = RunTests;
+            cmdDef.Handler = (cmd) => {
+                string container = cmd["container"].GetValue<string>();
+                string method = cmd["method"].GetValue<string>();
+                if (method is not null)//the 'container required' constraint ensures that if method is not null a container value exists.
+                    RunTest(container, method);
+
+                else
+                    RunTests(container);
+            };
             cmdDef.AddOption<string>(
                 key: "container",
                 defaultArg: null,
