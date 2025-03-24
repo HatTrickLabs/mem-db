@@ -64,7 +64,7 @@ namespace HatTrick.InMemDb
             //let the consumer analyze each record to find the set they are looking for (and toss the rest).
             foreach (MemDbRecord<T> r in archReader.ReadArchiveRecords())
             {
-                yield return new MemDbArchivedRecord<T>(r.Id, r.State, r.StateSetAt, r.Value);
+                yield return new MemDbArchivedRecord<T>(r.Id, r.State, r.StateSetAt, r.IsEncrypted, r.Value);
             }
         }
         #endregion

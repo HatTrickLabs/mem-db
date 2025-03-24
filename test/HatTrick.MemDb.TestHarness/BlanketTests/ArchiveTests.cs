@@ -88,10 +88,13 @@ namespace HatTrick.InMemDb.TestHarness
         {
             base.Cleanup();
             string bakPath = Path.Combine(_dbPath, "_bak");
-            string[] files = Directory.GetFiles(bakPath);
-            for (int i = 0; i < files.Length; i++)
+            if (Directory.Exists(bakPath))
             {
-                File.Delete(files[i]);
+                string[] files = Directory.GetFiles(bakPath);
+                for (int i = 0; i < files.Length; i++)
+                {
+                    File.Delete(files[i]);
+                }
             }
         }
         #endregion

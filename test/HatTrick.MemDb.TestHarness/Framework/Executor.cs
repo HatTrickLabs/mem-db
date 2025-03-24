@@ -32,7 +32,7 @@ namespace HatTrick.InMemDb.TestHarness
             var action = this.ReflectTestMethod(against, methodName);
 
             if (action is null)
-                throw new CommandExecutionException("No test method found for provided for provided input.");
+                throw new CommandExecutionException("No test method found for provided input.");
 
             _tests = [action];
 

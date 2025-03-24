@@ -47,37 +47,55 @@ namespace HatTrick.InMemDb.TestHarness
                     throw new CommandExecutionException("No test methods found for provided for provided input.");
             }
 
+            List<Failure> failures = null;
+            int total = method is null ? 0 : 1;
+
+            if (method is not null)
+                failures = ExecuteSingleTest(tests[0], method);
+
+            else
+                failures = ExecuteTestSet(tests, out total);
+
+            if (failures.Count == 0)
+            {
+                Console.WriteLine($"Executed {total} tests with 0 failures");
+                return;
+            }
+
+            Console.WriteLine($"Executed {total} tests with {failures.Count} failures");
+            foreach (var f in failures)
+            {
+                Console.WriteLine($"Failed: {f.Target}...{f.Exception.Message}");
+            }
+        }
+        #endregion
+
+        #region execute single test
+        static List<Failure> ExecuteSingleTest(Type target, string method)
+        {
             List<Failure> failures = new List<Failure>();
             AssetResolver resolver = new AssetResolver();
 
-            int total = 0;
-            if (method is not null)
+            var test = (TestBase)Activator.CreateInstance(target, resolver);
+            test.Go(ref failures, method);
+            return failures;
+        }
+        #endregion
+
+        #region execute test set
+        static List<Failure> ExecuteTestSet(Type[] containers, out int total)
+        {
+            total = 0;
+            List<Failure> failures = new List<Failure>();
+            AssetResolver resolver = new AssetResolver();
+
+            for (int i = 0; i < containers.Length; i++)
             {
-                var test = (TestBase)Activator.CreateInstance(tests[0], resolver);
-                test.Go(ref failures, method);
-                total += 1;
+                var test = (TestBase)Activator.CreateInstance(containers[i], resolver);
+                test.Go(ref failures, out int count);
+                total += count;
             }
-            else
-            {
-                for (int i = 0; i < tests.Length; i++)
-                {
-                    var test = (TestBase)Activator.CreateInstance(tests[i], resolver);
-                    test.Go(ref failures, out int count);
-                    total += count;
-                }
-            }
-            if (failures.Count > 0)
-            {
-                Console.WriteLine($"Executed {total} tests with {failures.Count} failures");
-                foreach (var f in failures)
-                {
-                    Console.WriteLine($"Failed: {f.Target}...{f.Exception.Message}");
-                }
-            }
-            else
-            {
-                Console.WriteLine($"Executed {total} tests with 0 failures");
-            }
+            return failures;
         }
         #endregion
 
@@ -120,9 +138,14 @@ namespace HatTrick.InMemDb.TestHarness
         static void RegisterListCommand(DefinitionRegistry registry)
         {
             var cmdDef = new CommandDefinition(name: "list");
-            cmdDef.Help = "Lists all test method container names.";
+            cmdDef.Help = "Lists all test method container names and optionally each containers test methods.";
             cmdDef.Handler = (cmd) => { ListTestContainerNames(cmd["include-methods"].GetValue<bool>()); };
-            cmdDef.AddOption<bool>(key: "include-methods", defaultArg: false, help: "Include all container test methods.", (terse: null, verbose: "--im"));
+            cmdDef.AddOption<bool>(
+                key: "include-methods", 
+                defaultArg: false, 
+                help: "Include all container test methods.", 
+                flags: (terse: "-m", verbose: "--include-methods")
+            );
             registry.Add(cmdDef);
         }
         #endregion
@@ -131,7 +154,7 @@ namespace HatTrick.InMemDb.TestHarness
         static void RegisterRunCommand(DefinitionRegistry registry)
         {
             var cmdDef = new CommandDefinition(name: "run");
-            cmdDef.Help = "Runs the entire suite of blanket MemDb tests.";
+            cmdDef.Help = "Runs all (or a subset) of the blanket tests...execute '--help list' to view the container and method filter options.";
             cmdDef.Handler = RunTests;
             cmdDef.AddOption<string>(
                 key: "container",
@@ -139,12 +162,14 @@ namespace HatTrick.InMemDb.TestHarness
                 help: "The name of single test container (restrict run to methods within a container)...see 'List' command for container names.",
                 flags: (terse: "-c", verbose: "--container")
             );
+
             cmdDef.AddOption<string>(
                 key: "method",
                 defaultArg: null,
-                help: "The name of a method within the provided container name...see 'List --im' command for container and method names.",
+                help: "The name of a method within the provided container name...see 'List --include-methods' command for container and method names.",
                 flags: (terse: "-m", verbose: "--method")
             );
+
             cmdDef.ApplyConstraint(
                 constraint: (cmd) => {
                     if (cmd["method"].GetValue<string>() is not null)
@@ -154,8 +179,9 @@ namespace HatTrick.InMemDb.TestHarness
                     return true;
                 },
                 name: "container required",
-                description: "Adding a 'method' argument requires that a 'container' argument also be provided (must be a method within the container)."
+                description: "Adding a 'method' argument requires that a 'container' argument also be provided (must be a method within the provided container)."
             );
+
             registry.Add(cmdDef);
         }
         #endregion

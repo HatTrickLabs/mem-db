@@ -65,7 +65,7 @@ namespace HatTrick.InMemDb
             using (ZipArchive zip = ZipFile.Open(_fullArchivePath, ZipArchiveMode.Read))
             {
                 (string key, ZipArchiveEntry[] entries)[] sets = zip.Entries
-                    .GroupBy(e => e.Name.Substring(0, 16))
+                    .GroupBy(e => e.Name.Substring(0, 16))//first 16 is timestamp formated as: yyyyMMdd_HHmm_ss
                     .Select(g => (g.Key, g.ToArray()))
                     .ToArray();
 
@@ -79,7 +79,9 @@ namespace HatTrick.InMemDb
                 foreach (var set in sets)
                 {
                     var mapEntry = set.entries.First(e => e.Comment == "map");
-                    MemDbMap map = new MemDbMap("xxx", false);//this is just tmp in mem only, don't init to disk...
+                    //this is just tmp in mem only, don't init to disk...
+                    //simply give the ctor a bunk path, do not initialize and never flush
+                    MemDbMap map = new MemDbMap("xxx", false);
 
                     using (var mapStream = mapEntry.Open())
                     {
@@ -119,7 +121,6 @@ namespace HatTrick.InMemDb
                                 {
                                     //move deserialize into local func to take advantage of stackalloc within loop (although the yeild return may actually be enough to flush scope).
                                     value = this.DeserializeRecord(dbReader, ptr.Length);
-                                    //value = _serializer.Deserialize(dbReader, ptr.Length);//T value
                                 }
 
                                 var record = new MemDbRecord<T>(ptr.Id, value, ptr.State, ptr.StateSetAt, ptr.IsEncrypted, -1, i);
