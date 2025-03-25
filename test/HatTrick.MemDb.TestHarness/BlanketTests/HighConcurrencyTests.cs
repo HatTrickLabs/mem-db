@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace HatTrick.InMemDb.TestHarness
 {
@@ -16,7 +17,11 @@ namespace HatTrick.InMemDb.TestHarness
         #region ctors
         public HighConcurrencyTests(AssetResolver assetResolver) : base(_dataset, _dbPath, assetResolver)
         {
-            MemDb.ConfigureFor<DigitalAsset>(_dataset, _dbPath).Register();
+            MemDb.ConfigureFor<DigitalAsset>(_dataset, _dbPath)
+                .CloneWith(() => new DigitalAssetCloner())
+                .SerializeWith(() => new DigitalAssetBinarySerializer())
+                .EncryptWithPassword(() => "My super complex password....")
+                .Register();
         }
         #endregion
 
@@ -210,6 +215,65 @@ namespace HatTrick.InMemDb.TestHarness
         }
         #endregion
 
+        #region parallel flush
+        public void Test_ParallelFlush()
+        {
+            List<DigitalAsset> allAssets = new List<DigitalAsset>(10_000);
+            allAssets.AddRange(base.ResolveAssetSet());
+            allAssets.AddRange(base.ResolveAssetSet());
+            allAssets.AddRange(base.ResolveAssetSet());
+            allAssets.AddRange(base.ResolveAssetSet());
+            allAssets.AddRange(base.ResolveAssetSet());
+            allAssets.AddRange(base.ResolveAssetSet());
+            allAssets.AddRange(base.ResolveAssetSet());
+            allAssets.AddRange(base.ResolveAssetSet());
+            allAssets.AddRange(base.ResolveAssetSet());
+            allAssets.AddRange(base.ResolveAssetSet());
+
+            using var db = MemDb.Open<DigitalAsset>(_dataset);
+
+            //generate 5000 more inserts and 5000 more updates while parallel flushes are running
+            Thread t0 = new Thread(() => {
+                Parallel.For(0, allAssets.Count, (i) =>
+                {
+                    db.Insert(allAssets[i], (id) => allAssets[i].Id = id);
+                    db.Update(a => a.XXHash += 1, (a) => a.Id == allAssets[i].Id);
+                });
+            });
+
+            Thread t1 = new Thread(() => { db.Flush(); db.Flush(); db.Flush(); });
+            Thread t2 = new Thread(() => { db.Flush(); db.Flush(); db.Flush(); });
+            Thread t3 = new Thread(() => { db.Flush(); db.Flush(); db.Flush(); });
+
+            //generate 5000 inserts and 5000 updates for the asset set...
+            Parallel.For(0, allAssets.Count, (i) =>
+            {
+                db.Insert(allAssets[i], (id) => allAssets[i].Id = id);
+                int updated = db.Update(a => a.XXHash += 1, (a) => a.Id == allAssets[i].Id);
+                if (updated == 0)
+                    Console.WriteLine(allAssets[i].Id);
+            });
+
+            allAssets.ForEach(a => a.Id = 0);
+
+            t0.Start();
+            t1.Start();
+            t2.Start();
+            t3.Start();
+
+            t0.Join();
+            t1.Join();
+            t2.Join();
+            t3.Join();
+
+            //we inserted all assets (5000) two times
+            Assert.IsEqual(db.Count(), allAssets.Count * 2);
+
+            //we incremented every asset xxhash to 1 immediately after each insert
+            Assert.IsEqual(db.Count(a => a.XXHash == 1), allAssets.Count * 2);
+        }
+        #endregion
+
         #region high concurrency chaos
         public void Test_HighConcurrencyChaosNoFlush()
         {
@@ -281,7 +345,7 @@ namespace HatTrick.InMemDb.TestHarness
                     });
                 });
 
-                //t5 will attempt to delete the 1000 newly inserted records in a loop until all 1000 show up, are found and deleted.
+                //t5 will attempt to delete the 1000 newly inserted records in a loop until all 1000 show up, found and deleted.
                 int deleted = 0;
                 Thread t5 = new Thread(() => {
                     do
