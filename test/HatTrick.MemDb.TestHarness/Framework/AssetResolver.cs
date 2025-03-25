@@ -7,7 +7,7 @@ namespace HatTrick.InMemDb.TestHarness
     public class AssetResolver
     {
         #region internals
-        private readonly string _path = @"..\..\..\..\assets";
+        private readonly string _path = Path.Combine("..", "..", "..", "..", "assets");
         private Lock _lock;
         private DigitalAsset[] _assets;
         #endregion
