@@ -32,6 +32,10 @@ namespace HatTrick.InMemDb
         private DateTime _now;
         #endregion
 
+        #region interface
+        public static readonly string TimestampFormat = "yyyyMMdd_HHmm_ss_ffff";
+        #endregion
+
         #region ctors
         public MemDbArchiver(string datasetName, string path, string archivePath)
         {
@@ -55,7 +59,7 @@ namespace HatTrick.InMemDb
             _fullMapPath = Path.Combine(path, $"htl.{datasetName}.map");
 
             _now = DateTime.Now;
-            string now = _now.ToString("yyyyMMdd_HHmm_ss");
+            string now = _now.ToString(TimestampFormat);
             _mapArchiveFileName = $"{now}.htl.{datasetName}.map.arch";
             _dbArchiveFileName = $"{now}.htl.{datasetName}.db.arch";
             _fullMapArchivePath = Path.Combine(archivePath, _mapArchiveFileName);

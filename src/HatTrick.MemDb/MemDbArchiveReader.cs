@@ -65,7 +65,8 @@ namespace HatTrick.InMemDb
             using (ZipArchive zip = ZipFile.Open(_fullArchivePath, ZipArchiveMode.Read))
             {
                 (string key, ZipArchiveEntry[] entries)[] sets = zip.Entries
-                    .GroupBy(e => e.Name.Substring(0, 16))//first 16 is timestamp formated as: yyyyMMdd_HHmm_ss
+                    //first 21 is timestamp formated as: yyyyMMdd_HHmm_ss_ffff
+                    .GroupBy(e => e.Name.Substring(0, MemDbArchiver.TimestampFormat.Length))
                     .Select(g => (g.Key, g.ToArray()))
                     .ToArray();
 
