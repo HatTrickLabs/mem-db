@@ -1,5 +1,8 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace HatTrick.InMemDb.TestHarness
 {
@@ -45,8 +48,8 @@ namespace HatTrick.InMemDb.TestHarness
         }
         #endregion
 
-        #region defrag
-        public void Test_Defrag()
+        #region defrag with archive
+        public void Test_DefragWithArchive()
         {
             Stats resolve = Stats.FreshCount | Stats.StaleCount | Stats.DeletedCount | Stats.FreshSize | Stats.StaleSize | Stats.DeletedSize;
             MemDbStatistics stats = null;
@@ -73,6 +76,10 @@ namespace HatTrick.InMemDb.TestHarness
                 stats = db.ResolveStatistics(resolve);
             }
 
+            Assert.IsEqual(stats.FreshCount, (txtCnt + jsonCnt));//we deleted the unknown assets
+            Assert.IsEqual(stats.StaleCount, txtCnt);//we updated all the txt assets leaving all the original txt assets marked stale
+            Assert.IsEqual(stats.DeletedCount, unknownCnt);//we deleted all the unknown assets marking all as deleted
+
             MemDb.Defrag(_dataset);
 
             MemDbStatistics stats2 = null;
@@ -80,6 +87,68 @@ namespace HatTrick.InMemDb.TestHarness
             {
                 stats2 = db.ResolveStatistics(resolve);
             }
+
+            Assert.IsEqual(stats2.FreshCount, (txtCnt + jsonCnt));
+            Assert.IsEqual(stats2.StaleCount, 0);
+            Assert.IsEqual(stats2.DeletedCount, 0);
+
+            List<MemDbArchivedRecord<DigitalAsset>> archives = new List<MemDbArchivedRecord<DigitalAsset>>();
+            foreach (var rec in MemDb.ReadArchive<DigitalAsset>(_dataset))
+            {
+                archives.Add(rec);
+            }
+
+            //we updated txt recs and deleted unknowns
+            Assert.IsEqual(archives.Count, (txtCnt + unknownCnt));
+            Assert.IsEqual(archives.Count(a => a.State == RecordState.Stale), txtCnt);
+            Assert.IsEqual(archives.Count(a => a.State == RecordState.Deleted), unknownCnt);
+        }
+        #endregion
+
+        #region multi defrag with archive
+        public void Test_MultiDefragWithArchive()
+        {
+            int txtCnt;
+            int jsonCnt;
+            int unknownCnt;
+
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                this.LoadDb(db, out txtCnt, out jsonCnt, out unknownCnt);
+            }
+
+            long timestamp = DateTime.UtcNow.ToBinary();
+
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                db.Update(a => a.XXHash = 1, a => a.AssetType == DigitalAssetType.Text);
+                db.Update(a => a.XXHash = 1, a => a.AssetType == DigitalAssetType.Unknown);
+            }
+
+            MemDb.Defrag(_dataset);
+
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                db.Update(a => a.XXHash = 1, a => a.AssetType == DigitalAssetType.Json);
+                db.Delete(a => a.AssetType == DigitalAssetType.Unknown);
+            }
+
+            MemDb.Defrag(_dataset);
+
+            var archives = new List<MemDbArchivedRecord<DigitalAsset>>(txtCnt + unknownCnt + jsonCnt + unknownCnt);
+            foreach (var rec in MemDb.ReadArchive<DigitalAsset>(_dataset))
+            {
+                archives.Add(rec);
+            }
+
+            //we should have txtCnt + unknownCnt + jsonCnt + unknownCnt total archive records
+            Assert.IsEqual(archives.Count, txtCnt + unknownCnt + jsonCnt + unknownCnt);
+
+            //we should have txtCnt + unknownCnt + jsonCnt stale records
+            Assert.IsEqual(archives.Count(a => a.State == RecordState.Stale), txtCnt + unknownCnt + jsonCnt);
+
+            //we should have unknownCnt deleted records
+            Assert.IsEqual(archives.Count(a => a.State == RecordState.Deleted), unknownCnt);
         }
         #endregion
 
