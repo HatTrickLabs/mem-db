@@ -43,6 +43,8 @@ namespace HatTrick.InMemDb
             IMemDbDefragmenter defragmenter = new MemDbDefragmenter(config.DatasetName, config.Path);
 
             defragmenter.Defrag();
+
+            config.Clear();
         }
         #endregion
 
@@ -66,6 +68,8 @@ namespace HatTrick.InMemDb
             {
                 yield return new MemDbArchivedRecord<T>(r.Id, r.State, r.StateSetAt, r.IsEncrypted, r.Value);
             }
+
+            configOfT.Clear();
         }
         #endregion
 
