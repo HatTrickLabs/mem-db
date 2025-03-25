@@ -298,13 +298,11 @@ namespace HatTrick.InMemDb
                 int count = reader.ReadInt32();
                 _lastId = reader.ReadUInt32();
 
-                //check for corruption...
-                long pointerLength = (int)reader.BaseStream.Length - (sizeof(int) + sizeof(uint));
-                long persisted = pointerLength / MemDbPointer.Size;
-                //TODO: why did i do a lt here vs a !eq ???
-                if (persisted < count)//TODO: after the integrity checker / corrupt file fixer util is built, reference the util in this exception.
-                    throw new MemDbCorruptException($"Mismatch between persisted pointer count '{persisted}' vs expected pointer count '{count}'.");
-
+                //we can only do the corruption check IF the underlying stream is seekable (archive compression streams are NOT seekable).
+                if (reader.BaseStream.CanSeek)
+                {
+                    this.EnsureNoWriteCorruption(reader.BaseStream, count);
+                }
                 _pointers = new List<MemDbPointer>((int)(count * 1.1));
 
                 for (int i = 0; i < count; i++)
@@ -314,6 +312,18 @@ namespace HatTrick.InMemDb
 
                 _nextFlushIdx = count;
             }
+        }
+        #endregion
+
+        #region ensure no write corruption
+        private void EnsureNoWriteCorruption(Stream stream, int expected)
+        {
+            //check for corruption...
+            long pointerLength = (int)stream.Length - (sizeof(int) + sizeof(uint));
+            long persisted = pointerLength / MemDbPointer.Size;
+
+            if (persisted < expected)//TODO: after the integrity checker / corrupt file fixer util is built, reference the util in this exception.
+                throw new MemDbCorruptException($"Mismatch between persisted pointer count '{persisted}' vs expected pointer count '{expected}'.");
         }
         #endregion
     }
