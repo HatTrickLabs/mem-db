@@ -60,78 +60,83 @@ namespace HatTrick.InMemDb
         #region read archive records
         public IEnumerable<MemDbRecord<T>> ReadArchiveRecords()
         {
-            //TODO: refactor this down into safer chunks...Need to ensure the tmp files get cleaned
-            //up in a finally block.
-            using (ZipArchive zip = ZipFile.Open(_fullArchivePath, ZipArchiveMode.Read))
+            using ZipArchive zip = ZipFile.Open(_fullArchivePath, ZipArchiveMode.Read);
+
+            (string key, ZipArchiveEntry[] entries)[] sets = zip.Entries
+                //first 21 is timestamp formated as: yyyyMMdd_HHmm_ss_ffff
+                .GroupBy(e => e.Name.Substring(0, MemDbArchiver.TimestampFormat.Length))
+                .Select(g => (g.Key, g.ToArray()))
+                .ToArray();
+
+            Array.Sort(sets, (a, b) => a.key.CompareTo(b.key));
+
+            //should result in
+            //{x, [ x.htl.datasetName.db.arch, x.htl.datasetName.map.arch ] }
+            //{y, [ y.htl.datasetName.db.arch, y.htl.datasetName.map.arch ] }
+            //{z, [ z.htl.datasetName.db.arch, z.htl.datasetName.map.arch ] }
+
+            foreach (var set in sets)
             {
-                (string key, ZipArchiveEntry[] entries)[] sets = zip.Entries
-                    //first 21 is timestamp formated as: yyyyMMdd_HHmm_ss_ffff
-                    .GroupBy(e => e.Name.Substring(0, MemDbArchiver.TimestampFormat.Length))
-                    .Select(g => (g.Key, g.ToArray()))
-                    .ToArray();
+                var mapEntry = set.entries.First(e => e.Comment == "map");
 
-                Array.Sort(sets, (a, b) => a.key.CompareTo(b.key));
-
-                //should result in
-                //{x, [ x.htl.datasetName.db.arch, x.htl.datasetName.map.arch ] }
-                //{y, [ y.htl.datasetName.db.arch, y.htl.datasetName.map.arch ] }
-                //{z, [ z.htl.datasetName.db.arch, z.htl.datasetName.map.arch ] }
-
-                foreach (var set in sets)
+                //this is just tmp in mem only, don't init to disk...
+                //simply give the ctor a bunk path, do not initialize and never flush
+                MemDbMap map = new MemDbMap("xxx", false);
+                using (var mapStream = mapEntry.Open())
                 {
-                    var mapEntry = set.entries.First(e => e.Comment == "map");
-                    //this is just tmp in mem only, don't init to disk...
-                    //simply give the ctor a bunk path, do not initialize and never flush
-                    MemDbMap map = new MemDbMap("xxx", false);
-
-                    using (var mapStream = mapEntry.Open())
+                    using (var mapReader = new BinaryReader(mapStream))
                     {
-                        using (var mapReader = new BinaryReader(mapStream))
-                        {
-                            map.DeserializeFrom(mapReader);
-                        }
+                        map.DeserializeFrom(mapReader);
                     }
-
-                    var dbEntry = set.entries.First(e => e.Comment == "db");
-                    string tmpArchFilePath = Path.Combine(_archivePath, dbEntry.Name);
-                    dbEntry.ExtractToFile(tmpArchFilePath, true);
-                    using (var dbStream = new FileStream(tmpArchFilePath, FileMode.Open, FileAccess.Read))
-                    {
-                        using (var dbReader = new BinaryReader(dbStream))
-                        {
-                            MemDbPointer ptr;
-                            long cnt = 0;
-                            Stream fsDb = dbReader.BaseStream;
-                            for (int i = 0; i < map.Count; i++)
-                            {
-                                ptr = map[i];
-
-                                if (ptr.IsEncrypted && !this.IsEncryptionReady)
-                                {
-                                    fsDb.Position += MemDbAESEncryptor.CalculateCryptoByteLength(ptr.Length);
-                                    continue;
-                                }
-
-                                T value = null;
-                                if (ptr.IsEncrypted)
-                                {
-                                    Span<byte> raw = _encryptor.Decrypt(fsDb, ptr.Length);
-                                    value = _serializer.Deserialize(raw);
-                                }
-                                else
-                                {
-                                    //move deserialize into local func to take advantage of stackalloc within loop (although the yeild return may actually be enough to flush scope).
-                                    value = this.DeserializeRecord(dbReader, ptr.Length);
-                                }
-
-                                var record = new MemDbRecord<T>(ptr.Id, value, ptr.State, ptr.StateSetAt, ptr.IsEncrypted, -1, i);
-                                cnt += 1;
-                                yield return record;
-                            }
-                        }
-                    }
-                    File.Delete(tmpArchFilePath);
                 }
+
+                var dbEntry = set.entries.First(e => e.Comment == "db");
+                string tmpArchFilePath = Path.Combine(_archivePath, dbEntry.Name);
+                dbEntry.ExtractToFile(tmpArchFilePath, true);
+
+                foreach (var rec in this.EmitArchiveRecords(tmpArchFilePath, map))
+                {
+                    yield return rec;
+                }
+
+                File.Delete(tmpArchFilePath);
+            }
+        }
+        #endregion
+
+        #region emit archive records
+        private IEnumerable<MemDbRecord<T>> EmitArchiveRecords(string tmpArchFilePath, MemDbMap map)
+        {
+            using var dbStream = new FileStream(tmpArchFilePath, FileMode.Open, FileAccess.Read);
+            using var dbReader = new BinaryReader(dbStream);
+
+            MemDbPointer ptr;
+            Stream fsDb = dbReader.BaseStream;
+
+            for (int i = 0; i < map.Count; i++)
+            {
+                ptr = map[i];
+
+                if (ptr.IsEncrypted && !this.IsEncryptionReady)
+                {
+                    fsDb.Position += MemDbAESEncryptor.CalculateCryptoByteLength(ptr.Length);
+                    continue;
+                }
+
+                T value = null;
+                if (ptr.IsEncrypted)
+                {
+                    Span<byte> raw = _encryptor.Decrypt(fsDb, ptr.Length);
+                    value = _serializer.Deserialize(raw);
+                }
+                else
+                {
+                    //move deserialize into local func to take advantage of stackalloc within loop (although the yeild return may actually be enough to flush scope).
+                    value = this.DeserializeRecord(dbReader, ptr.Length);
+                }
+
+                var record = new MemDbRecord<T>(ptr.Id, value, ptr.State, ptr.StateSetAt, ptr.IsEncrypted, -1, i);
+                yield return record;
             }
         }
         #endregion
