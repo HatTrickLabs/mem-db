@@ -64,6 +64,13 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region clone
+        internal MemDbPointer Clone()
+        {
+            return new MemDbPointer(this.Id, this.State, this.StateSetAt, this.IsEncrypted, this.Position, this.Length, this.Flushed);
+        }
+        #endregion
+
         #region serialize to
         internal void SerializeTo(BinaryWriter writer)
         {

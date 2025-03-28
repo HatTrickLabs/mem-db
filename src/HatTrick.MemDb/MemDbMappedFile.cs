@@ -47,36 +47,24 @@ namespace HatTrick.InMemDb
         public bool IsEncryptionReady => _encryptor is not null;
         #endregion
 
-        #region constructors
-        internal MemDbMappedFile(string datasetName, string path, AccessMode mode,  IMemDbSerializer<T> serializer)
-            : this(datasetName, path, mode, serializer, null)
-        { }
-
-        internal MemDbMappedFile(string datasetName, string path, AccessMode mode, IMemDbSerializer<T> serializer, IMemDbEncryptor encryptor)
+        #region ctors
+        internal MemDbMappedFile(MemDbConfiguration<T> config)
         {
-            if (string.IsNullOrEmpty(datasetName))
-                throw new ArgumentException("arg must have a value.", nameof(datasetName));
+            if (config is null)
+                throw new ArgumentNullException(nameof(config));
 
-            if (string.IsNullOrWhiteSpace(path))
-                throw new ArgumentException("arg must have a value.", nameof(path));
+            _path = config.Path;
+            _datasetName = config.DatasetName;
+            _mode = config.Mode;
 
-            if (serializer == null)
-                throw new ArgumentNullException(nameof(serializer));
+            _serializer = config.GetSerializer();
+            if (_serializer is IBinaryReadMemDbSerializer<T> binReadSerializer)
+                _binReadSerializer = binReadSerializer;
 
-            //the encryptor can be null.
+            _encryptor = config.GetEncryptor();
 
-            _path = path;
-            _datasetName = datasetName;
-            _mode = mode;
-
-            _serializer = serializer;
-            if (serializer is IBinaryReadMemDbSerializer<T> binReadSer)
-                _binReadSerializer = binReadSer;
-
-            _encryptor = encryptor;
-
-            _fullDbPath = Path.Combine(path, $"htl.{datasetName}.db");
-            _fullMapPath = Path.Combine(path, $"htl.{datasetName}.map");
+            _fullDbPath = config.GetFullDbFilePath();
+            _fullMapPath = config.GetFullMapFilePath();
 
             _flushLock = new();
 
@@ -410,8 +398,12 @@ namespace HatTrick.InMemDb
                         }
                         catch
                         {
-                            //reset the len of file back to position before this pass started.
-                            fsDb.SetLength(startPos);
+                            //reset the len of file back to position + length of the last pointer.
+                            MemDbPointer lPtr = _map[^1];
+                            uint length = lPtr.Position + (uint)lPtr.Length;
+                            if (fsDb.Length > length)
+                                fsDb.SetLength(lPtr.Position + lPtr.Length);
+
                             //ensure pointers successfully added get flushed before tossing the ex
                             _map.Flush();
                             throw;

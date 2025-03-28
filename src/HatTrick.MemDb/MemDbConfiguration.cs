@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Security.Cryptography;
 using System.Text;
+using System.Security.Cryptography;
 
 namespace HatTrick.InMemDb
 {
@@ -9,26 +9,50 @@ namespace HatTrick.InMemDb
     {
         #region const
         public const int MinPasswordLength = 10;
+        public const string ArchiveTimestampFormat = "yyyyMMdd_HHmm_ss_ffff";
+        //private const string MapNameFormat = "htl.{0}.map";
+        //private const string DbNameFormat  = "htl.{0}.db";
+        //private const string MapArchiveNameFormat = "{now}.htl.{datasetName}.map.arch";
+        //private const string DbArchiveNameFormat = "{now}.htl.{datasetName}.db.arch";
         #endregion
 
         #region internals
+        private bool _isInitialized;
         private string _datasetName;
         private string _path;
         private string _archivePath;
+        private AccessMode _mode;
         #endregion
 
         #region interface
+        protected bool IsInitialized => _isInitialized;
         public string DatasetName => _datasetName;
         public string Path => _path;
         internal bool ShouldArchive => _archivePath is not null;
         internal string ArchivePath => _archivePath;
+        internal AccessMode Mode => _mode;
         #endregion
 
         #region constructors
-        protected MemDbConfiguration(string datasetName, string path)
+        protected MemDbConfiguration(string datasetName, string path, AccessMode mode)
         {
             _datasetName = datasetName ?? throw new ArgumentNullException(nameof(datasetName));
             _path = path ?? throw new ArgumentNullException(nameof(path));
+            _mode = mode;
+        }
+        #endregion
+
+        #region initialize
+        internal virtual void Initialize()
+        {
+            _isInitialized = true;
+        }
+        #endregion
+
+        #region set mode
+        protected void SetMode(AccessMode mode)
+        {
+            _mode = mode;
         }
         #endregion
 
@@ -61,8 +85,48 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
-        #region clear [abstract]
-        internal abstract void Clear();
+        #region get full map file path
+        internal string GetFullMapFilePath()
+        {
+            return System.IO.Path.Combine(_path, $"htl.{_datasetName}.map");
+        }
+        #endregion
+
+        #region get full db file path
+        internal string GetFullDbFilePath()
+        {
+            return System.IO.Path.Combine(_path, $"htl.{_datasetName}.db");
+        }
+        #endregion
+
+        #region get full map archive file path
+        internal string GetFullMapArchiveFilePath(DateTime at)
+        {
+            string timestamp = at.ToString(ArchiveTimestampFormat);
+            return System.IO.Path.Combine(_archivePath, $"{timestamp}htl.{_datasetName}.map.arch");
+        }
+        #endregion
+
+        #region get full db archive file path
+        internal string GetFullDbArchiveFilePath(DateTime at)
+        {
+            string timestamp = at.ToString(ArchiveTimestampFormat);
+            return System.IO.Path.Combine(_archivePath, $"{timestamp}.htl.{_datasetName}.db.arch");
+        }
+        #endregion
+
+        #region get zip archive full file path
+        internal string GetZipArchiveFullFilePath()
+        {
+            return System.IO.Path.Combine(_archivePath, $"htl.{_datasetName}.zip");
+        }
+        #endregion
+
+        #region clear
+        internal virtual void Clear()
+        {
+            _isInitialized = false;
+        }
         #endregion
     }
     #endregion
@@ -94,21 +158,15 @@ namespace HatTrick.InMemDb
         private IMemDbCloner<T> _cloner;
         private byte[] _encryptionKey;
         private IMemDbEncryptor _encryptor;
-        private IMemDbCacher<T> _cache;
+        private IMemDbCache<T> _cache;
         private IMemDbPersister<T> _persister;
-        private AccessMode _mode;
-
-        private bool _isInitialized;
         #endregion
 
         #region constructors
         internal MemDbConfiguration(string datasetName, string path, Action<MemDbConfiguration<T>> registerCallback)
-            : base(datasetName, path)
+            : base(datasetName, path, AccessMode.ReadWrite)
         {
             _registerCallback = registerCallback ?? throw new ArgumentNullException(nameof(registerCallback));
-
-            //default mode should be read/write
-            _mode = AccessMode.ReadWrite;
 
             //set the default providers
             _serializerProvider = () => MemDbJsonSerializer<T>.GetInstance();
@@ -117,9 +175,9 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region set mode
-        public IMemDBConfigurationBuilder<T> SetMode(AccessMode mode)
+        public new IMemDBConfigurationBuilder<T> SetMode(AccessMode mode)
         {
-            _mode = mode;
+            base.SetMode(mode);
             return this;
         }
         #endregion
@@ -209,27 +267,28 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region initialize
-        internal void Initialize()
+        internal override void Initialize()
         {
-            if (_isInitialized)
+            if (base.IsInitialized)
                 return;
 
+            base.Initialize();
             _encryptionKey = _encryptionKeyProvider?.Invoke() ?? null;
             _encryptor = _encryptionKey is null ? null : new MemDbAESEncryptor(_encryptionKey);
             _serializer = _serializerProvider();//MUST BE BEFORE CLONER...clone provider passes this as arg on internal ctor
             _cloner = _clonerProvider();
-            _persister = new MemDbMappedFile<T>(base.DatasetName, base.Path, _mode, _serializer, _encryptor);
-            _cache = new MemDbCache<T>(base.DatasetName, _cloner, _persister);
-
-            _isInitialized = true;
+            _persister = new MemDbMappedFile<T>(this);//MUST BE BEFORE CACHE...Cache passes this as arg on internal ctor
+            _cache = new MemDbCache<T>(this);
         }
         #endregion
 
         #region clear
         internal override void Clear()
         {
-            if (!_isInitialized)
+            if (!base.IsInitialized)
                 return;
+
+            base.Clear();
 
             _encryptionKey = null;
             _encryptor = null;
@@ -237,25 +296,21 @@ namespace HatTrick.InMemDb
             _cloner = null;
             _persister = null;
             _cache = null;
-
-            _isInitialized = false;
         }
         #endregion
 
-        #region ensure intialized
-        private void EnsureInitalized()
+        #region get cloner
+        public IMemDbCloner<T> GetCloner()
         {
-            if (_isInitialized)
-                return;
-
             this.Initialize();
+            return _cloner;
         }
         #endregion
 
         #region get encryptor
         public IMemDbEncryptor GetEncryptor()
         {
-            this.EnsureInitalized();
+            this.Initialize();
             return _encryptor;
         }
         #endregion
@@ -263,15 +318,23 @@ namespace HatTrick.InMemDb
         #region get serializer
         internal IMemDbSerializer<T> GetSerializer()
         {
-            this.EnsureInitalized();
+            this.Initialize();
             return _serializer;
         }
         #endregion
 
-        #region get cache
-        internal IMemDbCacher<T> GetCache()
+        #region get persister
+        internal IMemDbPersister<T> GetPersister()
         {
-            this.EnsureInitalized();
+            this.Initialize();
+            return _persister;
+        }
+        #endregion
+
+        #region get cache
+        internal IMemDbCache<T> GetCache()
+        {
+            this.Initialize();
             return _cache;
         }
         #endregion

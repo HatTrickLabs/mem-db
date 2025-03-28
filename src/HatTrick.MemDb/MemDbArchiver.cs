@@ -8,19 +8,15 @@ namespace HatTrick.InMemDb
     {
         #region internals
         private string _path;
-        private string _name;
+        private string _datasetName;
         private string _archivePath;
 
         private string _fullMapPath;
         private string _fullDbPath;
 
-        string _mapArchiveFileName;
-        string _dbArchiveFileName;
-
         string _fullMapArchivePath;
         string _fullDbArchivePath;
 
-        string _zipArchiveFileName;
         string _fullZipArchivePath;
 
         private MemDbMap _map;
@@ -32,41 +28,31 @@ namespace HatTrick.InMemDb
         private DateTime _now;
         #endregion
 
-        #region interface
-        public static readonly string TimestampFormat = "yyyyMMdd_HHmm_ss_ffff";
-        #endregion
-
         #region ctors
-        public MemDbArchiver(string datasetName, string path, string archivePath)
+        internal MemDbArchiver(MemDbConfiguration config)
         {
-            if (string.IsNullOrEmpty(datasetName))
-                throw new ArgumentException("arg must have a value.", nameof(datasetName));
+            if (config is null)
+                throw new ArgumentNullException(nameof(config));
 
-            if (string.IsNullOrWhiteSpace(path))
-                throw new ArgumentException("arg must have a value.", nameof(path));
+            if (!config.ShouldArchive)
+                throw new InvalidOperationException($"Configuration for provided dataset '{config.DatasetName}' is not configured to archive on defrag.");
 
-            if (string.IsNullOrEmpty(archivePath))
-                throw new ArgumentException("arg must have a value.", nameof(archivePath));
+            if (!Directory.Exists(config.Path))
+                throw new ArgumentException($"No directory exists at {nameof(config)}.{nameof(config.Path)}");
 
-            _path = path;
-            _name = datasetName;
-            _archivePath = archivePath;
+            _path = config.Path;
+            _datasetName = config.DatasetName;
+            _archivePath = config.ArchivePath;
 
-            if (!Directory.Exists(path))
-                throw new ArgumentException("No directory exists for provided path.", nameof(path));
 
-            _fullDbPath = Path.Combine(path, $"htl.{datasetName}.db");
-            _fullMapPath = Path.Combine(path, $"htl.{datasetName}.map");
+
+            _fullDbPath = config.GetFullDbFilePath();
+            _fullMapPath = config.GetFullMapFilePath();
 
             _now = DateTime.Now;
-            string now = _now.ToString(TimestampFormat);
-            _mapArchiveFileName = $"{now}.htl.{datasetName}.map.arch";
-            _dbArchiveFileName = $"{now}.htl.{datasetName}.db.arch";
-            _fullMapArchivePath = Path.Combine(archivePath, _mapArchiveFileName);
-            _fullDbArchivePath = Path.Combine(archivePath, _dbArchiveFileName);
-
-            _zipArchiveFileName = $"htl.{datasetName}.zip";
-            _fullZipArchivePath = Path.Combine(archivePath, _zipArchiveFileName);
+            _fullMapArchivePath = config.GetFullMapArchiveFilePath(_now);
+            _fullDbArchivePath = config.GetFullDbArchiveFilePath(_now);
+            _fullZipArchivePath = config.GetZipArchiveFullFilePath();
         }
         #endregion
 
@@ -193,6 +179,8 @@ namespace HatTrick.InMemDb
                 origDb.Position = oPtr.Position;
                 int actualLen = oPtr.IsEncrypted ? MemDbAESEncryptor.CalculateCryptoByteLength(oPtr.Length) : oPtr.Length;
 
+                //we do not need to decrypt anything when moving to archive, simply copy the encrypted data
+                //directly from the original file stream over to the archive file stream
                 origDb.ReadExactly(buffer, 0, actualLen);
 
                 //the pointer should always store the un-encrypted length...
@@ -213,9 +201,12 @@ namespace HatTrick.InMemDb
             ZipArchiveMode mode = File.Exists(_fullZipArchivePath) ? ZipArchiveMode.Update : ZipArchiveMode.Create;
             using (ZipArchive zip = ZipFile.Open(_fullZipArchivePath, mode))
             {
-                ZipArchiveEntry map = zip.CreateEntryFromFile(_fullMapArchivePath, _mapArchiveFileName, CompressionLevel.Optimal);
+                string mapName = Path.GetFileName(_fullMapArchivePath);
+                ZipArchiveEntry map = zip.CreateEntryFromFile(_fullMapArchivePath, mapName, CompressionLevel.Optimal);
                 map.Comment = "map";
-                ZipArchiveEntry db = zip.CreateEntryFromFile(_fullDbArchivePath, _dbArchiveFileName, CompressionLevel.Optimal);
+
+                string dbName = Path.GetFileName(_fullDbArchivePath);
+                ZipArchiveEntry db = zip.CreateEntryFromFile(_fullDbArchivePath, dbName, CompressionLevel.Optimal);
                 db.Comment = "db";
             }
         }

@@ -7,7 +7,7 @@ namespace HatTrick.InMemDb
     {
         #region internals
         private string _path;
-        private string _name;
+        private string _datasetName;
 
         private string _fullMapPath;
         private string _fullDbPath;
@@ -23,24 +23,18 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region constructors
-        internal MemDbDefragmenter(string datasetName, string path)
+        internal MemDbDefragmenter(MemDbConfiguration config)
         {
-            if (string.IsNullOrEmpty(datasetName))
-                throw new ArgumentException("arg must have a value.", nameof(datasetName));
+            if (!Directory.Exists(config.Path))
+                throw new ArgumentException($"No directory exists at {nameof(config)}.{nameof(config.Path)}");
 
-            if (string.IsNullOrWhiteSpace(path))
-                throw new ArgumentException("arg must have a value.", nameof(path));
-
-            _path = path;
-            _name = datasetName;
-            _fullDbPath = Path.Combine(path, $"htl.{datasetName}.db");
-            _fullMapPath = Path.Combine(path, $"htl.{datasetName}.map");
+            _path = config.Path;
+            _datasetName = config.DatasetName;
+            _fullDbPath = config.GetFullDbFilePath();
+            _fullMapPath = config.GetFullMapFilePath();
 
             _fullTempMapPath = _fullMapPath + ".temp";
             _fullTempDbPath = _fullDbPath + ".temp";
-
-            if (!Directory.Exists(path))
-                throw new ArgumentException("No directory exists for provided path.", nameof(path));
         }
         #endregion
 

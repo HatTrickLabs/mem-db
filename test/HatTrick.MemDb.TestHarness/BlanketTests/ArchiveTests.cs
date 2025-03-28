@@ -54,9 +54,9 @@ namespace HatTrick.InMemDb.TestHarness
             Stats resolve = Stats.FreshCount | Stats.StaleCount | Stats.DeletedCount | Stats.FreshSize | Stats.StaleSize | Stats.DeletedSize;
             MemDbStatistics stats = null;
 
-            int txtSize = 104;
-            int jsonSize = 105;
-            int unknownSize = 100;
+            //int txtSize = 104;
+            //int jsonSize = 105;
+            //int unknownSize = 100;
 
             int txtCnt;
             int jsonCnt;
@@ -149,6 +149,65 @@ namespace HatTrick.InMemDb.TestHarness
 
             //we should have unknownCnt deleted records
             Assert.IsEqual(archives.Count(a => a.State == RecordState.Deleted), unknownCnt);
+        }
+        #endregion
+
+        #region multi defrag archive rebuild timestamped snapshot
+        public void Test_MultiDefragArchiveRebuildTimestampSnapshot()
+        {
+            int txtCnt;
+            int jsonCnt;
+            int unknownCnt;
+
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                this.LoadDb(db, out txtCnt, out jsonCnt, out unknownCnt);
+            }
+
+            long timestamp = DateTime.UtcNow.ToBinary();
+            Thread.Sleep(1);
+
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                db.Update(a => a.XXHash += 1, a => a.AssetType == DigitalAssetType.Text);
+                db.Update(a => a.XXHash += 1, a => a.AssetType == DigitalAssetType.Unknown);
+            }
+            MemDb.Defrag(_dataset);
+
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                db.Update(a => a.XXHash += 1, a => a.AssetType == DigitalAssetType.Json);
+                db.Delete(a => a.AssetType == DigitalAssetType.Unknown);
+            }
+            MemDb.Defrag(_dataset);
+
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                db.Update(a => a.XXHash = 2, a => a.AssetType == DigitalAssetType.Text);
+            }
+            MemDb.Defrag(_dataset);
+
+            string rebuildDataset = _dataset + "_2";
+            MemDb.ConfigureFor<DigitalAsset>(rebuildDataset, _dbPath)
+                .SerializeWith(() => new DigitalAssetBinarySerializer())
+                .CloneWith(() => new DigitalAssetCloner())
+                .Register();
+
+            var series = new Dictionary<uint, MemDbArchivedRecord<DigitalAsset>>(256);
+            using (var db2 = MemDb.Open<DigitalAsset>(rebuildDataset))
+            {
+                foreach (var rec in MemDb.ReadArchive<DigitalAsset>(_dataset))
+                {
+                    if (rec.StateSetAt > timestamp)
+                        break;
+                    series[rec.Id] = rec;
+                }
+
+                using (var db = MemDb.Open<DigitalAsset>(_dataset))
+                {
+                }
+            }
+
         }
         #endregion
 

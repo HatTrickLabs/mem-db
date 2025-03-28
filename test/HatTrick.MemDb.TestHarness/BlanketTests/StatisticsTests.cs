@@ -115,7 +115,7 @@ namespace HatTrick.InMemDb.TestHarness
             //we know the exact serialized size of each of the records...only diff is the file extensions ('.txt', '.json', '')
             int txtSize = 104;
             int jsonSize = 105;
-            int unknownSize = 100;
+            //int unknownSize = 100;
 
             db.Flush();
             var stats1 = db.ResolveStatistics(Stats.MaxFreshSize | Stats.MaxStaleSize| Stats.MaxDeletedSize);
@@ -147,7 +147,7 @@ namespace HatTrick.InMemDb.TestHarness
 
             //we know the exact serialized size of each of the records...only diff is the file extensions ('.txt', '.json', '')
             int txtSize = 104;
-            int jsonSize = 105;
+            //int jsonSize = 105;
             int unknownSize = 100;
 
             db.Flush();

@@ -9,10 +9,10 @@ namespace HatTrick.InMemDb
     internal class MemDbArchiveReader<T> where T : class
     {
         #region internals
-        private readonly string _archivePath;
         private readonly string _datasetName;
+        private readonly string _archivePath;
 
-        private string _fullArchivePath;
+        private string _fullZipArchivePath;
 
         private IMemDbSerializer<T> _serializer;
         private IBinaryReadMemDbSerializer<T> _binReadSerializer;//optional impl
@@ -23,48 +23,43 @@ namespace HatTrick.InMemDb
         public bool IsEncryptionReady => _encryptor is not null;
         #endregion
 
-        #region constructors
-        internal MemDbArchiveReader(string datasetName, string archivePath, IMemDbSerializer<T> serializer)
-            : this(datasetName, archivePath, serializer, null)
-        { }
-
-        public MemDbArchiveReader(string datasetName, string archivePath, IMemDbSerializer<T> serializer, IMemDbEncryptor encryptor)
+        #region ctors
+        //public MemDbArchiveReader(string datasetName, string archivePath, IMemDbSerializer<T> serializer, IMemDbEncryptor encryptor)
+        internal MemDbArchiveReader(MemDbConfiguration<T> config)
         {
-            if (string.IsNullOrEmpty(datasetName))
-                throw new ArgumentException("arg must have a value.", nameof(datasetName));
+            if (config is null)
+                throw new ArgumentNullException(nameof(config));
 
-            if (string.IsNullOrWhiteSpace(archivePath))
-                throw new ArgumentException("arg must have a value.", nameof(archivePath));
-
-            if (serializer == null)
-                throw new ArgumentNullException(nameof(serializer));
+            if (!config.ShouldArchive)
+                throw new InvalidOperationException($"Configuration for provided dataset '{config.DatasetName}' is not configured to archive on defrag.");
 
             //the encryptor can be null.
 
-            _archivePath = archivePath;
-            _datasetName = datasetName;
+            _datasetName = config.DatasetName;
+            _archivePath = config.ArchivePath;
 
-            _serializer = serializer;
-            if (serializer is IBinaryReadMemDbSerializer<T> binReadSer)
-                _binReadSerializer = binReadSer;
+            _serializer = config.GetSerializer();
 
-            _encryptor = encryptor;
+            if (_serializer is IBinaryReadMemDbSerializer<T> binReadSerializer)
+                _binReadSerializer = binReadSerializer;
 
-            _fullArchivePath = Path.Combine(_archivePath, $"htl.{datasetName}.zip");
+            _encryptor = config.GetEncryptor();
 
-            if (!File.Exists(_fullArchivePath))
-                throw new ArgumentException($"Expected archive file does not exist: {_fullArchivePath}", nameof(archivePath));
+            _fullZipArchivePath = config.GetZipArchiveFullFilePath();
+
+            if (!File.Exists(_fullZipArchivePath))
+                throw new InvalidOperationException($"Expected archive file does not exist '{_fullZipArchivePath}'");
         }
         #endregion
 
-        #region read archive records
-        public IEnumerable<MemDbRecord<T>> ReadArchiveRecords()
+        #region read archive
+        public IEnumerable<MemDbRecord<T>> ReadArchive()
         {
-            using ZipArchive zip = ZipFile.Open(_fullArchivePath, ZipArchiveMode.Read);
+            using ZipArchive zip = ZipFile.Open(_fullZipArchivePath, ZipArchiveMode.Read);
 
             (string key, ZipArchiveEntry[] entries)[] sets = zip.Entries
                 //first 21 is timestamp formated as: yyyyMMdd_HHmm_ss_ffff
-                .GroupBy(e => e.Name.Substring(0, MemDbArchiver.TimestampFormat.Length))
+                .GroupBy(e => e.Name.Substring(0, MemDbConfiguration.ArchiveTimestampFormat.Length))
                 .Select(g => (g.Key, g.ToArray()))
                 .ToArray();
 
@@ -79,7 +74,7 @@ namespace HatTrick.InMemDb
             {
                 var mapEntry = set.entries.First(e => e.Comment == "map");
 
-                //this is just tmp in mem only, don't init to disk...
+                //this is just tmp in-mem only, don't init to disk...
                 //simply give the ctor a bunk path, do not initialize and never flush
                 MemDbMap map = new MemDbMap("xxx", false);
                 using (var mapStream = mapEntry.Open())
@@ -94,7 +89,8 @@ namespace HatTrick.InMemDb
                 string tmpArchFilePath = Path.Combine(_archivePath, dbEntry.Name);
                 dbEntry.ExtractToFile(tmpArchFilePath, true);
 
-                foreach (var rec in this.EmitArchiveRecords(tmpArchFilePath, map))
+                var enumerator = this.EmitArchiveRecords(tmpArchFilePath, map);
+                foreach (var rec in enumerator)
                 {
                     yield return rec;
                 }

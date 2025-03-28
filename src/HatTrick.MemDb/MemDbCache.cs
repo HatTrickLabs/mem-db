@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace HatTrick.InMemDb
 {
-    internal sealed class MemDbCache<T> : IMemDbCacher<T>, IDisposable where T : class
+    internal sealed class MemDbCache<T> : IMemDbCache<T>, IDisposable where T : class
     {
         #region internals
         private string _datasetName;
@@ -19,20 +19,14 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region ctors
-        internal MemDbCache(string datasetName, IMemDbCloner<T> cloner, IMemDbPersister<T> persister)
+        internal MemDbCache(MemDbConfiguration<T> config)
         {
-            if (datasetName is null)
-                throw new ArgumentNullException(nameof(datasetName));
+            if (config is null)
+                throw new ArgumentNullException(nameof(config));
 
-            if (persister is null)
-                throw new ArgumentNullException(nameof(persister));
-
-            if (cloner is null)
-                throw new ArgumentNullException(nameof(cloner));
-
-            _datasetName = datasetName;
-            _cloner = cloner;
-            _persister = persister; 
+            _datasetName = config.DatasetName;
+            _cloner = config.GetCloner();
+            _persister = config.GetPersister();
             _lock = new();
 
             _mode = _persister.Mode;
