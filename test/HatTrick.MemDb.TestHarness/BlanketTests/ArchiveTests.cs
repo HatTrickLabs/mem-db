@@ -164,15 +164,16 @@ namespace HatTrick.InMemDb.TestHarness
                 this.LoadDb(db, out txtCnt, out jsonCnt, out unknownCnt);
             }
 
-            long timestamp = DateTime.UtcNow.ToBinary();
-            Thread.Sleep(1);
-
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
                 db.Update(a => a.XXHash += 1, a => a.AssetType == DigitalAssetType.Text);
                 db.Update(a => a.XXHash += 1, a => a.AssetType == DigitalAssetType.Unknown);
             }
             MemDb.Defrag(_dataset);
+
+            Thread.Sleep(1);
+            long timestamp = DateTime.UtcNow.ToBinary();
+            Thread.Sleep(1);
 
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
@@ -189,6 +190,23 @@ namespace HatTrick.InMemDb.TestHarness
             }
 
             MemDb.Restore(_dataset, timestamp, Path.Combine(_dbPath, "_restore"));
+
+            //remove the orig config in order to open the restored db
+            MemDb.RemoveConfiguationFor(_dataset);
+            MemDb.ConfigureFor<DigitalAsset>(_dataset, Path.Combine(_dbPath, "_restore"))
+                .CloneWith(() => new DigitalAssetCloner())
+                .SerializeWith(() => new DigitalAssetBinarySerializer())
+                .Register();
+
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                Assert.IsEqual(db.Count(), 1000);
+                Assert.IsEqual(db.Count(a => a.AssetType == DigitalAssetType.Text), txtCnt);
+                Assert.IsEqual(db.Count(a => a.AssetType == DigitalAssetType.Json), jsonCnt);
+                Assert.IsEqual(db.Count(a => a.AssetType == DigitalAssetType.Unknown), unknownCnt);
+                Assert.IsEqual(db.Count(a => a.XXHash == 1), (txtCnt + unknownCnt));
+                Assert.IsEqual(db.Count(a => a.XXHash == 0), jsonCnt);
+            }
         }
         #endregion
 

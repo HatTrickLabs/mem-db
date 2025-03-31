@@ -115,7 +115,12 @@ namespace HatTrick.InMemDb
                 if (entry.Comment == "map")
                 {
                     map = this.ExtractArchiveMap(entry);
-                    int dbIdx = i % 2 == 1 ? i - 1 : i + 1;
+
+                    //each set has a db and map...they will be naturally side by side, but not sure which is first
+                    //every 2 indexes is guaranteed to be a matching set...if the map is odd index, then the db 
+                    //is previous element, if map is even index, then the db is the next element.
+                    int dbIdx = (i % 2) == 1 ? (i - 1) : (i + 1);
+
                     string dbPath = Path.Combine(_archivePath, zipEntries[dbIdx].Name);
                     this.RollPointers(map, dbPath);
                 }
@@ -138,18 +143,14 @@ namespace HatTrick.InMemDb
                 .OrderBy(g => g.Key)
                 .ToArray();
 
-            //should result in
-            //{ yyyyMMdd_HHmm_ss_ffff, [ yyyyMMdd_HHmm_ss_ffff.htl.datasetName.db.arch, yyyyMMdd_HHmm_ss_ffff.htl.datasetName.map.arch ] }
-            //{ yyyyMMdd_HHmm_ss_ffff, [ yyyyMMdd_HHmm_ss_ffff.htl.datasetName.db.arch, yyyyMMdd_HHmm_ss_ffff.htl.datasetName.map.arch ] }
-            //{ yyyyMMdd_HHmm_ss_ffff, [ yyyyMMdd_HHmm_ss_ffff.htl.datasetName.db.arch, yyyyMMdd_HHmm_ss_ffff.htl.datasetName.map.arch ] }
-
+            //each set has a db and a map (order not guaranteed).
             var entries = new ZipArchiveEntry[sets.Length * 2];
             int at = 0;
             for (int i = 0; i < sets.Length; i++)
             {
                 var set = sets[i];
-                entries[at++] = set.entries[0];//db
-                entries[at++] = set.entries[1];//map
+                entries[at++] = set.entries[0];
+                entries[at++] = set.entries[1];
             }
 
             return entries;
@@ -216,7 +217,7 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
-        #region write restored Db
+        #region write restored db
         private void BuildRestoredFiles ()
         {
             MemDbMap map = new MemDbMap(_fullRestoreMapPath, true);
