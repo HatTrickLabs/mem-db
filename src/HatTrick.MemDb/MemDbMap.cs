@@ -93,7 +93,7 @@ namespace HatTrick.InMemDb
 
         private void InitializeExisting()
         {
-            using var fsMap = new FileStream(_path, FileMode.Open, FileAccess.Read); ;
+            using var fsMap = new FileStream(_path, FileMode.Open, FileAccess.Read);
             using var reader = new BinaryReader(fsMap, Encoding.UTF8, true);
             this.DeserializeFrom(reader);
         }

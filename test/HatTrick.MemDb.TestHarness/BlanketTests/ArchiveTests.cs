@@ -183,31 +183,12 @@ namespace HatTrick.InMemDb.TestHarness
 
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
-                db.Update(a => a.XXHash = 2, a => a.AssetType == DigitalAssetType.Text);
-            }
-            MemDb.Defrag(_dataset);
-
-            string rebuildDataset = _dataset + "_2";
-            MemDb.ConfigureFor<DigitalAsset>(rebuildDataset, _dbPath)
-                .SerializeWith(() => new DigitalAssetBinarySerializer())
-                .CloneWith(() => new DigitalAssetCloner())
-                .Register();
-
-            var series = new Dictionary<uint, MemDbArchivedRecord<DigitalAsset>>(256);
-            using (var db2 = MemDb.Open<DigitalAsset>(rebuildDataset))
-            {
-                foreach (var rec in MemDb.ReadArchive<DigitalAsset>(_dataset))
-                {
-                    if (rec.StateSetAt > timestamp)
-                        break;
-                    series[rec.Id] = rec;
-                }
-
-                using (var db = MemDb.Open<DigitalAsset>(_dataset))
-                {
-                }
+                db.Update(a => a.XXHash += 1, a => a.AssetType == DigitalAssetType.Text);
+                db.Update(a => a.XXHash += 1, a => a.AssetType == DigitalAssetType.Json);
+                db.Update(a => a.XXHash += 1, a => a.AssetType == DigitalAssetType.Unknown);
             }
 
+            MemDb.Restore(_dataset, timestamp, Path.Combine(_dbPath, "_restore"));
         }
         #endregion
 

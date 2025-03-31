@@ -24,7 +24,6 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region ctors
-        //public MemDbArchiveReader(string datasetName, string archivePath, IMemDbSerializer<T> serializer, IMemDbEncryptor encryptor)
         internal MemDbArchiveReader(MemDbConfiguration<T> config)
         {
             if (config is null)
@@ -57,18 +56,7 @@ namespace HatTrick.InMemDb
         {
             using ZipArchive zip = ZipFile.Open(_fullZipArchivePath, ZipArchiveMode.Read);
 
-            (string key, ZipArchiveEntry[] entries)[] sets = zip.Entries
-                //first 21 is timestamp formated as: yyyyMMdd_HHmm_ss_ffff
-                .GroupBy(e => e.Name.Substring(0, MemDbConfiguration.ArchiveTimestampFormat.Length))
-                .Select(g => (g.Key, g.ToArray()))
-                .ToArray();
-
-            Array.Sort(sets, (a, b) => a.key.CompareTo(b.key));
-
-            //should result in
-            //{x, [ x.htl.datasetName.db.arch, x.htl.datasetName.map.arch ] }
-            //{y, [ y.htl.datasetName.db.arch, y.htl.datasetName.map.arch ] }
-            //{z, [ z.htl.datasetName.db.arch, z.htl.datasetName.map.arch ] }
+            (string key, ZipArchiveEntry[] entries)[] sets = this.ResolveZipArchiveFileSets(zip);
 
             foreach (var set in sets)
             {
@@ -97,6 +85,26 @@ namespace HatTrick.InMemDb
 
                 File.Delete(tmpArchFilePath);
             }
+        }
+        #endregion
+
+        #region resolve zip archive file sets
+        private (string key, ZipArchiveEntry[] enries)[] ResolveZipArchiveFileSets(ZipArchive zip)
+        {
+            (string key, ZipArchiveEntry[] entries)[] sets = zip.Entries
+                //first 21 is timestamp formated as: yyyyMMdd_HHmm_ss_ffff
+                .GroupBy(e => e.Name.Substring(0, MemDbConfiguration.ArchiveTimestampFormat.Length))
+                .Select(g => (g.Key, g.ToArray()))
+                .ToArray();
+
+            Array.Sort(sets, (a, b) => a.key.CompareTo(b.key));
+
+            //should result in
+            //{yyyyMMdd_HHmm_ss_ffff, [ yyyyMMdd_HHmm_ss_ffff.htl.datasetName.db.arch, yyyyMMdd_HHmm_ss_ffff.htl.datasetName.map.arch ] }
+            //{yyyyMMdd_HHmm_ss_ffff, [ yyyyMMdd_HHmm_ss_ffff.htl.datasetName.db.arch, yyyyMMdd_HHmm_ss_ffff.htl.datasetName.map.arch ] }
+            //{yyyyMMdd_HHmm_ss_ffff, [ yyyyMMdd_HHmm_ss_ffff.htl.datasetName.db.arch, yyyyMMdd_HHmm_ss_ffff.htl.datasetName.map.arch ] }
+
+            return sets;
         }
         #endregion
 

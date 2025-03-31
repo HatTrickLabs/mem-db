@@ -14,10 +14,6 @@ namespace HatTrick.InMemDb
         private static Lock _lock;
         #endregion
 
-        #region static interface
-        //protected static List<MemDbConfiguration> Configurations => _configurations;
-        #endregion
-
         #region static ctor
         static MemDb()
         {
@@ -46,21 +42,23 @@ namespace HatTrick.InMemDb
             }
 
             MemDbConfiguration config = MemDb.GetConfiguration(datasetName);
-
-            if (config is null)
-                throw new ArgumentException($"No configuration registered for provided datasetName: {datasetName}");
-
-            if (config.ShouldArchive)
+            try
             {
-                IMemDbArchiver archiver = new MemDbArchiver(config);
-                archiver.Archive();
+                if (config is null)
+                    throw new ArgumentException($"No configuration registered for provided datasetName: {datasetName}");
+            
+                if (config.ShouldArchive)
+                {
+                    IMemDbArchiver archiver = new MemDbArchiver(config);
+                    archiver.Archive();
+                }
+                IMemDbDefragmenter defragmenter = new MemDbDefragmenter(config);
+                defragmenter.Defrag();
             }
-
-            IMemDbDefragmenter defragmenter = new MemDbDefragmenter(config);
-
-            defragmenter.Defrag();
-
-            config.Clear();
+            finally
+            {
+                config?.Clear();
+            }
         }
         #endregion
 
@@ -68,38 +66,40 @@ namespace HatTrick.InMemDb
         public static IEnumerable<MemDbArchivedRecord<T>> ReadArchive<T>(string datasetName) where T : class
         {
             MemDbConfiguration config = MemDb.GetConfiguration(datasetName);
-
-            if (config is null)
-                throw new ArgumentException($"No configuration registered fr provided datasetName: {datasetName}");
-
-            if (!config.ShouldArchive)
-                throw new InvalidOperationException($"Configuration for provided dataset '{datasetName}' is not configured to archive on defrag.");
-
-            var configOfT = config.EnsureGenericType<T>(config);
-            var archReader = new MemDbArchiveReader<T>(configOfT);
-
-            //we want this entire stack to be yeild return.  Archive record counts could be large, so we
-            //let the consumer analyze each record to find the set they are looking for (and toss the rest).
-            var enumerator = archReader.ReadArchive();
-            foreach (MemDbRecord<T> r in enumerator)
+            try
             {
-                yield return new MemDbArchivedRecord<T>(r.Id, r.State, r.StateSetAt, r.IsEncrypted, r.Value);
-            }
+                if (config is null)
+                    throw new ArgumentException($"No configuration registered fr provided datasetName: {datasetName}");
 
-            configOfT.Clear();
+                if (!config.ShouldArchive)
+                    throw new InvalidOperationException($"Configuration for provided dataset '{datasetName}' is not configured to archive on defrag.");
+
+                var configOfT = config.EnsureGenericType<T>(config);
+                var archReader = new MemDbArchiveReader<T>(configOfT);
+
+                //we want this entire stack to be yeild return.  Archive record counts could be large, so we
+                //let the consumer analyze each record to find the set they are looking for (and toss the rest).
+                var enumerator = archReader.ReadArchive();
+                foreach (MemDbRecord<T> r in enumerator)
+                {
+                    yield return new MemDbArchivedRecord<T>(r.Id, r.State, r.StateSetAt, r.IsEncrypted, r.Value);
+                }
+            }
+            finally
+            {
+                config.Clear();
+            }
         }
         #endregion
 
         #region restore
-        public void Restore(string datasetName, long utcTimestamp, string outputDirectory)
+        public static void Restore(string datasetName, long utcTimestamp, string outputDirectory)
         {
             if (datasetName is null)
                 throw new ArgumentNullException(nameof(datasetName));
 
             if (utcTimestamp >= DateTime.UtcNow.ToBinary())
                 throw new ArgumentException($"Provided {nameof(utcTimestamp)} must represent a timestamp in the past.");
-
-            this.EnsureDirectory(outputDirectory);
 
             lock (_lock)
             {
@@ -108,13 +108,22 @@ namespace HatTrick.InMemDb
             }
 
             MemDbConfiguration config = MemDb.GetConfiguration(datasetName);
+            try
+            {
+                if (config is null)
+                    throw new ArgumentException($"No configuration registered for provided datasetName: {datasetName}");
 
-            if (config is null)
-                throw new ArgumentException($"No configuration registered for provided datasetName: {datasetName}");
+                if (!config.ShouldArchive)
+                    throw new InvalidOperationException($"{nameof(Restore)} cannot be run on a MemDb instance that was not configured for Archive.");
 
-            if (!config.ShouldArchive)
-                throw new InvalidOperationException($"{nameof(Restore)} cannot be run on a MemDb instance that was not configured for Archive.");
+                var restorer = new MemDbRestorer(config, outputDirectory, utcTimestamp, true);
 
+                restorer.Restore();
+            }
+            finally
+            {
+                config?.Clear();
+            }
         }
         #endregion
 
@@ -167,20 +176,6 @@ namespace HatTrick.InMemDb
                 _openDatasets.Add(datasetName);
                 return memDb;
             }
-        }
-        #endregion
-
-        #region ensure directory
-        private void EnsureDirectory(string path)
-        {
-            if (Directory.Exists(path))
-                return;
-
-            if (File.Exists(path))
-                throw new InvalidOperationException($"A file exists at the provided directory path '{path}'");
-
-            //try to create it
-            Directory.CreateDirectory(path);
         }
         #endregion
 

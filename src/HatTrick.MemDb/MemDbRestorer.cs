@@ -1,20 +1,26 @@
 ﻿using System;
 using System.IO;
 using System.Threading;
+using System.IO.Compression;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace HatTrick.InMemDb
 {
-    internal sealed class MemDbRestorer<T> where T : class
+    internal sealed class MemDbRestorer//<T> where T : class
     {
         #region internals
         private string _outputPath;
         private string _fullDbPath;
         private string _fullMapPath;
+        private string _archivePath;
+        private string _fullZipArchiveFilePath;
         private string _fullRestoreDbPath;
         private string _fullRestoreMapPath;
         private long _utcTimestamp;
         private bool _overwrite;
+
+        private Dictionary<uint, RestoreRecord> _records;
         #endregion
 
         #region ctors
@@ -23,26 +29,58 @@ namespace HatTrick.InMemDb
             if (config is null)
                 throw new ArgumentNullException(nameof(config));
 
-            if (!Directory.Exists(outputPath))
-                throw new ArgumentException("No directory exists for provided path.", nameof(outputPath));
-
-            if (utcTimestamp <= DateTime.UtcNow.ToBinary())
-                throw new ArgumentException("", nameof(utcTimestamp));
+            if (utcTimestamp >= DateTime.UtcNow.ToBinary())
+                throw new ArgumentException("The 'restore to' utc timestamp must be in the past.", nameof(utcTimestamp));
 
             _overwrite = overwrite;
             _fullDbPath = config.GetFullDbFilePath();
             _fullMapPath = config.GetFullMapFilePath();
+            _outputPath = outputPath;
             _utcTimestamp = utcTimestamp;
 
-            _fullRestoreMapPath = Path.Combine(outputPath, $"htl.{config.DatasetName}.db");
-            _fullRestoreDbPath = Path.Combine(outputPath, $"htl.{config.DatasetName}.map");
-            this.EnsureRestoreFile(_fullRestoreMapPath);
-            this.EnsureRestoreFile(_fullRestoreDbPath);
+            _archivePath = config.ArchivePath;
+            _fullZipArchiveFilePath = config.GetZipArchiveFullFilePath();
+            //HACK on the file name format not being centralized...
+            _fullRestoreMapPath = Path.Combine(outputPath, $"htl.{config.DatasetName}.map");
+            _fullRestoreDbPath = Path.Combine(outputPath, $"htl.{config.DatasetName}.db");
+            this.EnsureRestoreDirectory(outputPath);
+            this.EnsureRestoreMapFile(_fullRestoreMapPath);
+            this.EnsureRestoreDbFile(_fullRestoreDbPath);
+
+            if (!File.Exists(_fullMapPath))
+                throw new InvalidOperationException($"No file exists at MemDb map file path '{_fullMapPath}'.");
+
+            if (!File.Exists(_fullDbPath))
+                throw new InvalidOperationException($"No file exists at MemDb data file path '{_fullDbPath}'.");
+
+            _records = new Dictionary<uint, RestoreRecord>(128);
         }
         #endregion
 
-        #region initialize file
-        private void EnsureRestoreFile(string path)
+        #region ensure restore directory
+        private void EnsureRestoreDirectory(string directory)
+        {
+            if (!Directory.Exists(directory))
+                Directory.CreateDirectory(directory);
+        }
+        #endregion
+
+        #region ensure restore map file
+        private void EnsureRestoreMapFile(string path)
+        {
+            bool exists = File.Exists(path);
+            if (exists && !_overwrite)
+                throw new InvalidOperationException($"MemDb file already exists at restore path '{path}'{Environment.NewLine}Use 'overwrite' option on ctor to overwrite existing map files.");
+
+            if (exists)
+                File.Delete(path);
+
+            _ = new MemDbMap(path, true);
+        }
+        #endregion
+
+        #region ensure restore db file
+        private void EnsureRestoreDbFile(string path)
         {
             bool exists = File.Exists(path);
             if (exists && !_overwrite)
@@ -60,98 +98,155 @@ namespace HatTrick.InMemDb
         internal void Restore()
         {
             //TODO: Ensure available space...
+            using ZipArchive zip = ZipFile.Open(_fullZipArchiveFilePath, ZipArchiveMode.Read);
+            ZipArchiveEntry[]  zipEntries = this.ResolveArchiveFileSets(zip);
 
-            //ensure the record map actually exists
-            if (!File.Exists(_fullMapPath))
-                throw new InvalidOperationException("No file exists at MemDb map file path: " + _fullMapPath);
+            for (int i = 0; i < zipEntries.Length; i++)
+            {
+                var entry = zipEntries[i];
+                if (entry.Comment == "db")
+                    entry.ExtractToFile(Path.Combine(_archivePath, entry.Name));
+            }
 
-            //ensure the data store actually exists
-            if (!File.Exists(_fullDbPath))
-                throw new InvalidOperationException("No file exists at MemDb data file path: " + _fullDbPath);
+            MemDbMap map = null;
+            for (int i = 0; i < zipEntries.Length; i++)
+            {
+                var entry = zipEntries[i];
+                if (entry.Comment == "map")
+                {
+                    map = this.ExtractArchiveMap(entry);
+                    int dbIdx = i % 2 == 1 ? i - 1 : i + 1;
+                    string dbPath = Path.Combine(_archivePath, zipEntries[dbIdx].Name);
+                    this.RollPointers(map, dbPath);
+                }
+            }
 
-            var set = new Dictionary<uint, MemDbPointer>(256);
-            this.ResolvePortRecords(_fullMapPath, ref set);
+            map = this.ExtractDbMap();
+            this.RollPointers(map, _fullDbPath);
+
+            this.BuildRestoredFiles();
         }
         #endregion
 
-        #region resove port records
-        private Dictionary<uint, MemDbPointer> ResolvePortRecords(string mapPath, ref Dictionary<uint, MemDbPointer> pointers)
+        #region resolve archive file sets
+        private ZipArchiveEntry[] ResolveArchiveFileSets(ZipArchive zip)
         {
-            var map = new MemDbMap(mapPath, true);
+            (string key, ZipArchiveEntry[] entries)[] sets = zip.Entries
+                //first 21 is timestamp formated as: yyyyMMdd_HHmm_ss_ffff
+                .GroupBy(e => e.Name.Substring(0, MemDbConfiguration.ArchiveTimestampFormat.Length))
+                .Select(g => (g.Key, g.ToArray()))
+                .OrderBy(g => g.Key)
+                .ToArray();
 
-            var set = new Dictionary<uint, MemDbPointer>();
+            //should result in
+            //{ yyyyMMdd_HHmm_ss_ffff, [ yyyyMMdd_HHmm_ss_ffff.htl.datasetName.db.arch, yyyyMMdd_HHmm_ss_ffff.htl.datasetName.map.arch ] }
+            //{ yyyyMMdd_HHmm_ss_ffff, [ yyyyMMdd_HHmm_ss_ffff.htl.datasetName.db.arch, yyyyMMdd_HHmm_ss_ffff.htl.datasetName.map.arch ] }
+            //{ yyyyMMdd_HHmm_ss_ffff, [ yyyyMMdd_HHmm_ss_ffff.htl.datasetName.db.arch, yyyyMMdd_HHmm_ss_ffff.htl.datasetName.map.arch ] }
+
+            var entries = new ZipArchiveEntry[sets.Length * 2];
+            int at = 0;
+            for (int i = 0; i < sets.Length; i++)
+            {
+                var set = sets[i];
+                entries[at++] = set.entries[0];//db
+                entries[at++] = set.entries[1];//map
+            }
+
+            return entries;
+        }
+        #endregion
+
+        #region extract archive map
+        private MemDbMap ExtractArchiveMap(ZipArchiveEntry mapArchive)
+        {
+            //this is just tmp in-mem only, don't init to disk...
+            //simply give the ctor a bunk path, do not initialize and never flush
+            MemDbMap map = new MemDbMap("xxx", false);
+            using (var mapStream = mapArchive.Open())
+            {
+                using (var mapReader = new BinaryReader(mapStream))
+                {
+                    map.DeserializeFrom(mapReader);
+                }
+            }
+            return map;
+        }
+        #endregion
+
+        #region extract db map
+        private MemDbMap ExtractDbMap()
+        {
+            //this is just tmp in-mem only, don't init to disk...
+            //simply give the ctor a bunk path, do not initialize and never flush
+            MemDbMap map = new MemDbMap("xxx", false);
+            using (var fs = new FileStream(_fullMapPath, FileMode.Open, FileAccess.Read))
+            {
+                using (var mapReader = new BinaryReader(fs))
+                {
+                    map.DeserializeFrom(mapReader);
+                }
+            }
+            return map;
+        }
+        #endregion
+
+        #region roll pointers
+        public void RollPointers(MemDbMap map, string dbFilePath)
+        {
+            using var db = new FileStream(dbFilePath, FileMode.Open, FileAccess.Read);
 
             for (int i = 0; i < map.Count; i++)
             {
                 MemDbPointer ptr = map[i];
 
                 if (ptr.StateSetAt > _utcTimestamp)
-                    break;//maps are always in chronological order...break as soon as we hit the restore point timestamp.
-
-                if (ptr.State == RecordState.Fresh)
-                    set[ptr.Id] = ptr;
-            }
-
-            return set;
-        }
-        #endregion
-
-        #region port fresh records
-        private void PortFreshRecords()
-        {
-            var origMap = new MemDbMap(_fullMapPath, true);
-            var restoreMap = new MemDbMap(_fullRestoreMapPath, true);
-
-            //TODO:
-            //restoreMap.SetLastId(origMap.LastId);
-
-            int maxRecLength = origMap.MaxFreshRecordSize;
-
-            byte[] buffer = new byte[maxRecLength];
-
-            using var origDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read);
-            using var restoreDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.ReadWrite);
-
-            for (int i = 0; i < origMap.Count; i++)
-            {
-                var oPtr = origMap[i];
-
-                if (oPtr.StateSetAt > _utcTimestamp)
-                    continue;//if it happened after the restore point, just toss it.
-
-                if (oPtr.State == RecordState.Fresh)
-                {
-                }
-
-                else if (oPtr.State == RecordState.Stale)
-                {
-                }
-
-                else if (oPtr.State == RecordState.Deleted)
-                {
-                }
-
-                if (oPtr.StateSetAt > _utcTimestamp)
                     continue;
 
-                //var nPtr = new MemDbPointer(oPtr.Id, oPtr.State, oPtr.StateSetAt, oPtr.IsEncrypted, oPtr.Position, oPtr.Length);
-                restoreMap.Add(oPtr.Clone());
-
-                origDb.Position = oPtr.Position;
-                int actualLen = oPtr.IsEncrypted ? MemDbAESEncryptor.CalculateCryptoByteLength(oPtr.Length) : oPtr.Length;
-
-                origDb.ReadExactly(buffer, 0, actualLen);
-                restoreDb.Write(buffer, 0, actualLen);
+                if (ptr.State == RecordState.Fresh || ptr.State == RecordState.Stale)
+                {
+                    db.Position = ptr.Position;
+                    int length = ptr.IsEncrypted ? MemDbAESEncryptor.CalculateCryptoByteLength(ptr.Length) : ptr.Length;
+                    var raw = new byte[length];
+                    db.ReadExactly(raw, 0, raw.Length);
+                    _records[ptr.Id] = new RestoreRecord(ptr, raw);
+                }
+                else if (ptr.State == RecordState.Deleted)
+                    _ = _records.Remove(ptr.Id);
             }
-
-            restoreMap.Flush();
         }
         #endregion
 
-        #region restore deleted records
-        private void RestoreDeletedRecords()
+        #region write restored Db
+        private void BuildRestoredFiles ()
         {
+            MemDbMap map = new MemDbMap(_fullRestoreMapPath, true);
+            using var db = new FileStream(_fullRestoreDbPath, FileMode.Create, FileAccess.ReadWrite);
 
+            uint[] ids = _records.Keys.ToArray();
+            for (int i = 0; i < ids.Length; i++)
+            {
+                RestoreRecord record = _records[ids[i]];
+
+                MemDbPointer oPtr = record.Pointer;
+                var nPtr = new MemDbPointer(oPtr.Id, RecordState.Fresh, oPtr.StateSetAt, oPtr.IsEncrypted, (uint)db.Position, oPtr.Length);
+                map.Add(nPtr);
+                db.Write(record.RawData);
+            }
+            map.Flush();
+        }
+        #endregion
+
+        #region restore recored [class]
+        internal class RestoreRecord
+        {
+            internal MemDbPointer Pointer { get; private set; }
+            internal byte[] RawData { get; private set; }
+
+            internal RestoreRecord(MemDbPointer pointer, byte[] rawData)
+            {
+                this.Pointer = pointer;
+                this.RawData = rawData;
+            }
         }
         #endregion
     }
