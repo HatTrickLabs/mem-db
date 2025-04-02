@@ -249,7 +249,7 @@ namespace HatTrick.InMemDb
             uint id = _persister.GetNextId();
             idCallback?.Invoke(id);
 
-            MemDbRecord<T> rec = new MemDbRecord<T>(id, _cloner.DeepCopy(record), encrypt);
+            MemDbRecord<T> rec = new MemDbRecord<T>(id, _cloner.DeepCopy(record), DateTime.UtcNow.ToBinary(), encrypt);
 
             if (_mode != AccessMode.AppendOnly)
             {
@@ -278,7 +278,7 @@ namespace HatTrick.InMemDb
             List<MemDbRecord<T>> matches = null;
             lock (_lock)
             {
-                long binaryUtcTimestamp = DateTime.UtcNow.ToBinary();
+                long utcTimestamp = DateTime.UtcNow.ToBinary();
                 matches = _records.FindAll(r => r.State == RecordState.Fresh && where(r.Value));
 
                 if (matches.Count > 0)
@@ -290,12 +290,12 @@ namespace HatTrick.InMemDb
                         //will get the update.  We need a traceable / archiveable state for each update.  If we don't deep copy
                         //and multi updates are applied to the same record before a disk flush, then all the records updated
                         //between flushes receive all updates and look identical if archived.
-                        var newRec = new MemDbRecord<T>(oldRec.Id, _cloner.DeepCopy(oldRec.Value), oldRec.IsEncrypted);
+                        var newRec = new MemDbRecord<T>(oldRec.Id, _cloner.DeepCopy(oldRec.Value), utcTimestamp, oldRec.IsEncrypted);
 
                         //we know the MemDb instance is encryption ready if anything encrypted was ever read into or inserted
                         //into the cache (the cache will not contain encrypted data if not encryption ready).
 
-                        oldRec.MarkStale(binaryUtcTimestamp);
+                        oldRec.MarkStale(utcTimestamp);
                         apply(newRec.Value);
 
                         newRec.SetCacheIndex(_records.Count);
@@ -322,12 +322,12 @@ namespace HatTrick.InMemDb
             int cnt = 0;
             lock (_lock)
             {
-                long binaryUtcTimestamp = DateTime.UtcNow.ToBinary();
+                long utcTimestamp = DateTime.UtcNow.ToBinary();
                 var set = _records.Where(r => r.State == RecordState.Fresh && where(r.Value));
                 foreach (var r in set)
                 {
                     cnt += 1;
-                    r.MarkDeleted(binaryUtcTimestamp);
+                    r.MarkDeleted(utcTimestamp);
                     _persister.MarkDeleted(r);
                 }
             }

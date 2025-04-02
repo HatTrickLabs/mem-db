@@ -182,7 +182,7 @@ namespace HatTrick.InMemDb
                         value = this.DeserializeRecord(reader, ptr.Length);
                     }
 
-                    record = new(ptr.Id, value, fresh, ptr.StateSetAt, ptr.IsEncrypted, records.Count, i);
+                    record = new(ptr.Id, value, fresh, ptr.StateSetAt, ptr.CreatedAt, ptr.IsEncrypted, records.Count, i);
                     records.Add(record);
                 }
             }
@@ -393,7 +393,7 @@ namespace HatTrick.InMemDb
                                 length = (int)(fsDb.Position - startPos);
                             }
 
-                            var pointer = new MemDbPointer(record.Id, RecordState.Fresh, record.StateSetAt, record.IsEncrypted, startPos, length);
+                            var pointer = new MemDbPointer(record.Id, RecordState.Fresh, record.StateSetAt, record.CreatedAt, record.IsEncrypted, startPos, length);
                             record.SetMapIndex(_map.Add(pointer));
                         }
                         catch

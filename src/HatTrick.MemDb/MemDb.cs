@@ -82,7 +82,7 @@ namespace HatTrick.InMemDb
                 var enumerator = archReader.ReadArchive();
                 foreach (MemDbRecord<T> r in enumerator)
                 {
-                    yield return new MemDbArchivedRecord<T>(r.Id, r.State, r.StateSetAt, r.IsEncrypted, r.Value);
+                    yield return new MemDbArchivedRecord<T>(r.Id, r.State, r.StateSetAt, r.CreatedAt, r.IsEncrypted, r.Value);
                 }
             }
             finally
@@ -141,7 +141,7 @@ namespace HatTrick.InMemDb
             {
                 int at = _configurations.FindIndex(c => string.Compare(c.DatasetName, datasetName, true) == 0);
                 if (at < 0)
-                    throw new ArgumentException($"No cinfiguration currently registered for provided dataset name '{datasetName}'", nameof(datasetName));
+                    throw new ArgumentException($"No configuration currently registered for provided dataset name '{datasetName}'", nameof(datasetName));
 
                 if (_openDatasets.Contains(datasetName))
                     throw new InvalidOperationException($"Cannot remove configuration for dataset '{datasetName}', the dataset is currently open.");

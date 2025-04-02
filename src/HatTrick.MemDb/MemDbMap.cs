@@ -207,7 +207,6 @@ namespace HatTrick.InMemDb
         #region update pointer state
         public void UpdatePointerState(StaleRecordQueue tryGetStaleRecord)
         {
-            long binaryUtcTimestamp = DateTime.UtcNow.ToBinary();
             lock (_syncLock)
             {
                 MemDbRecord record = null;
@@ -217,15 +216,16 @@ namespace HatTrick.InMemDb
                 using var fsMap = new FileStream(_path, FileMode.Open, FileAccess.ReadWrite);
                 do
                 {
-                    if (record.State == RecordState.Stale)
-                        _pointers[record.MapIndex].MarkStale(binaryUtcTimestamp);
-
-                    else
-                        _pointers[record.MapIndex].MarkDeleted(binaryUtcTimestamp);
-
-                    //sizeof(pointercount) + sizeof(lastId) + (idx * size) + sizeof(id)
+                    //sizeof(pointercount) + sizeof(lastId) + (idx * pointerSize) + sizeof(id)
                     fsMap.Position = sizeof(int) + sizeof(uint) + (record.MapIndex * MemDbPointer.Size) + sizeof(int);
                     fsMap.WriteByte((byte)record.State);
+                    fsMap.Write(BitConverter.GetBytes(record.StateSetAt));
+
+                    if (record.State == RecordState.Stale)
+                        _pointers[record.MapIndex].MarkStale(record.StateSetAt);
+
+                    else
+                        _pointers[record.MapIndex].MarkDeleted(record.StateSetAt);
 
                 } while (tryGetStaleRecord(out record));
             }

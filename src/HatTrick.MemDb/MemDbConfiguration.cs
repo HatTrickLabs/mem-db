@@ -103,7 +103,7 @@ namespace HatTrick.InMemDb
         internal string GetFullMapArchiveFilePath(DateTime at)
         {
             string timestamp = at.ToString(ArchiveTimestampFormat);
-            return System.IO.Path.Combine(_archivePath, $"{timestamp}htl.{_datasetName}.map.arch");
+            return System.IO.Path.Combine(_archivePath, $"{timestamp}.htl.{_datasetName}.map.arch");
         }
         #endregion
 

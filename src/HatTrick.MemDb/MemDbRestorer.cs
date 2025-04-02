@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace HatTrick.InMemDb
 {
-    internal sealed class MemDbRestorer//<T> where T : class
+    internal sealed class MemDbRestorer
     {
         #region internals
         private string _outputPath;
@@ -196,14 +196,35 @@ namespace HatTrick.InMemDb
         {
             using var db = new FileStream(dbFilePath, FileMode.Open, FileAccess.Read);
 
+            long restorePoint = _utcTimestamp;
             for (int i = 0; i < map.Count; i++)
             {
                 MemDbPointer ptr = map[i];
+                bool shouldCopy = false;
 
-                if (ptr.StateSetAt > _utcTimestamp)
+                if (ptr.CreatedAt > restorePoint)
                     continue;
 
-                if (ptr.State == RecordState.Fresh || ptr.State == RecordState.Stale)
+                if (ptr.State == RecordState.Fresh)
+                {
+                    if (ptr.CreatedAt <= restorePoint)
+                        shouldCopy = true;
+                }
+                else if (ptr.State == RecordState.Stale)
+                {
+                    if (ptr.CreatedAt <= restorePoint)
+                        shouldCopy = true;
+                }
+                else if (ptr.State == RecordState.Deleted)
+                {
+                    if (ptr.StateSetAt <= restorePoint)
+                        _ = _records.Remove(ptr.Id);
+
+                    else if (ptr.CreatedAt <= restorePoint)
+                            shouldCopy = true;
+                }
+
+                if (shouldCopy)
                 {
                     db.Position = ptr.Position;
                     int length = ptr.IsEncrypted ? MemDbAESEncryptor.CalculateCryptoByteLength(ptr.Length) : ptr.Length;
@@ -211,8 +232,6 @@ namespace HatTrick.InMemDb
                     db.ReadExactly(raw, 0, raw.Length);
                     _records[ptr.Id] = new RestoreRecord(ptr, raw);
                 }
-                else if (ptr.State == RecordState.Deleted)
-                    _ = _records.Remove(ptr.Id);
             }
         }
         #endregion
@@ -229,7 +248,7 @@ namespace HatTrick.InMemDb
                 RestoreRecord record = _records[ids[i]];
 
                 MemDbPointer oPtr = record.Pointer;
-                var nPtr = new MemDbPointer(oPtr.Id, RecordState.Fresh, oPtr.StateSetAt, oPtr.IsEncrypted, (uint)db.Position, oPtr.Length);
+                var nPtr = new MemDbPointer(oPtr.Id, RecordState.Fresh, oPtr.StateSetAt, oPtr.CreatedAt, oPtr.IsEncrypted, (uint)db.Position, oPtr.Length);
                 map.Add(nPtr);
                 db.Write(record.RawData);
             }
