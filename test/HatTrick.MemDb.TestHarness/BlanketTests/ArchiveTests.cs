@@ -50,7 +50,7 @@ namespace HatTrick.InMemDb.TestHarness
                 if (asset.AssetType == DigitalAssetType.Unknown)
                     unknownCnt += 1;
 
-                db.Insert(asset);
+                db.Insert(asset, (id) => asset.Id = id);
             }
         }
         #endregion
@@ -165,6 +165,50 @@ namespace HatTrick.InMemDb.TestHarness
             int txtCnt;
             int jsonCnt;
             int unknownCnt;
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                this.LoadDb(db, out txtCnt, out jsonCnt, out unknownCnt);
+            }
+
+            long timestamp = 0;
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                uint[] ids = db.Query().SelectDistinct(a => a.Id);
+
+                for (int i = 0; i < ids.Length; i++)
+                {
+                    db.Update(a => a.XXHash += 1, a => a.Id == ids[i]);
+                    if (i == 249)
+                    {
+                        Thread.Sleep(1);
+                        timestamp = DateTime.UtcNow.ToBinary();
+                    }
+                }
+
+                for (int i = 0; i < ids.Length; i++)
+                {
+                    db.Delete(a => a.Id == ids[i]);
+                }
+            }
+            MemDb.Defrag(_dataset);
+
+            MemDb.Restore(_dataset, timestamp, Path.Combine(_dbPath, "_restore"));
+            MemDb.RemoveConfiguationFor(_dataset);
+            this.RegisterMemDb(Path.Combine(_dbPath, "_restore"));
+
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                Assert.IsEqual(db.Count(a => a.XXHash == 1), 250);
+            }
+        }
+        #endregion
+
+        #region multi defrag archive restore to timestamp 2
+        public void Test_MultiDefragArchiveRestoreToTimestamp2()
+        {
+            int txtCnt;
+            int jsonCnt;
+            int unknownCnt;
 
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
@@ -214,8 +258,8 @@ namespace HatTrick.InMemDb.TestHarness
         }
         #endregion
 
-        #region multi defrag archive restore to timestamp
-        public void Test_MultiDefragArchiveRestoreToTimestamp2()
+        #region multi defrag archive restore to timestamp 3
+        public void Test_MultiDefragArchiveRestoreToTimestamp3()
         {
             int txtCnt;
             int jsonCnt;
