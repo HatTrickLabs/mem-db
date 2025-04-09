@@ -51,6 +51,10 @@ namespace HatTrick.InMemDb
         internal double AvgFreshRecordSize => this.GetAvgRecordSize(RecordState.Fresh);
         internal double AvgStaleRecordSize => this.GetAvgRecordSize(RecordState.Stale);
         internal double AvgDeletedRecordSize => this.GetAvgRecordSize(RecordState.Deleted);
+
+        internal int EncryptedFreshCount => this.GetEncryptedCount(RecordState.Fresh);
+        internal int EncryptedStaleCount => this.GetEncryptedCount(RecordState.Stale);
+        internal int EncryptedDeletedCount => this.GetEncryptedCount(RecordState.Deleted);
         #endregion
 
         #region constructors
@@ -132,6 +136,14 @@ namespace HatTrick.InMemDb
             lock (_syncLock)
             {
                 return _pointers.Count(p => p.State == state);
+            }
+        }
+
+        private int GetEncryptedCount(RecordState state)
+        {
+            lock (_syncLock)
+            {
+                return _pointers.Count(p => p.State == state && p.IsEncrypted);
             }
         }
         #endregion
@@ -253,8 +265,7 @@ namespace HatTrick.InMemDb
                     for (int i = _nextFlushIdx; i < _pointers.Count; i++)
                     {
                         var p = _pointers[i];
-                        if (!p.Flushed)//technically don't need this check anymore...we are now tracking next flush idx
-                            p.SerializeTo(mapWriter);
+                        p.SerializeTo(mapWriter);
                     }
 
                     _nextFlushIdx = _pointers.Count;
