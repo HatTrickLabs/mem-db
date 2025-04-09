@@ -16,21 +16,21 @@ x Return some type of IMemDbConfiguration on the fluent configure methods to eli
 x Implement some type of block or guard against opening MemDb<T>("datasetName") more than 1 time within a process.
 - Research some type of block or guard against opening MemDb<T>("datasetName") across processes (maybe exclusive file lock)...
 x Fix (open, dispose, re-open) bug...The complete MemDbConfig state needs to be CLEARED.
-- Very basic test framework
-- Blanket Tests:
-  - Baseline: deep copy, inserts, updates, deletes, accuracy of find / find all, load-flush-close-reopen still accurate
-  - Custom Cloner
-  - Custom Serializer
-  - Custom Cloner and Serializer
-  - AES Encryption with Key: 
-  - AES Encryption with Key from Password
-  - ReadOnly access mode: allows read, throws on any attempt to write (insert,update,delete)
-  - AppendOnly access mode: allows insert and throws on any attempt to read (find, findall, query, update, delete)
-  - Auto Increment Identity and identity provider delegate
-  - Query Expression Builder: where, order by, group by, skip/limit, sum, max, min, avg, select projection, select distinct, update, delete
-  - High Concurrency
-  - Defrag
-  - Defrag with Archive
+x Very basic test framework
+x Blanket Tests:
+  x Baseline: deep copy, inserts, updates, deletes, accuracy of find / find all, load-flush-close-reopen still accurate
+  x Custom Cloner
+  x Custom Serializer
+  x Custom Cloner and Serializer
+  x AES Encryption with Key: 
+  x AES Encryption with Key from Password
+  x ReadOnly access mode: allows read, throws on any attempt to write (insert,update,delete)
+  x AppendOnly access mode: allows insert and throws on any attempt to read (find, findall, query, update, delete)
+  x Auto Increment Identity and identity provider delegate
+  x Query Expression Builder: where, order by, group by, skip/limit, sum, max, min, avg, select projection, select distinct, update, delete
+  x High Concurrency
+  x Defrag
+  x Defrag with Archive
   
   
   

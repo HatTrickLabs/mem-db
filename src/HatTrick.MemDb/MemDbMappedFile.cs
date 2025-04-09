@@ -136,9 +136,8 @@ namespace HatTrick.InMemDb
             this.EnsureMode(AccessMode.ReadOnly | AccessMode.ReadWrite, nameof(IMemDbPersister<T>.InitializeMappedRecords));
 
             int encrypted = 0;
-            bool isEncryptionReady = this.IsEncryptionReady;
-            int capacity = _mode == AccessMode.ReadOnly ? _map.FreshCount : (int)(_map.FreshCount * 1.1);
-            records = new List<MemDbRecord<T>>(capacity);
+            bool isCryptoReady = this.IsEncryptionReady;
+            this.InitializeRecordList(out records, _mode, isCryptoReady);
             lock (_flushLock)
             {
                 using var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read);
@@ -150,25 +149,21 @@ namespace HatTrick.InMemDb
                 for (int i = 0; i < _map.Count; i++)
                 {
                     ptr = _map[i];
-
                     if (ptr.State != fresh)
                     {
                         if (ptr.IsEncrypted)
                             fsDb.Position += MemDbAESEncryptor.CalculateCryptoByteLength(ptr.Length);
-
                         else
                             fsDb.Position += ptr.Length;
 
                         continue;
                     }
-
-                    if (ptr.IsEncrypted && !isEncryptionReady)
+                    if (ptr.IsEncrypted && !isCryptoReady)
                     {
                         fsDb.Position += MemDbAESEncryptor.CalculateCryptoByteLength(ptr.Length);
                         encrypted += 1;
                         continue;
                     }
-
                     T value = null;
                     if (ptr.IsEncrypted)
                     {
@@ -178,15 +173,33 @@ namespace HatTrick.InMemDb
                     }
                     else
                     {
-                        //move the deserilize into a func with limited scope in order to take advantage of stackalloc
                         value = this.DeserializeRecord(reader, ptr.Length);
                     }
-
                     record = new(ptr.Id, value, fresh, ptr.StateSetAt, ptr.CreatedAt, ptr.IsEncrypted, records.Count, i);
                     records.Add(record);
                 }
             }
             _cryptoRecordCount = encrypted;
+        }
+        #endregion
+
+        #region initialize record list
+        private void InitializeRecordList(out IList<MemDbRecord<T>> records, AccessMode mode, bool cryptoReady)
+        {
+            MemDbMap map = _map;
+            int totalFresh = map.FreshCount;
+            int encryptedFresh = map.EncryptedFreshCount;
+
+            int capacity = mode == AccessMode.ReadOnly
+                ? cryptoReady
+                    ? totalFresh
+                    : (totalFresh - encryptedFresh)
+                : cryptoReady
+                    ? (int)(totalFresh * 1.1)
+                    : (int)((totalFresh - encryptedFresh) * 1.1);
+
+            //if the map is empty (brand new db) set the initial capacity equal the same initial capacity as the queues
+            records = new List<MemDbRecord<T>>(capacity == 0 ? _initialQueueCapacity : capacity);
         }
         #endregion
 
@@ -320,7 +333,6 @@ namespace HatTrick.InMemDb
                 {
                     this.AppendInsertedItems();
                 }
-
                 if (!_isClosed && _insertQ.Capacity > (_initialQueueCapacity * 4))
                 {
                     lock (_insertQLock)
@@ -346,7 +358,6 @@ namespace HatTrick.InMemDb
                 {
                     this.UpdateItemStates();
                 }
-
                 if (!_isClosed && _stateModQ.Capacity > (_initialQueueCapacity * 4))
                 {
                     lock (_stateModQLock)
@@ -371,15 +382,12 @@ namespace HatTrick.InMemDb
                 using (var dbWriter = new BinaryWriter(fsDb, Encoding.UTF8, true))
                 {
                     fsDb.Position = fsDb.Length;
-
                     do
                     {
                         uint startPos = (uint)fsDb.Position;
-
                         try
                         {
                             int length;
-
                             if (record.IsEncrypted)
                             {
                                 Span<byte> raw = this.SerializeRecord(record.Value);
@@ -392,7 +400,6 @@ namespace HatTrick.InMemDb
                                 this.SerializeRecord(record.Value, dbWriter);
                                 length = (int)(fsDb.Position - startPos);
                             }
-
                             var pointer = new MemDbPointer(record.Id, RecordState.Fresh, record.StateSetAt, record.CreatedAt, record.IsEncrypted, startPos, length);
                             record.SetMapIndex(_map.Add(pointer));
                         }
@@ -408,7 +415,6 @@ namespace HatTrick.InMemDb
                             _map.Flush();
                             throw;
                         }
-
                     } while (this.TryPopInsertRecord(out record));
                 }
             }
@@ -483,11 +489,8 @@ namespace HatTrick.InMemDb
         private void Close(bool isFinalizer = false)
         {
             _isClosed = true;
-
             _fileSyncTimer?.Dispose();
-
             (this as IMemDbPersister<T>).Flush(true);
-
             if (!isFinalizer)
                 GC.SuppressFinalize(this);
         }
@@ -497,9 +500,7 @@ namespace HatTrick.InMemDb
         public void Dispose()
         {
             if (!_isClosed)
-            {
                 this.Close();
-            }
         }
         #endregion
 

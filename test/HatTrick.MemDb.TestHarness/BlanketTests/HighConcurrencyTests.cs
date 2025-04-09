@@ -7,7 +7,7 @@ using System.Collections.Generic;
 
 namespace HatTrick.InMemDb.TestHarness
 {
-    internal class HighConcurrencyTests : TestBase
+    public class HighConcurrencyTests : TestBase
     {
         #region internals
         private static readonly string _dataset = $"assets";
