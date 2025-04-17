@@ -13,9 +13,6 @@ namespace HatTrick.InMemDb
         private bool _isEncrypted;
         private uint _position;
         private int _length;
-
-        //not serialized
-        private bool _flushed;
         #endregion
 
         #region interface
@@ -34,12 +31,10 @@ namespace HatTrick.InMemDb
         internal bool IsEncrypted => _isEncrypted;
         internal uint Position => _position;
         internal int Length => _length;
-
-        internal bool Flushed => _flushed;
         #endregion
 
         #region constructor
-        internal MemDbPointer(uint id, RecordState state, long stateSetAt, long createdAt, bool isEncrypted, uint startPosition, int length, bool flushed = false)
+        internal MemDbPointer(uint id, RecordState state, long stateSetAt, long createdAt, bool isEncrypted, uint startPosition, int length)
         {
             _id = id;
             _state = state;
@@ -48,7 +43,6 @@ namespace HatTrick.InMemDb
             _isEncrypted = isEncrypted;
             _position = startPosition;
             _length = length;
-            _flushed = flushed;
         }
         #endregion
 
@@ -68,13 +62,6 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
-        #region clone
-        internal MemDbPointer Clone()
-        {
-            return new MemDbPointer(_id, _state, _stateSetAt, _createdAt, _isEncrypted, _position, _length, _flushed);
-        }
-        #endregion
-
         #region serialize to
         internal void SerializeTo(BinaryWriter writer)
         {
@@ -85,8 +72,6 @@ namespace HatTrick.InMemDb
             writer.Write(_isEncrypted);
             writer.Write(_position);
             writer.Write(_length);
-
-            _flushed = true;
         }
         #endregion
 
@@ -100,7 +85,7 @@ namespace HatTrick.InMemDb
             bool isEncrypted = reader.ReadBoolean();
             uint position = reader.ReadUInt32();
             int length = reader.ReadInt32();
-            return new MemDbPointer(id, state, stateSetAt, createdAt, isEncrypted, position, length, true);
+            return new MemDbPointer(id, state, stateSetAt, createdAt, isEncrypted, position, length);
         }
         #endregion
     }
