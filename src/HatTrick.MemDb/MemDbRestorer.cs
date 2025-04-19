@@ -180,7 +180,7 @@ namespace HatTrick.InMemDb
             //this is just tmp in-mem only, don't init to disk...
             //simply give the ctor a bunk path, do not initialize and never flush
             MemDbMap map = new MemDbMap("xxx", false);
-            using (var fs = new FileStream(_fullMapPath, FileMode.Open, FileAccess.Read))
+            using (var fs = new FileStream(_fullMapPath, FileMode.Open, FileAccess.Read, FileShare.None))
             {
                 using (var mapReader = new BinaryReader(fs))
                 {
@@ -194,7 +194,7 @@ namespace HatTrick.InMemDb
         #region roll pointers
         public void RollPointers(MemDbMap map, string dbFilePath)
         {
-            using var db = new FileStream(dbFilePath, FileMode.Open, FileAccess.Read);
+            using var db = new FileStream(dbFilePath, FileMode.Open, FileAccess.Read, FileShare.None);
 
             long restorePoint = _utcTimestamp;
             for (int i = 0; i < map.Count; i++)
@@ -240,7 +240,7 @@ namespace HatTrick.InMemDb
         private void BuildRestoredFiles ()
         {
             MemDbMap map = new MemDbMap(_fullRestoreMapPath, true);
-            using var db = new FileStream(_fullRestoreDbPath, FileMode.Create, FileAccess.ReadWrite);
+            using var db = new FileStream(_fullRestoreDbPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None);
 
             uint[] ids = _records.Keys.ToArray();
             for (int i = 0; i < ids.Length; i++)

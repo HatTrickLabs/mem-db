@@ -139,8 +139,8 @@ namespace HatTrick.InMemDb
             byte[] buffer = new byte[maxRecLength];
 
             //rebuild the db and map bypassing all stale and deleted records
-            using var oldDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read);
-            using var newDb = new FileStream(_fullTempDbPath, FileMode.Open, FileAccess.Write);
+            using var oldDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read, FileShare.None);
+            using var newDb = new FileStream(_fullTempDbPath, FileMode.Open, FileAccess.Write, FileShare.None);
 
             for (int i = 0; i < origMap.Count; i++)
             {

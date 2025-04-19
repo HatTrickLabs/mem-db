@@ -91,13 +91,13 @@ namespace HatTrick.InMemDb
         private void InitializeNew()
         {
             _pointers = new List<MemDbPointer>(_defaultInitialCapacity);
-            using var fs = new FileStream(_path, FileMode.CreateNew);
+            using var fs = new FileStream(_path, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None);
             this.SerializeTo(fs);
         }
 
         private void InitializeExisting()
         {
-            using var fsMap = new FileStream(_path, FileMode.Open, FileAccess.Read);
+            using var fsMap = new FileStream(_path, FileMode.Open, FileAccess.Read, FileShare.None);
             using var reader = new BinaryReader(fsMap, Encoding.UTF8, true);
             this.DeserializeFrom(reader);
         }
@@ -225,7 +225,7 @@ namespace HatTrick.InMemDb
                 if (!tryGetStaleRecord(out record))
                     return;
 
-                using (var fsMap = new FileStream(_path, FileMode.Open, FileAccess.ReadWrite))
+                using (var fsMap = new FileStream(_path, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
                 {
                     do
                     {
@@ -253,7 +253,7 @@ namespace HatTrick.InMemDb
             {
                 if (_nextFlushIdx < _pointers.Count)
                 {
-                    using var fsMap = new FileStream(_path, FileMode.Open, FileAccess.ReadWrite);
+                    using var fsMap = new FileStream(_path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
                     using var mapWriter = new BinaryWriter(fsMap, Encoding.UTF8, true);
 
                     //overwrite count and last id at the beginning

@@ -140,7 +140,7 @@ namespace HatTrick.InMemDb
             this.InitializeRecordList(out records, _mode, isCryptoReady);
             lock (_flushLock)
             {
-                using var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read);
+                using var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read, FileShare.None);
                 using var reader = new BinaryReader(fsDb, Encoding.UTF8, true);
 
                 RecordState fresh = RecordState.Fresh;
@@ -377,7 +377,7 @@ namespace HatTrick.InMemDb
             if (!this.TryPopInsertRecord(out record))
                 return;
 
-            using (var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.ReadWrite))
+            using (var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
             {
                 using (var dbWriter = new BinaryWriter(fsDb, Encoding.UTF8, true))
                 {

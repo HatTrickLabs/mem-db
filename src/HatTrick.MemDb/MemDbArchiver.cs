@@ -166,8 +166,8 @@ namespace HatTrick.InMemDb
             byte[] buffer = new byte[maxRecLength];
 
             //build archive of all stale and deleted records
-            using var origDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read);
-            using var archDb = new FileStream(_fullDbArchivePath, FileMode.Open, FileAccess.Write);
+            using var origDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read, FileShare.None);
+            using var archDb = new FileStream(_fullDbArchivePath, FileMode.Open, FileAccess.Write, FileShare.None);
 
             for (int i = 0; i < origMap.Count; i++)
             {

@@ -111,7 +111,7 @@ namespace HatTrick.InMemDb
         #region emit archive records
         private IEnumerable<MemDbRecord<T>> EmitArchiveRecords(string tmpArchFilePath, MemDbMap map)
         {
-            using var dbStream = new FileStream(tmpArchFilePath, FileMode.Open, FileAccess.Read);
+            using var dbStream = new FileStream(tmpArchFilePath, FileMode.Open, FileAccess.Read, FileShare.None);
             using var dbReader = new BinaryReader(dbStream);
 
             MemDbPointer ptr;
