@@ -2,10 +2,17 @@
 
 namespace HatTrick.InMemDb
 {
+    #region mem db record
     internal abstract class MemDbRecord
     {
         #region read only
-        internal static readonly int Size = sizeof(uint) + sizeof(RecordState) + sizeof(long) + sizeof(long) + sizeof(bool) + sizeof(int) + sizeof(int);
+        internal static readonly int Size = sizeof(uint)//id
+                                          + sizeof(RecordState)//state
+                                          + sizeof(long)//state set at
+                                          + sizeof(long)//created at
+                                          + sizeof(bool)//is encrypted
+                                          + sizeof(int) //cache index
+                                          + sizeof(int);//map index
         #endregion
 
         #region internals
@@ -81,7 +88,9 @@ namespace HatTrick.InMemDb
         }
         #endregion
     }
+    #endregion
 
+    #region mem db record of T
     internal class MemDbRecord<T> : MemDbRecord where T: class
     {
         #region internals
@@ -122,4 +131,5 @@ namespace HatTrick.InMemDb
         }
         #endregion
     }
+    #endregion
 }

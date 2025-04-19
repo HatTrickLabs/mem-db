@@ -19,7 +19,7 @@ namespace HatTrick.InMemDb.TestHarness
             MemDb.ConfigureFor<DigitalAsset>(_dataset, _dbPath)
                 .CloneWith(() => new DigitalAssetCloner())
                 .SerializeWith(() => new DigitalAssetBinarySerializer())
-                .EncryptWithPassword(() => "This is a super fancy and complex password.")
+                .EncryptWithPassword(() => "This is a super fancy and complex password!!!!!")
                 .Register();
         }
 
@@ -30,7 +30,7 @@ namespace HatTrick.InMemDb.TestHarness
             for (int i = 0; i < assets.Length; i++)
             {
                 var asset = assets[i];
-                db.Insert(asset, (id) => asset.Id = id, true);
+                db.Insert(asset, (id) => asset.Id = id, (i % 100) == 0);
             }
         }
         #endregion
@@ -38,18 +38,44 @@ namespace HatTrick.InMemDb.TestHarness
         #region large volume
         public void Test_LargeVolume()
         {
+            int iterations = 2_500;
+            int setCount = base.ResolveAssetSet().Length;
+            Stopwatch sw = new Stopwatch();
+            Console.WriteLine($"Starting load of  {iterations * setCount} into new database.");
+            sw.Start();
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
-                Parallel.For(0, 1_000, (i) =>
+                Parallel.For(0, iterations, (i) =>
                 {
                     this.LoadDb(db);
-                    if ((i % 10) == 0)
-                        db.Flush();
                 });
             }
+            sw.Stop();
+            Console.WriteLine($"{sw.ElapsedMilliseconds}\tCompleted insert, flush to disk and close db after insert of {iterations * setCount} records.");
 
+
+            sw.Reset();
+            Console.WriteLine($"Starting re-open and hydrate of {iterations * setCount} record db into RAM.");
+            sw.Start();
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
+                sw.Stop();
+                Console.WriteLine($"{sw.ElapsedMilliseconds}\tCompleted re-open and hydrate {iterations * setCount} records");
+
+                sw.Reset();
+                Console.WriteLine("Starting query for all records with .json extension");
+                sw.Start();
+                var json = db.FindAll(a => string.Compare(a.Extension, ".json", true) == 0);
+                sw.Stop();
+                Console.WriteLine($"{sw.ElapsedMilliseconds}\tResolved and cloned {json.Length} json assets.");
+                sw.Reset();
+                Console.WriteLine("Starting query for grouping of records by extension.");
+                sw.Start();
+                var groups = db.Query().GroupBy(a => a.Extension).Select(g => (g.Key, g.Count())).ToArray();
+                sw.Stop();
+                Console.WriteLine($"{sw.ElapsedMilliseconds}\tResolved {groups.Length} groups: {string.Join(',', groups.ToList().ConvertAll<string>(g => $"{g.Key}:{g.Item2}"))} ");
+
+
             }
         }
         #endregion

@@ -205,10 +205,7 @@ namespace HatTrick.InMemDb
         private bool _isClosed;
         #endregion
 
-        #region interface
-        #endregion
-
-        #region constructors
+        #region ctors
         private MemDb(MemDbConfiguration<T> config)
         {
             if (config is null)

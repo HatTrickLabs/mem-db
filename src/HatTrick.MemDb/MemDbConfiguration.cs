@@ -10,10 +10,6 @@ namespace HatTrick.InMemDb
         #region const
         public const int MinPasswordLength = 10;
         public const string ArchiveTimestampFormat = "yyyyMMdd_HHmm_ss_ffff";
-        //private const string MapNameFormat = "htl.{0}.map";
-        //private const string DbNameFormat  = "htl.{0}.db";
-        //private const string MapArchiveNameFormat = "{now}.htl.{datasetName}.map.arch";
-        //private const string DbArchiveNameFormat = "{now}.htl.{datasetName}.db.arch";
         #endregion
 
         #region internals
@@ -302,7 +298,6 @@ namespace HatTrick.InMemDb
         #region get cloner
         public IMemDbCloner<T> GetCloner()
         {
-            this.Initialize();
             return _cloner;
         }
         #endregion
@@ -310,7 +305,6 @@ namespace HatTrick.InMemDb
         #region get encryptor
         public IMemDbEncryptor GetEncryptor()
         {
-            this.Initialize();
             return _encryptor;
         }
         #endregion
@@ -318,7 +312,6 @@ namespace HatTrick.InMemDb
         #region get serializer
         internal IMemDbSerializer<T> GetSerializer()
         {
-            this.Initialize();
             return _serializer;
         }
         #endregion
@@ -326,7 +319,6 @@ namespace HatTrick.InMemDb
         #region get persister
         internal IMemDbPersister<T> GetPersister()
         {
-            this.Initialize();
             return _persister;
         }
         #endregion
@@ -334,7 +326,6 @@ namespace HatTrick.InMemDb
         #region get cache
         internal IMemDbCache<T> GetCache()
         {
-            this.Initialize();
             return _cache;
         }
         #endregion
