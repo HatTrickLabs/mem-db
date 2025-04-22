@@ -13,7 +13,6 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region internals
-        private bool _isInitialized;
         private string _datasetName;
         private string _path;
         private string _archivePath;
@@ -21,7 +20,6 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region interface
-        protected bool IsInitialized => _isInitialized;
         public string DatasetName => _datasetName;
         public string Path => _path;
         internal bool ShouldArchive => _archivePath is not null;
@@ -35,13 +33,6 @@ namespace HatTrick.InMemDb
             _datasetName = datasetName ?? throw new ArgumentNullException(nameof(datasetName));
             _path = path ?? throw new ArgumentNullException(nameof(path));
             _mode = mode;
-        }
-        #endregion
-
-        #region initialize
-        internal virtual void Initialize()
-        {
-            _isInitialized = true;
         }
         #endregion
 
@@ -117,13 +108,6 @@ namespace HatTrick.InMemDb
             return System.IO.Path.Combine(_archivePath, $"htl.{_datasetName}.zip");
         }
         #endregion
-
-        #region clear
-        internal virtual void Clear()
-        {
-            _isInitialized = false;
-        }
-        #endregion
     }
     #endregion
 
@@ -150,12 +134,11 @@ namespace HatTrick.InMemDb
         private Func<IMemDbCloner<T>> _clonerProvider;
         private Func<byte[]> _encryptionKeyProvider;
 
-        private IMemDbSerializer<T> _serializer;
-        private IMemDbCloner<T> _cloner;
-        private byte[] _encryptionKey;
-        private IMemDbEncryptor _encryptor;
-        private IMemDbCache<T> _cache;
-        private IMemDbPersister<T> _persister;
+        //private IMemDbSerializer<T> _serializer;
+        //private IMemDbCloner<T> _cloner;
+        //private IMemDbEncryptor _encryptor;
+        //private IMemDbCache<T> _cache;
+        //private IMemDbPersister<T> _persister;
         #endregion
 
         #region constructors
@@ -166,7 +149,7 @@ namespace HatTrick.InMemDb
 
             //set the default providers
             _serializerProvider = () => MemDbJsonSerializer<T>.GetInstance();
-            _clonerProvider = () => new MemDbSerializationCloner<T>(_serializer);
+            _clonerProvider = () => new MemDbSerializationCloner<T>(this.GetSerializer());
         }
         #endregion
 
@@ -263,70 +246,73 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region initialize
-        internal override void Initialize()
-        {
-            if (base.IsInitialized)
-                return;
+        //internal override void Initialize()
+        //{
+        //    if (base.IsInitialized)
+        //        return;
 
-            base.Initialize();
-            _encryptionKey = _encryptionKeyProvider?.Invoke() ?? null;
-            _encryptor = _encryptionKey is null ? null : new MemDbAESEncryptor(_encryptionKey);
-            _serializer = _serializerProvider();//MUST BE BEFORE CLONER...clone provider passes this as arg on internal ctor
-            _cloner = _clonerProvider();
-            _persister = new MemDbMappedFile<T>(this);//MUST BE BEFORE CACHE...Cache passes this as arg on internal ctor
-            _cache = new MemDbCache<T>(this);
-        }
-        #endregion
-
-        #region clear
-        internal override void Clear()
-        {
-            if (!base.IsInitialized)
-                return;
-
-            base.Clear();
-
-            _encryptionKey = null;
-            _encryptor = null;
-            _serializer = null;
-            _cloner = null;
-            _persister = null;
-            _cache = null;
-        }
+        //    base.Initialize();
+        //    _encryptionKey = _encryptionKeyProvider?.Invoke() ?? null;
+        //    _encryptor = _encryptionKey is null ? null : new MemDbAESEncryptor(_encryptionKey);
+        //    _serializer = _serializerProvider();//MUST BE BEFORE CLONER...clone provider passes this as arg on internal ctor
+        //    _cloner = _clonerProvider();
+        //    _persister = new MemDbMappedFile<T>(this);//MUST BE BEFORE CACHE...Cache passes this as arg on internal ctor
+        //    _cache = new MemDbCache<T>(this);
+        //}
         #endregion
 
         #region get cloner
         public IMemDbCloner<T> GetCloner()
         {
-            return _cloner;
+            //if (_cloner is null)
+            //    _cloner = _clonerProvider();
+
+            //return _cloner;
+            return _clonerProvider();
         }
         #endregion
 
         #region get encryptor
         public IMemDbEncryptor GetEncryptor()
         {
-            return _encryptor;
+            //if (_encryptor is null)
+            //    _encryptor = _encryptionKeyProvider is null ? null : new MemDbAESEncryptor(_encryptionKeyProvider());
+
+            //return _encryptor;
+            return _encryptionKeyProvider is null ? null : new MemDbAESEncryptor(_encryptionKeyProvider());
         }
         #endregion
 
         #region get serializer
         internal IMemDbSerializer<T> GetSerializer()
         {
-            return _serializer;
+            //if (_serializer is null)
+            //    _serializer = _serializerProvider();
+
+            //return _serializer;
+            return _serializerProvider();
         }
         #endregion
 
         #region get persister
         internal IMemDbPersister<T> GetPersister()
         {
-            return _persister;
+            //if (_persister is null)
+            //    _persister = new MemDbMappedFile<T>(this);
+
+            //return _persister;
+            return new MemDbMappedFile<T>(this);
         }
         #endregion
 
         #region get cache
         internal IMemDbCache<T> GetCache()
         {
-            return _cache;
+            //if (_cache is null)
+            //    _cache = new MemDbCache<T>(this);
+
+            //return _cache;
+            return new MemDbCache<T>(this);
         }
         #endregion
     }

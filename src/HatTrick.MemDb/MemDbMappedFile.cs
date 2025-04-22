@@ -33,8 +33,6 @@ namespace HatTrick.InMemDb
         private IMemDbSerializer<T> _serializer;
         private IBinaryReadMemDbSerializer<T> _binReadSerializer;//optional impl
         private IMemDbEncryptor _encryptor;
-        
-        private int _cryptoRecordCount;
 
         private bool _isClosed;
         #endregion
@@ -130,12 +128,11 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
-        #region initialize mapped records
-        void IMemDbPersister<T>.InitializeMappedRecords(out IList<MemDbRecord<T>> records)
+        #region read mapped records
+        void IMemDbPersister<T>.ReadMappedRecords(out IList<MemDbRecord<T>> records)
         {
-            this.EnsureMode(AccessMode.ReadOnly | AccessMode.ReadWrite, nameof(IMemDbPersister<T>.InitializeMappedRecords));
+            this.EnsureMode(AccessMode.ReadOnly | AccessMode.ReadWrite, nameof(IMemDbPersister<T>.ReadMappedRecords));
 
-            int encrypted = 0;
             bool isCryptoReady = this.IsEncryptionReady;
             this.InitializeRecordList(out records, _mode, isCryptoReady);
             lock (_flushLock)
@@ -149,27 +146,20 @@ namespace HatTrick.InMemDb
                 for (int i = 0; i < _map.Count; i++)
                 {
                     ptr = _map[i];
-                    if (ptr.State != fresh)
+                    if (ptr.State != fresh || (ptr.IsEncrypted && !isCryptoReady))
                     {
-                        if (ptr.IsEncrypted)
-                            fsDb.Position += MemDbAESEncryptor.CalculateCryptoByteLength(ptr.Length);
-                        else
-                            fsDb.Position += ptr.Length;
+                        fsDb.Position += (ptr.IsEncrypted) 
+                            ? MemDbAESEncryptor.CalculateCryptoByteLength(ptr.Length) 
+                            : ptr.Length;
 
                         continue;
                     }
-                    if (ptr.IsEncrypted && !isCryptoReady)
-                    {
-                        fsDb.Position += MemDbAESEncryptor.CalculateCryptoByteLength(ptr.Length);
-                        encrypted += 1;
-                        continue;
-                    }
+
                     T value = null;
                     if (ptr.IsEncrypted)
                     {
                         Span<byte> raw = _encryptor.Decrypt(fsDb, ptr.Length);
                         value = _serializer.Deserialize(raw);
-                        encrypted += 1;
                     }
                     else
                     {
@@ -179,7 +169,6 @@ namespace HatTrick.InMemDb
                     records.Add(record);
                 }
             }
-            _cryptoRecordCount = encrypted;
         }
         #endregion
 

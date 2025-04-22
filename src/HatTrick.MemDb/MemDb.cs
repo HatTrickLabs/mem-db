@@ -27,7 +27,6 @@ namespace HatTrick.InMemDb
         public static MemDbConfiguration GetConfiguration(string datasetName)
         {
             var config = _configurations.Find(c => c.DatasetName == datasetName);
-            config?.Initialize();
             return config;
         }
         #endregion
@@ -42,23 +41,16 @@ namespace HatTrick.InMemDb
             }
 
             MemDbConfiguration config = MemDb.GetConfiguration(datasetName);
-            try
-            {
-                if (config is null)
-                    throw new ArgumentException($"No configuration registered for provided datasetName: {datasetName}");
+            if (config is null)
+                throw new ArgumentException($"No configuration registered for provided datasetName: {datasetName}");
             
-                if (config.ShouldArchive)
-                {
-                    IMemDbArchiver archiver = new MemDbArchiver(config);
-                    archiver.Archive();
-                }
-                IMemDbDefragmenter defragmenter = new MemDbDefragmenter(config);
-                defragmenter.Defrag();
-            }
-            finally
+            if (config.ShouldArchive)
             {
-                config?.Clear();
+                IMemDbArchiver archiver = new MemDbArchiver(config);
+                archiver.Archive();
             }
+            IMemDbDefragmenter defragmenter = new MemDbDefragmenter(config);
+            defragmenter.Defrag();
         }
         #endregion
 
@@ -66,28 +58,21 @@ namespace HatTrick.InMemDb
         public static IEnumerable<MemDbArchivedRecord<T>> ReadArchive<T>(string datasetName) where T : class
         {
             MemDbConfiguration config = MemDb.GetConfiguration(datasetName);
-            try
+            if (config is null)
+                throw new ArgumentException($"No configuration registered fr provided datasetName: {datasetName}");
+
+            if (!config.ShouldArchive)
+                throw new InvalidOperationException($"Configuration for provided dataset '{datasetName}' is not configured to archive on defrag.");
+
+            var configOfT = config.EnsureGenericType<T>(config);
+            var archReader = new MemDbArchiveReader<T>(configOfT);
+
+            //we want this entire stack to be yeild return.  Archive record counts could be large, so we
+            //let the consumer analyze each record to find the set they are looking for (and toss the rest).
+            var enumerator = archReader.ReadArchive();
+            foreach (MemDbRecord<T> r in enumerator)
             {
-                if (config is null)
-                    throw new ArgumentException($"No configuration registered fr provided datasetName: {datasetName}");
-
-                if (!config.ShouldArchive)
-                    throw new InvalidOperationException($"Configuration for provided dataset '{datasetName}' is not configured to archive on defrag.");
-
-                var configOfT = config.EnsureGenericType<T>(config);
-                var archReader = new MemDbArchiveReader<T>(configOfT);
-
-                //we want this entire stack to be yeild return.  Archive record counts could be large, so we
-                //let the consumer analyze each record to find the set they are looking for (and toss the rest).
-                var enumerator = archReader.ReadArchive();
-                foreach (MemDbRecord<T> r in enumerator)
-                {
-                    yield return new MemDbArchivedRecord<T>(r.Id, r.State, r.StateSetAt, r.CreatedAt, r.IsEncrypted, r.Value);
-                }
-            }
-            finally
-            {
-                config.Clear();
+                yield return new MemDbArchivedRecord<T>(r.Id, r.State, r.StateSetAt, r.CreatedAt, r.IsEncrypted, r.Value);
             }
         }
         #endregion
@@ -108,22 +93,15 @@ namespace HatTrick.InMemDb
             }
 
             MemDbConfiguration config = MemDb.GetConfiguration(datasetName);
-            try
-            {
-                if (config is null)
-                    throw new ArgumentException($"No configuration registered for provided datasetName: {datasetName}");
+            if (config is null)
+                throw new ArgumentException($"No configuration registered for provided datasetName: {datasetName}");
 
-                if (!config.ShouldArchive)
-                    throw new InvalidOperationException($"{nameof(Restore)} cannot be run on a MemDb instance that was not configured for Archive.");
+            if (!config.ShouldArchive)
+                throw new InvalidOperationException($"{nameof(Restore)} cannot be run on a MemDb instance that was not configured for Archive.");
 
-                var restorer = new MemDbRestorer(config, outputDirectory, utcTimestamp, true);
+            var restorer = new MemDbRestorer(config, outputDirectory, utcTimestamp, true);
 
-                restorer.Restore();
-            }
-            finally
-            {
-                config?.Clear();
-            }
+            restorer.Restore();
         }
         #endregion
 
@@ -169,11 +147,20 @@ namespace HatTrick.InMemDb
 
             lock (_lock)
             {
+                //ensure the requested db is not already open within this currently executing process...
                 if (_openDatasets.Contains(datasetName))
                     throw new InvalidOperationException($"MemDb instance for provided {nameof(datasetName)} '{datasetName}' is already open.");
 
-                var memDb = MemDb<T>.Open(datasetName);
+                MemDbConfiguration config = MemDb.GetConfiguration(datasetName);
+
+                if (config is null)
+                    throw new ArgumentException($"No configuration registered for provided {nameof(datasetName)}: {datasetName}");
+
+                var configOfT = config.EnsureGenericType<T>(config);
+                var memDb = new MemDb<T>(configOfT);
+
                 _openDatasets.Add(datasetName);
+
                 return memDb;
             }
         }
@@ -187,7 +174,6 @@ namespace HatTrick.InMemDb
                 if (_openDatasets.Remove(datasetName))
                 {
                     var config = MemDb.GetConfiguration(datasetName);
-                    config?.Clear();
                 }
             }
         }
@@ -206,30 +192,14 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region ctors
-        private MemDb(MemDbConfiguration<T> config)
+        internal MemDb(MemDbConfiguration<T> config)
         {
             if (config is null)
                 throw new ArgumentNullException(nameof(config));
 
             _datasetName = config.DatasetName;
-            _cache = config.GetCache();
             _isEncryptionReady = config.GetEncryptor() is not null;
-        }
-        #endregion
-
-        #region open
-        internal static MemDb<T> Open(string datasetName)
-        {
-            MemDbConfiguration config = MemDb.GetConfiguration(datasetName);
-
-            if (config is null)
-                throw new ArgumentException($"No configuration registered for provided datasetName: {datasetName}");
-
-            var configOfT = config.EnsureGenericType<T>(config);
-
-            var memDb = new MemDb<T>(configOfT);
-
-            return memDb;
+            _cache = config.GetCache();
         }
         #endregion
 

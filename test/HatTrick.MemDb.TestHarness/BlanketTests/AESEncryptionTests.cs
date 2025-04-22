@@ -26,13 +26,15 @@ namespace HatTrick.InMemDb.TestHarness
         #region insert encrypted records
         public void Test_InsertEncryptedRecords()
         {
-            using var db = MemDb.Open<DigitalAsset>(_dataset);
-            DigitalAsset[] assets = base.ResolveAssetSet();
-            for (int i = 0; i < assets.Length; i++)
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
-                db.Insert(assets[i], true);
+                DigitalAsset[] assets = base.ResolveAssetSet();
+                for (int i = 0; i < assets.Length; i++)
+                {
+                    db.Insert(assets[i], true);
+                }
+                db.Flush();
             }
-            db.Flush();
         }
         #endregion
 

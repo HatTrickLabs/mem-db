@@ -8,7 +8,7 @@ namespace HatTrick.InMemDb
         internal AccessMode Mode { get; }
         internal int RecordCount { get; }
         internal bool IsEncryptionReady { get; }
-        internal void InitializeMappedRecords(out IList<MemDbRecord<T>> records);
+        internal void ReadMappedRecords(out IList<MemDbRecord<T>> records);
         internal uint GetNextId();
         internal void Insert(MemDbRecord<T> record);
         internal void MarkStale(MemDbRecord<T> record);

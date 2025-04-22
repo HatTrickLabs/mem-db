@@ -40,8 +40,8 @@ namespace HatTrick.InMemDb
         {
             if (_mode == AccessMode.AppendOnly)
                 return;
-            
-            _persister.InitializeMappedRecords(out IList<MemDbRecord<T>> records);
+
+            _persister.ReadMappedRecords(out IList<MemDbRecord<T>> records);
             _records = records as List<MemDbRecord<T>>;
         }
         #endregion
