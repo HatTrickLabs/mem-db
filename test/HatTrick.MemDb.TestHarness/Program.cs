@@ -42,7 +42,7 @@ namespace HatTrick.InMemDb.TestHarness
             {
                 tests = Array.FindAll(tests, (t) => t.Name == container);
                 if (tests is null || tests.Length == 0)
-                    throw new CommandExecutionException("No test methods found for provided for provided input.");
+                    throw new CommandExecutionException("No test methods found for provided input.");
             }
 
             int total = 0;

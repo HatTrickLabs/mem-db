@@ -133,12 +133,6 @@ namespace HatTrick.InMemDb
         private Func<IMemDbSerializer<T>> _serializerProvider;
         private Func<IMemDbCloner<T>> _clonerProvider;
         private Func<byte[]> _encryptionKeyProvider;
-
-        //private IMemDbSerializer<T> _serializer;
-        //private IMemDbCloner<T> _cloner;
-        //private IMemDbEncryptor _encryptor;
-        //private IMemDbCache<T> _cache;
-        //private IMemDbPersister<T> _persister;
         #endregion
 
         #region constructors
@@ -245,29 +239,9 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
-        #region initialize
-        //internal override void Initialize()
-        //{
-        //    if (base.IsInitialized)
-        //        return;
-
-        //    base.Initialize();
-        //    _encryptionKey = _encryptionKeyProvider?.Invoke() ?? null;
-        //    _encryptor = _encryptionKey is null ? null : new MemDbAESEncryptor(_encryptionKey);
-        //    _serializer = _serializerProvider();//MUST BE BEFORE CLONER...clone provider passes this as arg on internal ctor
-        //    _cloner = _clonerProvider();
-        //    _persister = new MemDbMappedFile<T>(this);//MUST BE BEFORE CACHE...Cache passes this as arg on internal ctor
-        //    _cache = new MemDbCache<T>(this);
-        //}
-        #endregion
-
         #region get cloner
         public IMemDbCloner<T> GetCloner()
         {
-            //if (_cloner is null)
-            //    _cloner = _clonerProvider();
-
-            //return _cloner;
             return _clonerProvider();
         }
         #endregion
@@ -275,10 +249,6 @@ namespace HatTrick.InMemDb
         #region get encryptor
         public IMemDbEncryptor GetEncryptor()
         {
-            //if (_encryptor is null)
-            //    _encryptor = _encryptionKeyProvider is null ? null : new MemDbAESEncryptor(_encryptionKeyProvider());
-
-            //return _encryptor;
             return _encryptionKeyProvider is null ? null : new MemDbAESEncryptor(_encryptionKeyProvider());
         }
         #endregion
@@ -286,10 +256,6 @@ namespace HatTrick.InMemDb
         #region get serializer
         internal IMemDbSerializer<T> GetSerializer()
         {
-            //if (_serializer is null)
-            //    _serializer = _serializerProvider();
-
-            //return _serializer;
             return _serializerProvider();
         }
         #endregion
@@ -297,10 +263,6 @@ namespace HatTrick.InMemDb
         #region get persister
         internal IMemDbPersister<T> GetPersister()
         {
-            //if (_persister is null)
-            //    _persister = new MemDbMappedFile<T>(this);
-
-            //return _persister;
             return new MemDbMappedFile<T>(this);
         }
         #endregion
@@ -308,10 +270,6 @@ namespace HatTrick.InMemDb
         #region get cache
         internal IMemDbCache<T> GetCache()
         {
-            //if (_cache is null)
-            //    _cache = new MemDbCache<T>(this);
-
-            //return _cache;
             return new MemDbCache<T>(this);
         }
         #endregion

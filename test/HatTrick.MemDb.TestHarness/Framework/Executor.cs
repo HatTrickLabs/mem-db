@@ -73,7 +73,7 @@ namespace HatTrick.InMemDb.TestHarness
         private Action[] ReflectTestMethods(TestBase target)
         {
             MethodInfo[] methods = target.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance);
-            MethodInfo[] tests = Array.FindAll(methods, m => m.Name.StartsWith("Test_"));
+            MethodInfo[] tests = Array.FindAll(methods, m => m.Name.StartsWith("Test_", StringComparison.OrdinalIgnoreCase));
 
             List<Action> actions = new List<Action>();
             foreach (var test in tests)

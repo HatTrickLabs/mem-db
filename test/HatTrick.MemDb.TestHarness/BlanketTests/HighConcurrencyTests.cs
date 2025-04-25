@@ -143,6 +143,9 @@ namespace HatTrick.InMemDb.TestHarness
                 t5.Start();
                 t6.Start();
 
+                if (flush)
+                    db.Flush();
+
                 t1.Join();
                 t2.Join();
                 t3.Join();
@@ -199,6 +202,9 @@ namespace HatTrick.InMemDb.TestHarness
                 t2.Start();
                 t3.Start();
 
+                if (flush)
+                    db.Flush();
+
                 t1.Join();
                 t2.Join();
                 t3.Join();
@@ -250,8 +256,6 @@ namespace HatTrick.InMemDb.TestHarness
             {
                 db.Insert(allAssets[i], (id) => allAssets[i].Id = id);
                 int updated = db.Update(a => a.XXHash += 1, (a) => a.Id == allAssets[i].Id);
-                if (updated == 0)
-                    Console.WriteLine(allAssets[i].Id);
             });
 
             allAssets.ForEach(a => a.Id = 0);
@@ -287,26 +291,26 @@ namespace HatTrick.InMemDb.TestHarness
 
         public void HighConcurrencyChaosTarget(bool flush)
         {
+            //build up 10,000 asset set
+            DigitalAsset[] assets1 = base.ResolveAssetSet();
+            DigitalAsset[] assets2 = base.ResolveAssetSet();
+            DigitalAsset[] assets3 = base.ResolveAssetSet();
+            DigitalAsset[] assets4 = base.ResolveAssetSet();
+            DigitalAsset[] assets5 = base.ResolveAssetSet();
+            DigitalAsset[] assets6 = base.ResolveAssetSet();
+            DigitalAsset[] assets7 = base.ResolveAssetSet();
+            DigitalAsset[] assets8 = base.ResolveAssetSet();
+            DigitalAsset[] assets9 = base.ResolveAssetSet();
+            DigitalAsset[] assets10 = base.ResolveAssetSet();
+
+
+            var assets = assets1.Concat(assets2).Concat(assets3).Concat(assets4)
+                                .Concat(assets5).Concat(assets6).Concat(assets7)
+                                .Concat(assets8).Concat(assets9).Concat(assets10)
+                                .ToArray();
+
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
             { 
-                //build up 10,000 asset set
-                DigitalAsset[] assets1 = base.ResolveAssetSet();
-                DigitalAsset[] assets2 = base.ResolveAssetSet();
-                DigitalAsset[] assets3 = base.ResolveAssetSet();
-                DigitalAsset[] assets4 = base.ResolveAssetSet();
-                DigitalAsset[] assets5 = base.ResolveAssetSet();
-                DigitalAsset[] assets6 = base.ResolveAssetSet();
-                DigitalAsset[] assets7 = base.ResolveAssetSet();
-                DigitalAsset[] assets8 = base.ResolveAssetSet();
-                DigitalAsset[] assets9 = base.ResolveAssetSet();
-                DigitalAsset[] assets10 = base.ResolveAssetSet();
-
-
-                var assets = assets1.Concat(assets2).Concat(assets3).Concat(assets4)
-                                    .Concat(assets5).Concat(assets6).Concat(assets7)
-                                    .Concat(assets8).Concat(assets9).Concat(assets10)
-                                    .ToArray();
-
                 //insert all 10000 records in a parallel loop
                 Parallel.For(0, assets.Length, (int i) =>
                 {
@@ -390,6 +394,22 @@ namespace HatTrick.InMemDb.TestHarness
                 Assert.IsEqual<int>(db.Count(a => a.XXHash == 2), assets.Length);
                 //ensure the final 1000 inserted after initial set were deleted.
                 Assert.IsEqual<int>(deleted, assets11.Length);
+            }
+
+            //close and reopen
+
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                //ensure correct number of records (original set)
+                Assert.IsEqual<int>(db.Count(), assets.Length);
+                //ensure each record has unique / distinct Id
+                Assert.IsEqual<int>(db.Query().SelectDistinct(a => a.Id).Count(), assets.Length);
+                //ensure min id is 1
+                Assert.IsEqual<uint>(db.Query().Min(a => a.Id), 1);
+                //ensure max id is total record length
+                Assert.IsEqual<uint>(db.Query().Max(a => a.Id), (uint)assets.Length);
+                //ensure all updates actually happened
+                Assert.IsEqual<int>(db.Count(a => a.XXHash == 2), assets.Length);
             }
         }
         #endregion

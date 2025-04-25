@@ -13,7 +13,10 @@ namespace HatTrick.InMemDb.TestHarness
         public RegisterdSerializeBaselineTests(AssetResolver assetResolver) : base(assetResolver)
         {
             MemDb.ConfigureFor<DigitalAsset>(base.Dataset, base.DbPath)
-                .SerializeWith(() => { _serializer = new DigitalAssetBinarySerializer(); return _serializer; })
+                .SerializeWith(() => 
+                    {
+                        return _serializer ?? (_serializer = new DigitalAssetBinarySerializer());
+                    })
                 .Register();
         }
         #endregion

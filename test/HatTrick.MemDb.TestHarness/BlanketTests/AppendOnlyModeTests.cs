@@ -23,7 +23,7 @@ namespace HatTrick.InMemDb.TestHarness
             for (int i = 0; i < assets.Length; i++)
             {
                 var asset = assets[i];
-                db.Insert(asset);
+                db.Insert(asset, (id) => asset.Id = id);
             }
         }
         #endregion
@@ -98,6 +98,53 @@ namespace HatTrick.InMemDb.TestHarness
             {
                 var a = db.Find(a => a.Name == "xxx.txt");
                 Assert.IsNotNull(a);
+            }
+
+            MemDb.RemoveConfiguationFor(_dataset);
+        }
+        #endregion
+
+        #region append only allows complete load from init
+        public void Test_AppendOnlyAllowsCompleteLoadFromInit()
+        {
+            MemDb.ConfigureFor<DigitalAsset>(_dataset, _dbPath)
+                .SetMode(AccessMode.AppendOnly)
+                .CloneWith(() => new DigitalAssetCloner())
+                .SerializeWith(() => new DigitalAssetBinarySerializer())
+                .Register();
+
+            int assetSetlength = base.ResolveAssetSet().Length;
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                this.LoadDb(db);
+                Assert.IsEqual(db.Count(), assetSetlength);
+            }
+
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                Assert.IsEqual(db.Count(), assetSetlength);
+            }
+
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                this.LoadDb(db);
+                Assert.IsEqual(db.Count(), (assetSetlength * 2));
+            }
+
+            MemDb.RemoveConfiguationFor(_dataset);
+
+            MemDb.ConfigureFor<DigitalAsset>(_dataset, _dbPath)
+                .SetMode(AccessMode.ReadWrite)
+                .CloneWith(() => new DigitalAssetCloner())
+                .SerializeWith(() => new DigitalAssetBinarySerializer())
+                .Register();
+
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                var all = db.FindAll(a => true);
+                Assert.IsEqual(all.Length, (assetSetlength * 2));
+                var distinctIds = db.Query().SelectDistinct<uint>(a => a.Id);
+                Assert.IsEqual(distinctIds.Length, (assetSetlength * 2));
             }
         }
         #endregion

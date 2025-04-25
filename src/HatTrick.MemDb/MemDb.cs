@@ -129,7 +129,7 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
-        #region register
+        #region register configuration
         private static void RegisterConfiguration<T>(MemDbConfiguration<T> configuration) where T : class
         {
             if (_configurations.Exists(c => string.Compare(c.DatasetName, configuration.DatasetName, true) == 0))

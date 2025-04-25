@@ -31,6 +31,7 @@ x Blanket Tests:
   x High Concurrency
   x Defrag
   x Defrag with Archive
+- Refactor configuration builder.  Eliminate all internal persistance and the 'Clear()' method (let the consumre always dictate the source via provider functions).
   
   
   
