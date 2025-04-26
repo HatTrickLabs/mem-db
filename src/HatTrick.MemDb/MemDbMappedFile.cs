@@ -135,6 +135,10 @@ namespace HatTrick.InMemDb
 
             bool isCryptoReady = this.IsEncryptionReady;
             this.InitializeRecordList(out records, _mode, isCryptoReady);
+
+            if (_map.Count == 0)
+                return;
+
             lock (_flushLock)
             {
                 using var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.Read, FileShare.None);

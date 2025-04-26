@@ -17,6 +17,7 @@ namespace HatTrick.InMemDb.TestHarness
         public LargeVolumeTests(AssetResolver assetResolver) : base(_dataset, _dbPath, assetResolver)
         {
             MemDb.ConfigureFor<DigitalAsset>(_dataset, _dbPath)
+                .SetMode(AccessMode.AppendOnly)
                 .CloneWith(() => new DigitalAssetCloner())
                 .SerializeWith(() => new DigitalAssetBinarySerializer())
                 .EncryptWithPassword(() => "This is a super fancy and complex password!!!!!")
@@ -30,7 +31,8 @@ namespace HatTrick.InMemDb.TestHarness
             for (int i = 0; i < assets.Length; i++)
             {
                 var asset = assets[i];
-                db.Insert(asset, (id) => asset.Id = id, (i % 100) == 0);
+                //db.Insert(asset, (id) => asset.Id = id, (i % 100) == 0);
+                db.Insert(asset, (id) => asset.Id = id);
             }
         }
         #endregion
@@ -38,21 +40,29 @@ namespace HatTrick.InMemDb.TestHarness
         #region large volume
         public void Test_LargeVolume()
         {
-            int iterations = 2_500;
+            int iterations = 10_000;
             int setCount = base.ResolveAssetSet().Length;
             Stopwatch sw = new Stopwatch();
             Console.WriteLine($"Starting load of  {iterations * setCount} into new database.");
             sw.Start();
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
-                Parallel.For(0, iterations, (i) =>
+                for (int i = 0; i < iterations; i++)
                 {
                     this.LoadDb(db);
-                });
+                }
             }
             sw.Stop();
             Console.WriteLine($"{sw.ElapsedMilliseconds}\tCompleted insert, flush to disk and close db after insert of {iterations * setCount} records.");
 
+
+            MemDb.RemoveConfiguationFor(_dataset);
+            MemDb.ConfigureFor<DigitalAsset>(_dataset, _dbPath)
+                .SetMode(AccessMode.ReadOnly)
+                .CloneWith(() => new DigitalAssetCloner())
+                .SerializeWith(() => new DigitalAssetBinarySerializer())
+                .EncryptWithPassword(() => "This is a super fancy and complex password!!!!!")
+                .Register();
 
             sw.Reset();
             Console.WriteLine($"Starting re-open and hydrate of {iterations * setCount} record db into RAM.");
@@ -77,6 +87,9 @@ namespace HatTrick.InMemDb.TestHarness
 
 
             }
+
+            Console.WriteLine("Done...Press [Enter] to exit.");
+            Console.ReadLine();
         }
         #endregion
     }
