@@ -16,6 +16,8 @@ namespace HatTrick.InMemDb
         private IMemDbPersister<T> _persister;
 
         private AccessMode _mode;
+        private uint _memOnlyLastId;
+        private Lock _idLock;
         #endregion
 
         #region ctors
@@ -26,10 +28,15 @@ namespace HatTrick.InMemDb
 
             _datasetName = config.DatasetName;
             _cloner = config.GetCloner();
-            _persister = config.GetPersister();
             _lock = new();
 
-            _mode = _persister.Mode;
+            if (config.Path is not null)
+                _persister = config.GetPersister();
+            else
+                _idLock = new();
+
+            _mode = config.Mode;
+            _memOnlyLastId = 0;
 
             this.Initialize();
         }
@@ -41,8 +48,13 @@ namespace HatTrick.InMemDb
             if (_mode == AccessMode.AppendOnly)
                 return;
 
-            _persister.ReadMappedRecords(out IList<MemDbRecord<T>> records);
-            _records = records as List<MemDbRecord<T>>;
+            if (_persister is not null)
+            {
+                _persister.ReadMappedRecords(out IList<MemDbRecord<T>> records);
+                _records = records as List<MemDbRecord<T>>;
+            }
+            else
+                _records = new List<MemDbRecord<T>>(128);
         }
         #endregion
 
@@ -231,6 +243,19 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region get next id
+        private uint GetNextId()
+        {
+            if (_persister is not null)
+                return _persister.GetNextId();
+
+            lock (_idLock)
+            {
+                return ++_memOnlyLastId;
+            }
+        }
+        #endregion
+
         #region insert
         public void Insert(T record, bool encrypt = false)
         {
@@ -244,7 +269,7 @@ namespace HatTrick.InMemDb
             //hint: this must happen before deep copy...
             //we don't even know if they want the Id, but if they do...
             //it MUST be applied WHEREVER they want it BEFORE DeepCopy
-            uint id = _persister.GetNextId();
+            uint id = this.GetNextId();
             idCallback?.Invoke(id);
 
             MemDbRecord<T> rec = new MemDbRecord<T>(id, _cloner.DeepCopy(record), DateTime.UtcNow.ToBinary(), encrypt);
@@ -258,7 +283,7 @@ namespace HatTrick.InMemDb
                 }
             }
 
-            _persister.Insert(rec);
+            _persister?.Insert(rec);
         }
         #endregion
 
@@ -299,8 +324,11 @@ namespace HatTrick.InMemDb
                         newRec.SetCacheIndex(_records.Count);
                         _records.Add(newRec);
 
-                        _persister.Insert(newRec);
-                        _persister.MarkStale(oldRec);
+                        if (_persister is not null)
+                        {
+                            _persister.Insert(newRec);
+                            _persister.MarkStale(oldRec);
+                        }
                     }
                 }
             }
@@ -326,7 +354,7 @@ namespace HatTrick.InMemDb
                 {
                     cnt += 1;
                     r.MarkDeleted(utcTimestamp);
-                    _persister.MarkDeleted(r);
+                    _persister?.MarkDeleted(r);
                 }
             }
 
@@ -337,13 +365,22 @@ namespace HatTrick.InMemDb
         #region resolve statistics
         public MemDbStatistics ResolveStatistics(Stats statistics)
         {
+            if (_persister is null)
+                throw new InvalidOperationException("Cannot resolve statistics for unpersisted database.");
+
             return _persister.ResolveStatistics(statistics);
         }
         #endregion
 
         #region flush
-        public void Flush()
+        void IMemDbCache<T>.Flush()
         {
+            if (_persister is null)
+            {
+                string msg = "Cannot flush an unpersisted database...A path must be provided during MemDb configuration for file-based persistence.";
+                throw new InvalidOperationException(msg);
+            }
+
             _persister.Flush(false);
         }
         #endregion
@@ -351,7 +388,7 @@ namespace HatTrick.InMemDb
         #region dispose
         public void Dispose()
         {
-            _persister.Dispose();
+            _persister?.Dispose();
         }
         #endregion
     }

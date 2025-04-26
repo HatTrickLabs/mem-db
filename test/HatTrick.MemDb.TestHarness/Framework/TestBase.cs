@@ -26,7 +26,7 @@ namespace HatTrick.InMemDb.TestHarness
         public TestBase(string datasetName, string dbPath, AssetResolver assetResolver)
         {
             _dataset = datasetName ?? throw new ArgumentNullException(nameof(datasetName));
-            _dbPath = dbPath ?? throw new ArgumentNullException(nameof(dbPath));
+            _dbPath = dbPath;//can be null..
             _assetResolver = assetResolver ?? throw new ArgumentNullException(nameof(assetResolver));
         }
         #endregion
@@ -42,7 +42,8 @@ namespace HatTrick.InMemDb.TestHarness
                 failures.AddRange(_failures);
             }
 
-            MemDb.RemoveConfiguationFor(_dataset);
+            if (MemDb.ContainsConfigurationFor(_dataset))
+                MemDb.RemoveConfiguationFor(_dataset);
         }
 
         public void Go(ref List<Failure> failures, string method)
@@ -76,19 +77,17 @@ namespace HatTrick.InMemDb.TestHarness
         #region delete db files
         private void DeleteDbFiles()
         {
-            //try
-            //{
-                string map = Path.Combine(_dbPath, "htl." + _dataset + ".map");
-                string db = Path.Combine(_dbPath, "htl." + _dataset + ".db");
+            if (_dbPath is null)
+                return;
 
-                if (File.Exists(map))
-                    File.Delete(map);
+            string map = Path.Combine(_dbPath, "htl." + _dataset + ".map");
+            string db = Path.Combine(_dbPath, "htl." + _dataset + ".db");
 
-                if (File.Exists(db))
-                    File.Delete(db);
-            //}
-            //catch (IOException)
-            //{}
+            if (File.Exists(map))
+                File.Delete(map);
+
+            if (File.Exists(db))
+                File.Delete(db);
         }
         #endregion
     }

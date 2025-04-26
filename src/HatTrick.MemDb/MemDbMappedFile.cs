@@ -9,12 +9,12 @@ namespace HatTrick.InMemDb
     internal sealed class MemDbMappedFile<T> : IMemDbPersister<T>, IDisposable where T : class
     {
         #region internals
-        private const int _flushInterval = (1000 * 5);//5 seconds
         private const int _initialQueueCapacity = 128;
 
         private readonly string _path;
         private readonly string _datasetName;
         private readonly AccessMode _mode;
+        private int _flushInterval;
 
         private string _fullMapPath;
         private string _fullDbPath;
@@ -54,6 +54,7 @@ namespace HatTrick.InMemDb
             _path = config.Path;
             _datasetName = config.DatasetName;
             _mode = config.Mode;
+            _flushInterval = config.FlushInterval;
 
             _serializer = config.GetSerializer();
             if (_serializer is IBinaryReadMemDbSerializer<T> binReadSerializer)
@@ -80,7 +81,7 @@ namespace HatTrick.InMemDb
         {
             this.EnsureFiles();
 
-            if (_mode != AccessMode.ReadOnly)
+            if (_mode != AccessMode.ReadOnly && _flushInterval > 0)
             {
                 var callback = new TimerCallback((this as IMemDbPersister<T>).Flush);
                 _fileSyncTimer = new Timer(callback, null, _flushInterval, Timeout.Infinite);
@@ -308,7 +309,7 @@ namespace HatTrick.InMemDb
             this.FlushInsertQueue();
             this.FlushStateChangeQueue();
 
-            if (!_isClosed)
+            if (!_isClosed && _flushInterval > 0)
                 _fileSyncTimer.Change(_flushInterval, Timeout.Infinite);
         }
         #endregion

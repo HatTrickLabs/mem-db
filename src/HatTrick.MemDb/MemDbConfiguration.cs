@@ -9,6 +9,8 @@ namespace HatTrick.InMemDb
     {
         #region const
         public const int MinPasswordLength = 10;
+        public const int DefaultFlushIntervalSeconds = 5;
+        public const int MaxFlushIntervalSeconds = 60;
         public const string ArchiveTimestampFormat = "yyyyMMdd_HHmm_ss_ffff";
         #endregion
 
@@ -17,6 +19,8 @@ namespace HatTrick.InMemDb
         private string _path;
         private string _archivePath;
         private AccessMode _mode;
+        private int _flushInterval;
+        private Func<byte[]> _encryptionKeyProvider;
         #endregion
 
         #region interface
@@ -25,21 +29,64 @@ namespace HatTrick.InMemDb
         internal bool ShouldArchive => _archivePath is not null;
         internal string ArchivePath => _archivePath;
         internal AccessMode Mode => _mode;
+        internal int FlushInterval => _path is null ? 0 : _flushInterval;
+        protected Func<byte[]> EncryptionKeyProvider => _encryptionKeyProvider;
         #endregion
 
         #region constructors
-        protected MemDbConfiguration(string datasetName, string path, AccessMode mode)
+        protected MemDbConfiguration(string datasetName, string path = null)
         {
             _datasetName = datasetName ?? throw new ArgumentNullException(nameof(datasetName));
-            _path = path ?? throw new ArgumentNullException(nameof(path));
-            _mode = mode;
+            _path = path;
+            _mode = AccessMode.ReadWrite;
+            //if path is null, we will never flush to disk (non persistant).
+            _flushInterval = path is null ? 0 : MemDbConfiguration.DefaultFlushIntervalSeconds * 1000;
         }
         #endregion
 
         #region set mode
         protected void SetMode(AccessMode mode)
         {
+            if (mode == AccessMode.AppendOnly && _path is null)
+                throw new InvalidOperationException($"{nameof(AccessMode)}.{AccessMode.AppendOnly} is inconsistent with a unpersisted database (no path provided).");
+
+            if (mode == AccessMode.ReadOnly && _path is null)
+                throw new InvalidOperationException($"{nameof(AccessMode)}.{AccessMode.ReadOnly} is inconsistent with a unpersisted database (no path provided).");
+
+            //assuming _flushInterval was never overridden if it is still equal to the default.
+            if (mode == AccessMode.ReadOnly && _flushInterval != MemDbConfiguration.DefaultFlushIntervalSeconds * 1000)
+                throw new InvalidOperationException($"{nameof(AccessMode)}.{AccessMode.ReadOnly} is inconsistent with with a flush interval greater than 0.");
+
             _mode = mode;
+        }
+        #endregion
+
+        #region set flush interval
+        protected void SetFlushInterval(int seconds)
+        {
+            if (_path is null)
+                throw new InvalidOperationException($"Flush interval is not applicable when database is not persisted (no path provided).");
+
+            if (_mode == AccessMode.ReadOnly)
+                throw new InvalidOperationException($"Flush interval is not applicable when {nameof(AccessMode)} is {AccessMode.ReadOnly}.");
+
+            if (seconds == 0 || seconds == -1)
+                _flushInterval = seconds;
+            else
+                _flushInterval = seconds * 1000;//convert to milliseconds
+        }
+        #endregion
+
+        #region set encryption key provider
+        protected void SetEncryptionKeyProvider(Func<byte[]> encryptionKeyProvider)
+        {
+            if (_encryptionKeyProvider is not null)
+                throw new InvalidOperationException("Encryption key provider already configured.");
+
+            if (_path is null)
+                throw new NotImplementedException("Encryption key is not applicable when database is not persisted (no path provided).");
+
+            _encryptionKeyProvider = encryptionKeyProvider;
         }
         #endregion
 
@@ -48,6 +95,9 @@ namespace HatTrick.InMemDb
         {
             if (_archivePath is not null)
                 throw new InvalidOperationException("Archive path already provided.");
+
+            if (_path is null)
+                throw new NotImplementedException("Archive path is not applicable when database is not persisted (no path provided).");
 
             _archivePath = archivePath;
         }
@@ -115,6 +165,7 @@ namespace HatTrick.InMemDb
     public interface IMemDBConfigurationBuilder<T> where T : class
     {
         IMemDBConfigurationBuilder<T> SetMode(AccessMode mode);
+        IMemDBConfigurationBuilder<T> SetFlushInterval(int interval);
         IMemDBConfigurationBuilder<T> SerializeWith(Func<IMemDbSerializer<T>> serializerProvider);
         IMemDBConfigurationBuilder<T> CloneWith(Func<IMemDbCloner<T>> clonerProvider);
         IMemDBConfigurationBuilder<T> EncryptWithKey(Func<byte[]> encryptionKeyProvider);
@@ -132,12 +183,15 @@ namespace HatTrick.InMemDb
 
         private Func<IMemDbSerializer<T>> _serializerProvider;
         private Func<IMemDbCloner<T>> _clonerProvider;
-        private Func<byte[]> _encryptionKeyProvider;
         #endregion
 
         #region constructors
-        internal MemDbConfiguration(string datasetName, string path, Action<MemDbConfiguration<T>> registerCallback)
-            : base(datasetName, path, AccessMode.ReadWrite)
+        internal MemDbConfiguration(string datasetName, Action<MemDbConfiguration<T>> registerCallback) 
+            : this(datasetName, null, registerCallback)
+        { }
+
+        internal MemDbConfiguration(string datasetName, string path, Action<MemDbConfiguration<T>> registerCallback) 
+            : base(datasetName, path)
         {
             _registerCallback = registerCallback ?? throw new ArgumentNullException(nameof(registerCallback));
 
@@ -151,6 +205,26 @@ namespace HatTrick.InMemDb
         public new IMemDBConfigurationBuilder<T> SetMode(AccessMode mode)
         {
             base.SetMode(mode);
+            return this;
+        }
+        #endregion
+
+        #region set flush interval
+        public new IMemDBConfigurationBuilder<T> SetFlushInterval(int seconds)
+        {
+            if (seconds == 0)//manual flush only
+                base.SetFlushInterval(seconds);
+
+            if (seconds < 0)
+                throw new ArgumentOutOfRangeException(nameof(seconds), "Argument cannot be less than 0.");
+
+            int maxAllowed = MemDbConfiguration.MaxFlushIntervalSeconds;
+
+            if (seconds > maxAllowed)
+                throw new ArgumentOutOfRangeException($"Max allowed flush interval is {maxAllowed} seconds.", nameof(seconds));
+
+            base.SetFlushInterval(seconds);
+
             return this;
         }
         #endregion
@@ -174,10 +248,11 @@ namespace HatTrick.InMemDb
         #region encrypt with key
         public IMemDBConfigurationBuilder<T> EncryptWithKey(Func<byte[]> encryptionKeyProvider)
         {
-            if (_encryptionKeyProvider is not null)
-                throw new InvalidOperationException("Encryption key already provided.");
+            if (encryptionKeyProvider is null)
+                throw new ArgumentNullException(nameof(encryptionKeyProvider));
 
-            _encryptionKeyProvider = encryptionKeyProvider ?? throw new ArgumentNullException(nameof(encryptionKeyProvider));
+            base.SetEncryptionKeyProvider(encryptionKeyProvider);
+
             return this;
         }
         #endregion
@@ -185,23 +260,24 @@ namespace HatTrick.InMemDb
         #region encrypt with password
         public IMemDBConfigurationBuilder<T> EncryptWithPassword(Func<string> encryptionPasswordProvider)
         {
-            if (_encryptionKeyProvider is not null)
-                throw new InvalidOperationException("Encryption key already provided...Use one of password or key for encryption.");
-
             if (encryptionPasswordProvider is null)
                 throw new ArgumentNullException(nameof(encryptionPasswordProvider));
 
-            _encryptionKeyProvider = () =>
+            Func<byte[]> encryptionKeyProvider = () =>
             {
+                string thisName = string.Concat(nameof(MemDbConfiguration<T>), ".", nameof(EncryptWithPassword));
+                string argName = nameof(encryptionKeyProvider);
+
                 string pw = encryptionPasswordProvider();
+
                 if (pw is null)
-                    throw new InvalidOperationException($"Password provided via {nameof(encryptionPasswordProvider)} from {nameof(MemDbConfiguration<T>)}.{nameof(EncryptWithPassword)} is null.");
+                    throw new InvalidOperationException($"Password provided via {argName} from {thisName} is null.");
 
                 if (pw == string.Empty)
-                    throw new InvalidOperationException($"Password provided via {nameof(encryptionPasswordProvider)} from {nameof(MemDbConfiguration<T>)}.{nameof(EncryptWithPassword)} is empty.");
+                    throw new InvalidOperationException($"Password provided via {argName} from {thisName} is empty.");
 
                 if (pw.Length < MemDbConfiguration.MinPasswordLength)
-                    throw new InvalidOperationException($"Password provided via {nameof(encryptionPasswordProvider)} from {nameof(MemDbConfiguration<T>)}.{nameof(EncryptWithPassword)} must be at least {MemDbConfiguration.MinPasswordLength} chars long.");
+                    throw new InvalidOperationException($"Password provided via {argName} from {thisName} must be at least {MemDbConfiguration.MinPasswordLength} chars long.");
 
                 byte[] hash = null;
                 using (var sha256 = SHA256.Create())
@@ -211,6 +287,8 @@ namespace HatTrick.InMemDb
 
                 return hash;
             };
+
+            base.SetEncryptionKeyProvider(encryptionKeyProvider);
 
             return this;
         }
@@ -249,7 +327,9 @@ namespace HatTrick.InMemDb
         #region get encryptor
         public IMemDbEncryptor GetEncryptor()
         {
-            return _encryptionKeyProvider is null ? null : new MemDbAESEncryptor(_encryptionKeyProvider());
+            return base.EncryptionKeyProvider is not null 
+                ? new MemDbAESEncryptor(base.EncryptionKeyProvider())
+                : null;
         }
         #endregion
 

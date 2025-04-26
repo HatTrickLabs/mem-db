@@ -23,9 +23,5 @@ namespace HatTrick.InMemDb
         public int Delete(Func<T, bool> where);
 
         public MemDbExpression<T> Query();
-
-        public void Flush();
-
-        public MemDbStatistics ResolveStatistics(Stats statistics);
     }
 }

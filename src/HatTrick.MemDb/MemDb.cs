@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace HatTrick.InMemDb
 {
-    #region [class] memdb
+    #region [class] mem db
     public abstract class MemDb
     {
         #region static internals
@@ -106,6 +106,11 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region configure for
+        public static IMemDBConfigurationBuilder<T> ConfigureFor<T>(string datasetName) where T : class
+        {
+            return new MemDbConfiguration<T>(datasetName, MemDb.RegisterConfiguration);
+        }
+
         public static IMemDBConfigurationBuilder<T> ConfigureFor<T>(string datasetName, string path) where T : class
         {
             return new MemDbConfiguration<T>(datasetName, path, MemDb.RegisterConfiguration);
@@ -125,6 +130,17 @@ namespace HatTrick.InMemDb
                     throw new InvalidOperationException($"Cannot remove configuration for dataset '{datasetName}', the dataset is currently open.");
 
                 _configurations.RemoveAt(at);
+            }
+        }
+        #endregion
+
+        #region contains configuratoin for
+        public static bool ContainsConfigurationFor(string datasetName)
+        {
+            lock (_lock)
+            {
+                int at = _configurations.FindIndex(c => string.Compare(c.DatasetName, datasetName, true) == 0);
+                return at > -1;
             }
         }
         #endregion
@@ -181,7 +197,7 @@ namespace HatTrick.InMemDb
     }
     #endregion
 
-    #region [class] memdb<T>
+    #region [class] mem db<T>
     public class MemDb<T> : MemDb, IDisposable, IMemDbAcceessor<T> where T : class
     {
         #region internals
