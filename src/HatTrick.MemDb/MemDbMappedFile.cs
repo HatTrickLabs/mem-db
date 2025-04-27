@@ -309,6 +309,9 @@ namespace HatTrick.InMemDb
             this.FlushInsertQueue();
             this.FlushStateChangeQueue();
 
+            //TODO: need some way to bubble an exception up to the main process thread
+            //when the exception is thrown from the timer fired thread
+
             if (!_isClosed && _flushInterval > 0)
                 _fileSyncTimer.Change(_flushInterval, Timeout.Infinite);
         }
