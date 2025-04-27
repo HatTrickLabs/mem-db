@@ -115,6 +115,14 @@ namespace HatTrick.InMemDb.TestHarness
             Assert.IsEqual<int>(Array.Find(sets, s => s.Key == ".txt").Item2, txtCnt);
             Assert.IsEqual<int>(Array.Find(sets, s => s.Key == ".json").Item2, jsonCnt);
             Assert.IsEqual<int>(Array.Find(sets, s => s.Key == string.Empty).Item2, unknownCnt);
+        }
+        #endregion
+
+        #region group by having
+        public void Test_GroupByExpressionHaving()
+        {
+            using var db = MemDb.Open<DigitalAsset>(_dataset);
+            this.LoadDb(db, out int txtCnt, out int jsonCnt, out int unknownCnt);
 
             //group by + having
             var sets2 = db.Query().GroupBy(a => a.Extension).Having(g => g.Count() > 100).Select(g => (g.Key, g.Count())).ToArray();
