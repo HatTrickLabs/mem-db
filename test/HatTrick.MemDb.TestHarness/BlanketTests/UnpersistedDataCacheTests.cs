@@ -97,7 +97,7 @@ namespace HatTrick.InMemDb.TestHarness
         }
         #endregion
 
-        #region loads
+        #region generate distinct incremental cache level ids
         public void Test_GeneratesDistinctIncrementalCacheLevelIds()
         {
             MemDb.ConfigureFor<DigitalAsset>(_dataset).Register();

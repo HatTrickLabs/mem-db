@@ -10,7 +10,7 @@ namespace HatTrick.InMemDb
     {
         #region static internals
         private static List<MemDbConfiguration> _configurations;
-        private static List<string> _openDatasets;
+        private static Dictionary<string, FileStream> _openDatasets;
         private static Lock _lock;
         #endregion
 
@@ -18,7 +18,7 @@ namespace HatTrick.InMemDb
         static MemDb()
         {
             _configurations = new List<MemDbConfiguration>();
-            _openDatasets = new List<string>();
+            _openDatasets = new();
             _lock = new();
         }
         #endregion
@@ -36,7 +36,7 @@ namespace HatTrick.InMemDb
         {
             lock (_lock)
             {
-                if (_openDatasets.Contains(datasetName))
+                if (_openDatasets.ContainsKey(datasetName))
                     throw new InvalidOperationException($"MemDb instance for provided {nameof(datasetName)} '{datasetName}' is currently open.");
             }
 
@@ -88,7 +88,7 @@ namespace HatTrick.InMemDb
 
             lock (_lock)
             {
-                if (_openDatasets.Contains(datasetName))
+                if (_openDatasets.ContainsKey(datasetName))
                     throw new InvalidOperationException($"MemDb instance for provided {nameof(datasetName)} '{datasetName}' is currently open.");
             }
 
@@ -126,7 +126,7 @@ namespace HatTrick.InMemDb
                 if (at < 0)
                     throw new ArgumentException($"No configuration currently registered for provided dataset name '{datasetName}'", nameof(datasetName));
 
-                if (_openDatasets.Contains(datasetName))
+                if (_openDatasets.ContainsKey(datasetName))
                     throw new InvalidOperationException($"Cannot remove configuration for dataset '{datasetName}', the dataset is currently open.");
 
                 _configurations.RemoveAt(at);
@@ -164,7 +164,7 @@ namespace HatTrick.InMemDb
             lock (_lock)
             {
                 //ensure the requested db is not already open within this currently executing process...
-                if (_openDatasets.Contains(datasetName))
+                if (_openDatasets.ContainsKey(datasetName))
                     throw new InvalidOperationException($"MemDb instance for provided {nameof(datasetName)} '{datasetName}' is already open.");
 
                 MemDbConfiguration config = MemDb.GetConfiguration(datasetName);
@@ -173,12 +173,35 @@ namespace HatTrick.InMemDb
                     throw new ArgumentException($"No configuration registered for provided {nameof(datasetName)}: {datasetName}");
 
                 var configOfT = config.EnsureGenericType<T>(config);
+
+                //ensure no other process has the db locked...
+                FileStream lockFile = config.IsPersisted ? MemDb.InitializeLockFile(config) : null;
+
                 var memDb = new MemDb<T>(configOfT);
 
-                _openDatasets.Add(datasetName);
+                _openDatasets.Add(datasetName, lockFile);
 
                 return memDb;
             }
+        }
+        #endregion
+
+        #region initialize lock file
+        private static FileStream InitializeLockFile(MemDbConfiguration config)
+        {
+            //if any other process has this MemDb file set open, init of this filestream
+            //will throw an exception prior to this process opening the file set.
+            var lockFile = new FileStream(config.GetFullLockFilePath(), new FileStreamOptions()
+            {
+                Access = FileAccess.ReadWrite,
+                Mode = FileMode.CreateNew,//should create new an NOT overwrite
+                Share = FileShare.None,//do not share
+                PreallocationSize = 0,//no preallocation
+                BufferSize = 0,//disable buffer
+                Options = FileOptions.DeleteOnClose//delete on dispose or when file handle is orphaned (0 refs)
+            });
+
+            return lockFile;
         }
         #endregion
 
@@ -187,10 +210,8 @@ namespace HatTrick.InMemDb
         {
             lock (_lock)
             {
-                if (_openDatasets.Remove(datasetName))
-                {
-                    var config = MemDb.GetConfiguration(datasetName);
-                }
+                _openDatasets.Remove(datasetName, out FileStream lockFile);
+                lockFile?.Dispose();
             }
         }
         #endregion

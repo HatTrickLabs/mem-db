@@ -26,6 +26,7 @@ namespace HatTrick.InMemDb
         #region interface
         public string DatasetName => _datasetName;
         public string Path => _path;
+        public bool IsPersisted => _path is not null;
         internal bool ShouldArchive => _archivePath is not null;
         internal string ArchivePath => _archivePath;
         internal AccessMode Mode => _mode;
@@ -119,6 +120,16 @@ namespace HatTrick.InMemDb
             }
 
             return configOfT;
+        }
+        #endregion
+
+        #region get full lock file path
+        internal string GetFullLockFilePath()
+        {
+            if (!this.IsPersisted)
+                throw new InvalidOperationException("Registered configuration for dataset name {_datasetName} is not persisted...No lock file initialized.");
+
+            return System.IO.Path.Combine(_path, $"~$htl.{_datasetName}.lock");
         }
         #endregion
 
