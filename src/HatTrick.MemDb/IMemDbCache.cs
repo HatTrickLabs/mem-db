@@ -6,5 +6,6 @@ namespace HatTrick.InMemDb
     {
         public MemDbStatistics ResolveStatistics(Stats statistics);
         internal void Flush();
+        public (int stale, int deleted) Purge();
     }
 }

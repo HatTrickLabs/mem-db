@@ -60,6 +60,76 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region purge
+        public (int stale, int deleted) Purge()
+        {
+            //if the mode is append only, the cache is never initialized.
+            //if the mode is read only, the cache can never be dirty.
+            //ONLY read write mode can have purgable records.
+            if (_mode != AccessMode.ReadWrite)
+                return (stale: 0, deleted: 0);
+
+            (int fresh, int stale, int deleted) stats = this.ResolveCacheStats(out int upperBound);
+
+            if (stats.stale == 0 && stats.deleted == 0)
+                return (stale: 0, deleted: 0);
+
+            lock (_lock)
+            {
+                int capacity = stats.fresh == 0 ? 128 : (int)(stats.fresh * 1.025);
+                var newSet = new List<MemDbRecord<T>>(capacity);
+
+                for (int i = 0; i < _records.Count; i++)
+                {
+                    var record = _records[i];
+
+                    //if the rec inserted or state changed after stats collected, just shift it over so return count is accurate.
+                    if (i > upperBound)
+                        newSet.Add(record);
+
+                    else if (record.State == RecordState.Fresh)
+                        newSet.Add(record);
+
+                    _records[i] = null;//not necessary...
+                }
+                _records = newSet;
+            }
+
+            return (stats.stale, stats.deleted);
+        }
+        #endregion
+
+        #region resolve cache stats
+        private (int fresh, int stale, int deleted) ResolveCacheStats(out int upperBound)
+        {
+            upperBound = 0;
+            int fresh = 0;
+            int stale = 0;
+            int deleted = 0;
+
+            lock (_lock)
+            {
+                int i;
+                for (i = 0; i < _records.Count; i++)
+                {
+                    RecordState state = _records[i].State;
+                    if (state == RecordState.Fresh)
+                        fresh += 1;
+
+                    else if (state == RecordState.Stale)
+                        stale += 1;
+
+                    else if (state == RecordState.Deleted)
+                        deleted += 1;
+                }
+
+                upperBound = i;
+            }
+
+            return (fresh, stale, deleted);
+        }
+        #endregion
+
         #region ensure mode
         private void EnsureReadMode(string targetSite)
         {
@@ -280,7 +350,7 @@ namespace HatTrick.InMemDb
             {
                 lock (_lock)
                 {
-                    rec.SetCacheIndex(_records.Count);
+                    //rec.SetCacheIndex(_records.Count);
                     _records.Add(rec);
                 }
             }
@@ -323,7 +393,6 @@ namespace HatTrick.InMemDb
                         oldRec.MarkStale(utcTimestamp);
                         apply(newRec.Value);
 
-                        newRec.SetCacheIndex(_records.Count);
                         _records.Add(newRec);
 
                         if (_persister is not null)

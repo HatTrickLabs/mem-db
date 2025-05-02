@@ -14,7 +14,7 @@ x Refactor into layer MemDb Engine:
 x Eliminate the 'Pointers' interface propery on MemDbMap...Make it all internal
 x Return some type of IMemDbConfiguration on the fluent configure methods to eliminate all the flak methods available in intellisense
 x Implement some type of block or guard against opening MemDb<T>("datasetName") more than 1 time within a process.
-- Research some type of block or guard against opening MemDb<T>("datasetName") across processes (maybe exclusive file lock)...
+x Research some type of block or guard against opening MemDb<T>("datasetName") across processes (maybe exclusive file lock)...
 x Fix (open, dispose, re-open) bug...The complete MemDbConfig state needs to be CLEARED.
 x Very basic test framework
 x Blanket Tests:

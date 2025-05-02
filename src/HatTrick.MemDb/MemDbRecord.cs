@@ -11,7 +11,6 @@ namespace HatTrick.InMemDb
                                           + sizeof(long)//state set at
                                           + sizeof(long)//created at
                                           + sizeof(bool)//is encrypted
-                                          + sizeof(int) //cache index
                                           + sizeof(int);//map index
         #endregion
 
@@ -21,7 +20,6 @@ namespace HatTrick.InMemDb
         private long _stateSetAt;
         private long _createdAt;
         private bool _isEncrypted;
-        private int _cacheIndex;
         private int _mapIndex;
         #endregion
 
@@ -31,7 +29,6 @@ namespace HatTrick.InMemDb
         internal long StateSetAt => _stateSetAt;
         internal long CreatedAt => _createdAt;
         internal bool IsEncrypted => _isEncrypted;
-        internal int CacheIndex => _cacheIndex;
         internal int MapIndex => _mapIndex;
         #endregion
 
@@ -39,21 +36,20 @@ namespace HatTrick.InMemDb
         internal MemDbRecord(uint id, long createdAt, bool isEncrypted)
         {
             _id = id;
-            _createdAt = createdAt;
             _state = RecordState.Fresh;
             _stateSetAt = createdAt;
+            _createdAt = createdAt;
             _isEncrypted = isEncrypted;
             _mapIndex = -1;//TODO: Lets catch that elusive (You've got an update being applied before the INSERT finalized theory).
         }
 
-        internal MemDbRecord(uint id, RecordState state, long stateSetAt, long createdAt, bool isEncrypted, int cacheIndex, int mapIndex)
+        internal MemDbRecord(uint id, RecordState state, long stateSetAt, long createdAt, bool isEncrypted, int mapIndex)
         {
             _id = id;
             _state = state;
             _stateSetAt = stateSetAt;
             _createdAt = createdAt;
             _isEncrypted = isEncrypted;
-            _cacheIndex = cacheIndex;
             _mapIndex = mapIndex;
         }
         #endregion
@@ -71,13 +67,6 @@ namespace HatTrick.InMemDb
         {
             _state = RecordState.Deleted;
             _stateSetAt = utcTimestamp;
-        }
-        #endregion
-
-        #region set cache index
-        internal void SetCacheIndex(int cacheIndex)
-        {
-            _cacheIndex = cacheIndex;
         }
         #endregion
 
@@ -115,7 +104,7 @@ namespace HatTrick.InMemDb
         }
 
         internal MemDbRecord(uint id, T value, RecordState state, long stateSetAt, long createdAt, bool isEncrypted, int cacheIndex, int mapIndex) 
-            : base(id, state, stateSetAt, createdAt, isEncrypted, cacheIndex, mapIndex)
+            : base(id, state, stateSetAt, createdAt, isEncrypted, mapIndex)
         {
             if (value is null)
                 throw new ArgumentNullException(nameof(value));

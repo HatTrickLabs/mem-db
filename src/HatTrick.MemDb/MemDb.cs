@@ -189,12 +189,15 @@ namespace HatTrick.InMemDb
         #region initialize lock file
         private static FileStream InitializeLockFile(MemDbConfiguration config)
         {
+            if (!Directory.Exists(config.Path))
+                Directory.CreateDirectory(config.Path);
+
             //if any other process has this MemDb file set open, init of this filestream
             //will throw an exception prior to this process opening the file set.
             var lockFile = new FileStream(config.GetFullLockFilePath(), new FileStreamOptions()
             {
-                Access = FileAccess.ReadWrite,
-                Mode = FileMode.CreateNew,//should create new an NOT overwrite
+                Access = FileAccess.Write,
+                Mode = FileMode.CreateNew,//should create new, NOT overwrite
                 Share = FileShare.None,//do not share
                 PreallocationSize = 0,//no preallocation
                 BufferSize = 0,//disable buffer
@@ -249,6 +252,13 @@ namespace HatTrick.InMemDb
             {
                 _cache.Flush();
             }
+        }
+        #endregion
+
+        #region purge cache
+        public (int stale, int deleted) PurgeCache()
+        {
+            return _cache.Purge();
         }
         #endregion
 
