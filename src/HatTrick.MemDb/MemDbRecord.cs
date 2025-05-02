@@ -6,12 +6,14 @@ namespace HatTrick.InMemDb
     internal abstract class MemDbRecord
     {
         #region read only
-        internal static readonly int Size = sizeof(uint)//id
-                                          + sizeof(RecordState)//state
-                                          + sizeof(long)//state set at
-                                          + sizeof(long)//created at
-                                          + sizeof(bool)//is encrypted
-                                          + sizeof(int);//map index
+        internal static readonly int Size = sizeof(uint)//4:Id
+                                          + sizeof(byte)//1:State enum : byte
+                                          + sizeof(long)//8:StateSetAt
+                                          + sizeof(long)//8:CreatedAt
+                                          + sizeof(bool)//1:IsEncrypted
+                                          + sizeof(int);//4:MapIndex
+                                                        //--------------
+                                                        //26
         #endregion
 
         #region internals
@@ -40,7 +42,7 @@ namespace HatTrick.InMemDb
             _stateSetAt = createdAt;
             _createdAt = createdAt;
             _isEncrypted = isEncrypted;
-            _mapIndex = -1;//TODO: Lets catch that elusive (You've got an update being applied before the INSERT finalized theory).
+            _mapIndex = -1;
         }
 
         internal MemDbRecord(uint id, RecordState state, long stateSetAt, long createdAt, bool isEncrypted, int mapIndex)

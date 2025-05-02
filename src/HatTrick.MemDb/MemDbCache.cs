@@ -82,7 +82,6 @@ namespace HatTrick.InMemDb
                 for (int i = 0; i < _records.Count; i++)
                 {
                     var record = _records[i];
-
                     //if the rec inserted or state changed after stats collected, just shift it over so return count is accurate.
                     if (i > upperBound)
                         newSet.Add(record);
@@ -122,7 +121,6 @@ namespace HatTrick.InMemDb
                     else if (state == RecordState.Deleted)
                         deleted += 1;
                 }
-
                 upperBound = i;
             }
 

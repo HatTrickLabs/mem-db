@@ -16,13 +16,13 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region interface
-        internal static readonly int Size = sizeof(uint)//Id:4
-                                          + sizeof(byte)//State:1 (enum : byte)
-                                          + sizeof(long)//StateSetAt:8
-                                          + sizeof(long)//createdAt:8
-                                          + sizeof(bool)//IsEncrypted:1
-                                          + sizeof(uint)//Position:4
-                                          + sizeof(int);//Length:4
+        internal static readonly int Size = sizeof(uint)//4:Id
+                                          + sizeof(byte)//1:State enum : byte
+                                          + sizeof(long)//8:StateSetAt
+                                          + sizeof(long)//8:createdAt
+                                          + sizeof(bool)//1:IsEncrypted
+                                          + sizeof(uint)//4:Position
+                                          + sizeof(int);//4:Length
                                                         //----------------
                                                         //30
 
