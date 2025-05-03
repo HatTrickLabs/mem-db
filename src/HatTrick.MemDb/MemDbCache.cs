@@ -90,7 +90,7 @@ namespace HatTrick.InMemDb
                         newSet.Add(record);
 
                     _records[i] = null;//not necessary...
-                }
+                } 
                 _records = newSet;
             }
 

@@ -62,8 +62,135 @@ namespace HatTrick.InMemDb.TestHarness
         }
         #endregion
 
-        #region concurrent pressure purge
-        public void Test_ConcurrentPressurePurge()
+        #region purge all
+        public void Test_PurgeAll()
+        {
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                this.LoadDb(db, out int txtCnt, out int jsonCnt, out int unknownCnt);
+
+                db.Update(a => a.XXHash += 1, a => a.AssetType == DigitalAssetType.Text);
+                db.Update(a => a.XXHash += 1, a => a.AssetType == DigitalAssetType.Json);
+                db.Update(a => a.XXHash += 1, a => a.AssetType == DigitalAssetType.Unknown);
+
+                //delete everything.
+                db.Delete(a => a.AssetType == DigitalAssetType.Text);
+                db.Delete(a => a.AssetType == DigitalAssetType.Json);
+                db.Delete(a => a.AssetType == DigitalAssetType.Unknown);
+
+                (int stale, int deleted) purged = db.PurgeCache();
+
+                int total = (txtCnt + jsonCnt + unknownCnt);
+                Assert.IsEqual(purged.stale, total);
+                Assert.IsEqual(purged.deleted, total);
+
+                Assert.IsEqual(db.Count(), 0);
+            }
+        }
+        #endregion
+
+        #region purge all
+        public void Test_PurgeAllCloseReopen()
+        {
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                this.LoadDb(db, out int txtCnt, out int jsonCnt, out int unknownCnt);
+
+                db.Update(a => a.XXHash += 1, a => a.AssetType == DigitalAssetType.Text);
+                db.Update(a => a.XXHash += 1, a => a.AssetType == DigitalAssetType.Json);
+                db.Update(a => a.XXHash += 1, a => a.AssetType == DigitalAssetType.Unknown);
+
+                //delete everything.
+                db.Delete(a => a.AssetType == DigitalAssetType.Text);
+                db.Delete(a => a.AssetType == DigitalAssetType.Json);
+                db.Delete(a => a.AssetType == DigitalAssetType.Unknown);
+
+                (int stale, int deleted) purged = db.PurgeCache();
+
+                int total = (txtCnt + jsonCnt + unknownCnt);
+                Assert.IsEqual(purged.stale, total);
+                Assert.IsEqual(purged.deleted, total);
+
+                Assert.IsEqual(db.Count(), 0);
+            }
+
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                Assert.IsEqual(db.Count(), 0);
+                this.LoadDb(db, out int txtCnt, out int jsonCnt, out int unknownCnt);
+
+                Assert.IsEqual(db.Count(), (txtCnt + jsonCnt + unknownCnt));
+
+                (int stale, int deleted) purged = db.PurgeCache();
+
+                Assert.IsEqual(purged.stale, 0);
+                Assert.IsEqual(purged.deleted, 0);
+
+                //delete 1;=
+                int deleted = db.Delete(a => a.Id == db.Query().Max(a => a.Id));
+                Assert.IsEqual(deleted, 1);
+
+                purged = db.PurgeCache();
+
+                Assert.IsEqual(purged.stale, 0);
+                Assert.IsEqual(purged.deleted, deleted);
+            }
+        }
+        #endregion
+
+        #region purge all
+        public void Test_PurgeAllCloseDefragReopen()
+        {
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                this.LoadDb(db, out int txtCnt, out int jsonCnt, out int unknownCnt);
+
+                db.Update(a => a.XXHash += 1, a => a.AssetType == DigitalAssetType.Text);
+                db.Update(a => a.XXHash += 1, a => a.AssetType == DigitalAssetType.Json);
+                db.Update(a => a.XXHash += 1, a => a.AssetType == DigitalAssetType.Unknown);
+
+                //delete everything.
+                db.Delete(a => a.AssetType == DigitalAssetType.Text);
+                db.Delete(a => a.AssetType == DigitalAssetType.Json);
+                db.Delete(a => a.AssetType == DigitalAssetType.Unknown);
+
+                (int stale, int deleted) purged = db.PurgeCache();
+
+                int total = (txtCnt + jsonCnt + unknownCnt);
+                Assert.IsEqual(purged.stale, total);
+                Assert.IsEqual(purged.deleted, total);
+
+                Assert.IsEqual(db.Count(), 0);
+            }
+
+            MemDb.Defrag(_dataset);
+
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                Assert.IsEqual(db.Count(), 0);
+                this.LoadDb(db, out int txtCnt, out int jsonCnt, out int unknownCnt);
+
+                Assert.IsEqual(db.Count(), (txtCnt + jsonCnt + unknownCnt));
+
+                (int stale, int deleted) purged = db.PurgeCache();
+
+                Assert.IsEqual(purged.stale, 0);
+                Assert.IsEqual(purged.deleted, 0);
+
+                //delete 1;=
+                int deleted = db.Delete(a => a.Id == db.Query().Max(a => a.Id));
+                Assert.IsEqual(deleted, 1);
+
+                purged = db.PurgeCache();
+
+                Assert.IsEqual(purged.stale, 0);
+                Assert.IsEqual(purged.deleted, deleted);
+            }
+        }
+        #endregion
+
+        #region concurrency pressure purge
+        public void Test_ConcurrentInsertPressurePurge()
         {
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
@@ -80,12 +207,9 @@ namespace HatTrick.InMemDb.TestHarness
                 Thread t2 = new Thread(() => this.LoadDb(db, out _, out _, out _));
                 Thread t3 = new Thread(() => this.LoadDb(db, out _, out _, out _));
 
-                //calculate the total inserted
-
-
                 t1.Start();
-                (int stale, int deleted) purged = db.PurgeCache();
                 t2.Start();
+                (int stale, int deleted) purged = db.PurgeCache();
                 t3.Start();
 
                 t1.Join();
@@ -97,29 +221,6 @@ namespace HatTrick.InMemDb.TestHarness
 
                 //should be 8 sets of txt, 8 sets of json, 3 sets of unknown remaining within the db...
                 Assert.IsEqual(db.Count(), (txtCnt * 8) + (jsonCnt * 8) + (unknownCnt * 3));
-            }
-        }
-        #endregion
-
-        #region purge all
-        public void Test_PurgeAll()
-        {
-            using (var db = MemDb.Open<DigitalAsset>(_dataset))
-            {
-                this.LoadDb(db, out int txtCnt, out int jsonCnt, out int unknownCnt);
-
-                db.Update(a => a.XXHash += 1, a => a.AssetType == DigitalAssetType.Unknown);
-                db.Update(a => a.XXHash += 1, a => a.AssetType == DigitalAssetType.Text);
-                db.Update(a => a.XXHash += 1, a => a.AssetType == DigitalAssetType.Json);
-
-                db.Delete(a => true);//delete everything.
-
-                (int stale, int deleted) purged = db.PurgeCache();
-
-                Assert.IsEqual(purged.stale, (txtCnt + jsonCnt + unknownCnt));
-                Assert.IsEqual(purged.deleted, (txtCnt + jsonCnt + unknownCnt));
-
-                Assert.IsEqual(db.Count(), 0);
             }
         }
         #endregion
