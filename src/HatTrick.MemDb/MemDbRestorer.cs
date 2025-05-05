@@ -40,7 +40,6 @@ namespace HatTrick.InMemDb
 
             _archivePath = config.ArchivePath;
             _fullZipArchiveFilePath = config.GetZipArchiveFullFilePath();
-            //HACK on the file name format not being centralized...
             _fullRestoreMapPath = Path.Combine(outputPath, $"htl.{config.DatasetName}.map");
             _fullRestoreDbPath = Path.Combine(outputPath, $"htl.{config.DatasetName}.db");
             this.EnsureRestoreDirectory(outputPath);
