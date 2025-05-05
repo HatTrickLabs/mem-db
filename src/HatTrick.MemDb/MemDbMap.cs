@@ -130,16 +130,6 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
-        #region remove last
-        internal void RemoveLastRecord()
-        {
-            lock (_syncLock)
-            {
-                _pointers.RemoveAt(_pointers.Count - 1);
-            }
-        }
-        #endregion
-
         #region get count
         private int GetCount(RecordState state)
         {
@@ -261,26 +251,27 @@ namespace HatTrick.InMemDb
         {
             lock (_syncLock)
             {
-                if (_nextFlushIdx < _pointers.Count)
+                int count = _pointers.Count;
+                if (_nextFlushIdx < count)
                 {
                     using var fsMap = new FileStream(_path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
                     using var mapWriter = new BinaryWriter(fsMap, Encoding.UTF8, true);
 
                     //overwrite count and last id at the beginning
-                    mapWriter.Write(_pointers.Count);
+                    mapWriter.Write(count);
                     mapWriter.Write(_lastId);
 
                     fsMap.Position = fsMap.Length;
 
                     //start this for loop at the next index after prev flush
                     //...we are only flushing newly added records
-                    for (int i = _nextFlushIdx; i < _pointers.Count; i++)
+                    for (int i = _nextFlushIdx; i < count; i++)
                     {
                         var p = _pointers[i];
                         p.SerializeTo(mapWriter);
                     }
 
-                    _nextFlushIdx = _pointers.Count;
+                    _nextFlushIdx = count;
                 }
             }
         }

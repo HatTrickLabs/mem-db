@@ -29,8 +29,10 @@ namespace HatTrick.InMemDb
         #region write snapshot
         void IMemDbSnapshotter.WriteSnapshot(DateTime timestamp)
         {
+            this.EnsureSnapshotDirectoryPath(timestamp);
+
             using var fsDb = new FileStream(_dbPath, FileMode.Open, FileAccess.Read, FileShare.None);
-            using var fsSnapshotDb = new FileStream(_snapshotDbPath(timestamp), FileMode.Open, FileAccess.Write, FileShare.None);
+            using var fsSnapshotDb = new FileStream(_snapshotDbPath(timestamp), FileMode.CreateNew, FileAccess.Write, FileShare.None);
 
             var map = new MemDbMap(_mapPath, true);
             var snapshotMap = new MemDbMap(_snapshotMapPath(timestamp), true);
@@ -60,6 +62,16 @@ namespace HatTrick.InMemDb
 
             snapshotMap.OverrideLastId(map.LastId);
             snapshotMap.Flush();
+        }
+        #endregion
+
+        #region ensure directory path
+        private void EnsureSnapshotDirectoryPath(DateTime timestamp)
+        {
+            string path = Path.GetDirectoryName(_snapshotMapPath(timestamp));
+
+            if (!Directory.Exists(path))
+                Directory.CreateDirectory(path);
         }
         #endregion
     }

@@ -228,6 +228,7 @@ namespace HatTrick.InMemDb
         private string _datasetName;
         private IMemDbCache<T> _cache;
         private bool _isEncryptionReady;
+        private bool _isSnapshotReady;
         private bool _isClosed;
         #endregion
 
@@ -238,7 +239,8 @@ namespace HatTrick.InMemDb
                 throw new ArgumentNullException(nameof(config));
 
             _datasetName = config.DatasetName;
-            _isEncryptionReady = config.GetEncryptor() is not null;
+            _isEncryptionReady = config.IsEncryptionReady;
+            _isSnapshotReady = config.IsSnapshotReady;
             _cache = config.GetCache();
             //TODO: wire up some way for the cache to notify if a background thread
             //throws an exception...i.e. the timer initiated flush thread throws file access or permissions ex.
@@ -304,7 +306,7 @@ namespace HatTrick.InMemDb
         public void Insert(T record, Action<uint> idCallback, bool encrypt = false)
         {
             if (encrypt && !_isEncryptionReady)
-                throw new NotEncryptionReadyException($"MemDb config for '{_datasetName}' does not contain an encryption key or password.");
+                throw new NotEncryptionReadyException($"{nameof(MemDbConfiguration)} for '{_datasetName}' does not contain an encryption key or password.");
 
             _cache.Insert(record, idCallback, encrypt);
         }
@@ -335,6 +337,19 @@ namespace HatTrick.InMemDb
         public MemDbStatistics ResolveStatistics(Stats statistics)
         {
             return _cache.ResolveStatistics(statistics);
+        }
+        #endregion
+
+        #region snapshot
+        public DateTime Snapshot()
+        {
+            if (_isClosed)
+                throw new InvalidOperationException($"{nameof(Snapshot)} is not available on a closed database.");
+
+            if (!_isSnapshotReady)
+                throw new InvalidOperationException($"{nameof(MemDbConfiguration)} for '{_datasetName}' does not contain a {nameof(MemDbConfiguration<T>.SnapshotTo)} directory path.");
+
+            return _cache.Snapshot();
         }
         #endregion
 

@@ -300,7 +300,7 @@ namespace HatTrick.InMemDb
         {
             //state will be:
             //null if called from timer
-            //false if flush manually called through cache
+            //false if flush manually called through cache / snapshot
             //true if called from close/dispose
 
             //this is to avoid the timer 'flush' from getting in after
@@ -308,11 +308,17 @@ namespace HatTrick.InMemDb
             if (state == null && _isClosed)
                 return;
 
-            this.FlushInsertQueue();
-            this.FlushStateChangeQueue();
-
-            //TODO: need some way to bubble an exception up to the main process thread
-            //when the exception is thrown from the timer fired thread
+            try
+            {
+                this.FlushInsertQueue();
+                this.FlushStateChangeQueue();
+            }
+            catch (Exception ex)
+            {
+                //TODO: need some way to bubble an exception up to the main process thread
+                //when the exception is thrown from the timer fired thread
+                //i.e. wire up an OnException delegate that the main thread can bind to 
+            }
 
             if (!_isClosed && _flushInterval > 0)
                 _fileSyncTimer.Change(_flushInterval, Timeout.Infinite);
@@ -404,10 +410,21 @@ namespace HatTrick.InMemDb
                         }
                         catch
                         {
-                            if (!this.TrySyncMapAndDbOnError(fsDb, _map))
+                            var operation = () =>
                             {
-                                _map.Flush(1);
-                            }
+                                //reset the len of file back to position + length of the last pointer.
+                                MemDbPointer lPtr = _map[^1];
+                                int recLength = lPtr.IsEncrypted ? MemDbAESEncryptor.CalculateCryptoByteLength(lPtr.Length) : lPtr.Length;
+                                int end = (int)lPtr.Position + lPtr.Length;
+                                if (fsDb.Length > end)
+                                    fsDb.SetLength(lPtr.Position + lPtr.Length);
+
+                                //ensure pointers successfully added get flushed before tossing the ex
+                                _map.Flush();
+                            };
+
+                            _ = this.TryWrapperOperation(operation);
+
                             throw;
                         }
                     } while (this.TryPopInsertRecord(out record));
@@ -417,25 +434,17 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
-        #region sync map and db on error
-        private bool TrySyncMapAndDbOnError(FileStream dbFilestream, MemDbMap map)
+        #region try action
+        private bool TryWrapperOperation(Action operation)
         {
             try
             {
-                //reset the len of file back to position + length of the last pointer.
-                MemDbPointer lPtr = map[^1];
-                int recLength = lPtr.IsEncrypted ? MemDbAESEncryptor.CalculateCryptoByteLength(lPtr.Length) : lPtr.Length;
-                int end = (int)lPtr.Position + lPtr.Length;
-                if (dbFilestream.Length > end)
-                    dbFilestream.SetLength(lPtr.Position + lPtr.Length);
-
-                //ensure pointers successfully added get flushed before tossing the ex
-                map.Flush();
+                operation?.Invoke();
                 return true;
             }
-            catch
-            {
-                return false;
+            catch//catch all...
+            { 
+                return false; 
             }
         }
         #endregion
@@ -448,8 +457,10 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region snapshot
-        public DateTime Snapshot()
+        DateTime IMemDbPersister<T>.Snapshot()
         {
+            (this as IMemDbPersister<T>).Flush(false);
+
             lock (_flushLock)
             {
                 var now = DateTime.Now;

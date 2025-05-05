@@ -31,12 +31,14 @@ namespace HatTrick.InMemDb
         public bool IsPersisted => _path is not null;
         internal bool ShouldArchive => _archivePath is not null;
         internal string ArchivePath => _archivePath;
+        public bool IsSnapshotReady => _snapshotPath is not null;
         internal AccessMode Mode => _mode;
         internal int FlushInterval => _path is null ? 0 : _flushInterval;
         protected Func<byte[]> EncryptionKeyProvider => _encryptionKeyProvider;
+        public bool IsEncryptionReady => _encryptionKeyProvider is not null;
         #endregion
 
-        #region constructors
+        #region ctors
         protected MemDbConfiguration(string datasetName, string path = null)
         {
             _datasetName = datasetName ?? throw new ArgumentNullException(nameof(datasetName));
@@ -53,15 +55,15 @@ namespace HatTrick.InMemDb
             if (mode == AccessMode.AppendOnly && _path is null)
                 throw new InvalidOperationException($"{nameof(AccessMode)}.{AccessMode.AppendOnly} is not applicable with a unpersisted database (no path provided).");
 
-            if (mode == AccessMode.AppendOnly && _snapshotPath is not null)
-                throw new InvalidOperationException($"{nameof(AccessMode)}.{AccessMode.AppendOnly} is not applicable with database snapshot functionality...Cannot run in {nameof(AccessMode)}.{AccessMode.AppendOnly} mode when a snapshot path has been configured.");
+            if (mode == AccessMode.ReadOnly && _snapshotPath is not null)
+                throw new InvalidOperationException($"{nameof(AccessMode)}.{AccessMode.ReadOnly} is not applicable with database snapshot functionality...Cannot run in {nameof(AccessMode)}.{AccessMode.ReadOnly} mode when a snapshot path has been configured.");
 
             if (mode == AccessMode.ReadOnly && _path is null)
                 throw new InvalidOperationException($"{nameof(AccessMode)}.{AccessMode.ReadOnly} is not applicable with a unpersisted database (no path provided).");
 
             //assuming _flushInterval was never overridden if it is still equal to the default.
             if (mode == AccessMode.ReadOnly && _flushInterval != MemDbConfiguration.DefaultFlushIntervalSeconds * 1000)
-                throw new InvalidOperationException($"{nameof(AccessMode)}.{AccessMode.ReadOnly} is inconsistent with with a flush interval greater than 0.");
+                throw new InvalidOperationException($"{nameof(AccessMode)}.{AccessMode.ReadOnly} is not applicable with with a flush interval greater than 0.");
 
             _mode = mode;
         }
@@ -210,7 +212,9 @@ namespace HatTrick.InMemDb
         #region get snapshotter
         internal IMemDbSnapshotter GetSnapshotter()
         {
-            return new MemDbSnapshotter(this);
+            return _snapshotPath is not null
+                ? new MemDbSnapshotter(this)
+                : null;
         }
         #endregion
     }
@@ -226,6 +230,7 @@ namespace HatTrick.InMemDb
         IMemDBConfigurationBuilder<T> EncryptWithKey(Func<byte[]> encryptionKeyProvider);
         IMemDBConfigurationBuilder<T> EncryptWithPassword(Func<string> encryptionPasswordProvider);
         IMemDBConfigurationBuilder<T> ArchiveOnDefrag(string archivePath);
+        IMemDBConfigurationBuilder<T> SnapshotTo(string snapshotPath);
         void Register();
     }
     #endregion

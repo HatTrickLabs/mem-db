@@ -48,7 +48,7 @@ namespace HatTrick.InMemDb.TestHarness
                         .SetMode(AccessMode.ReadOnly)
                         .Register();
                 },
-                messageContains: $"{AccessMode.ReadOnly} is inconsistent with a unpersisted database"
+                messageContains: $"{AccessMode.ReadOnly} is not applicable with a unpersisted database"
             );
 
             Assert.Throws<InvalidOperationException>(
@@ -58,7 +58,7 @@ namespace HatTrick.InMemDb.TestHarness
                         .SetMode(AccessMode.ReadOnly)
                         .Register();
                 },
-                messageContains: $"{AccessMode.ReadOnly} is inconsistent with with a flush interval greater than 0"
+                messageContains: $"{AccessMode.ReadOnly} is not applicable with with a flush interval greater than 0"
             );
         }
         #endregion
@@ -73,7 +73,7 @@ namespace HatTrick.InMemDb.TestHarness
                         .SetMode(AccessMode.AppendOnly)
                         .Register();
                 },
-                messageContains: $"{AccessMode.AppendOnly} is inconsistent with a unpersisted database"
+                messageContains: $"{AccessMode.AppendOnly} is not applicable with a unpersisted database"
             );
         }
         #endregion

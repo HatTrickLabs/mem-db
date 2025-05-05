@@ -61,21 +61,20 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region snapshot
-        public DateTime Snapshot()
+        DateTime IMemDbCache<T>.Snapshot()
         {
             if (_persister is null)
-                throw new InvalidOperationException($"{nameof(Snapshot)} is not available with a unpersisted database (no path provided).");
+                throw new InvalidOperationException($"{nameof(IMemDbCache<T>.Snapshot)} is not available with a unpersisted database (no path provided).");
 
             lock (_lock)
             {
-                DateTime timestamp = _persister.Snapshot();
-                return timestamp;
+                return (_persister as IMemDbPersister<T>).Snapshot();
             }
         }
         #endregion
 
         #region purge
-        public (int stale, int deleted) Purge()
+        (int stale, int deleted) IMemDbCache<T>.Purge()
         {
             //if the mode is append only, the cache is never initialized.
             //if the mode is read only, the cache can never be dirty.
@@ -362,7 +361,6 @@ namespace HatTrick.InMemDb
             {
                 lock (_lock)
                 {
-                    //rec.SetCacheIndex(_records.Count);
                     _records.Add(rec);
                 }
             }
