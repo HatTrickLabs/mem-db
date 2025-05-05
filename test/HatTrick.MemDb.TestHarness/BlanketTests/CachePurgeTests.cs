@@ -14,7 +14,8 @@ namespace HatTrick.InMemDb.TestHarness
         #region ctors
         public CachePurgeTests(AssetResolver assetResolver) : base(_dataset, _dbPath, assetResolver)
         {
-            MemDb.ConfigureFor<DigitalAsset>(_dataset, _dbPath).Register();
+            MemDb.ConfigureFor<DigitalAsset>(_dataset, _dbPath)
+                .Register();
         }
         #endregion
 

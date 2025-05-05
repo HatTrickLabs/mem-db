@@ -14,7 +14,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region internals
-        private const int _defaultInitialCapacity = 64;
+        private const int _defaultInitialCapacity = 128;
 
         private string _path;
         private List<MemDbPointer> _pointers;
@@ -103,8 +103,8 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
-        #region set next id
-        internal void SetLastId(uint id)
+        #region override last id
+        internal void OverrideLastId(uint id)
         {
             bool outOfRange = false;
             lock (_idSyncLock)
@@ -126,6 +126,16 @@ namespace HatTrick.InMemDb
             lock (_idSyncLock)
             {
                 return ++_lastId;
+            }
+        }
+        #endregion
+
+        #region remove last
+        internal void RemoveLastRecord()
+        {
+            lock (_syncLock)
+            {
+                _pointers.RemoveAt(_pointers.Count - 1);
             }
         }
         #endregion

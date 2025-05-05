@@ -132,7 +132,7 @@ namespace HatTrick.InMemDb
             MemDbMap origMap = _originalMap;
             MemDbMap freshMap = _freshMap;
 
-            _freshMap.SetLastId(_originalMap.LastId);
+            _freshMap.OverrideLastId(_originalMap.LastId);
 
             int maxRecLength = origMap.MaxFreshRecordSize;
 

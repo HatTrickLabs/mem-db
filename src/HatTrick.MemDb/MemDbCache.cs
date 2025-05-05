@@ -60,6 +60,20 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region snapshot
+        public DateTime Snapshot()
+        {
+            if (_persister is null)
+                throw new InvalidOperationException($"{nameof(Snapshot)} is not available with a unpersisted database (no path provided).");
+
+            lock (_lock)
+            {
+                DateTime timestamp = _persister.Snapshot();
+                return timestamp;
+            }
+        }
+        #endregion
+
         #region purge
         public (int stale, int deleted) Purge()
         {

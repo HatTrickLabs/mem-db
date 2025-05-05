@@ -33,6 +33,7 @@ namespace HatTrick.InMemDb
         private IMemDbSerializer<T> _serializer;
         private IBinaryReadMemDbSerializer<T> _binReadSerializer;//optional impl
         private IMemDbEncryptor _encryptor;
+        private IMemDbSnapshotter _snapshotter;
 
         private bool _isClosed;
         #endregion
@@ -61,6 +62,7 @@ namespace HatTrick.InMemDb
                 _binReadSerializer = binReadSerializer;
 
             _encryptor = config.GetEncryptor();
+            _snapshotter = config.GetSnapshotter();
 
             _fullDbPath = config.GetFullDbFilePath();
             _fullMapPath = config.GetFullMapFilePath();
@@ -402,14 +404,10 @@ namespace HatTrick.InMemDb
                         }
                         catch
                         {
-                            //reset the len of file back to position + length of the last pointer.
-                            MemDbPointer lPtr = _map[^1];
-                            uint length = lPtr.Position + (uint)lPtr.Length;
-                            if (fsDb.Length > length)
-                                fsDb.SetLength(lPtr.Position + lPtr.Length);
-
-                            //ensure pointers successfully added get flushed before tossing the ex
-                            _map.Flush();
+                            if (!this.TrySyncMapAndDbOnError(fsDb, _map))
+                            {
+                                _map.Flush(1);
+                            }
                             throw;
                         }
                     } while (this.TryPopInsertRecord(out record));
@@ -419,10 +417,45 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
-        #region update item state
+        #region sync map and db on error
+        private bool TrySyncMapAndDbOnError(FileStream dbFilestream, MemDbMap map)
+        {
+            try
+            {
+                //reset the len of file back to position + length of the last pointer.
+                MemDbPointer lPtr = map[^1];
+                int recLength = lPtr.IsEncrypted ? MemDbAESEncryptor.CalculateCryptoByteLength(lPtr.Length) : lPtr.Length;
+                int end = (int)lPtr.Position + lPtr.Length;
+                if (dbFilestream.Length > end)
+                    dbFilestream.SetLength(lPtr.Position + lPtr.Length);
+
+                //ensure pointers successfully added get flushed before tossing the ex
+                map.Flush();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        #endregion
+
+        #region update item states
         private void UpdateItemStates()
         {
             _map.UpdatePointerState(this.TryPopStateChangeRecord);
+        }
+        #endregion
+
+        #region snapshot
+        public DateTime Snapshot()
+        {
+            lock (_flushLock)
+            {
+                var now = DateTime.Now;
+                _snapshotter.WriteSnapshot(now);
+                return now;
+            }
         }
         #endregion
 

@@ -12,12 +12,14 @@ namespace HatTrick.InMemDb
         public const int DefaultFlushIntervalSeconds = 5;
         public const int MaxFlushIntervalSeconds = 60;
         public const string ArchiveTimestampFormat = "yyyyMMdd_HHmm_ss_ffff";
+        public const string SnapshotTimestampFormat = "yyyyMMddHHmmssfff";
         #endregion
 
         #region internals
         private string _datasetName;
         private string _path;
         private string _archivePath;
+        private string _snapshotPath;
         private AccessMode _mode;
         private int _flushInterval;
         private Func<byte[]> _encryptionKeyProvider;
@@ -49,10 +51,13 @@ namespace HatTrick.InMemDb
         protected void SetMode(AccessMode mode)
         {
             if (mode == AccessMode.AppendOnly && _path is null)
-                throw new InvalidOperationException($"{nameof(AccessMode)}.{AccessMode.AppendOnly} is inconsistent with a unpersisted database (no path provided).");
+                throw new InvalidOperationException($"{nameof(AccessMode)}.{AccessMode.AppendOnly} is not applicable with a unpersisted database (no path provided).");
+
+            if (mode == AccessMode.AppendOnly && _snapshotPath is not null)
+                throw new InvalidOperationException($"{nameof(AccessMode)}.{AccessMode.AppendOnly} is not applicable with database snapshot functionality...Cannot run in {nameof(AccessMode)}.{AccessMode.AppendOnly} mode when a snapshot path has been configured.");
 
             if (mode == AccessMode.ReadOnly && _path is null)
-                throw new InvalidOperationException($"{nameof(AccessMode)}.{AccessMode.ReadOnly} is inconsistent with a unpersisted database (no path provided).");
+                throw new InvalidOperationException($"{nameof(AccessMode)}.{AccessMode.ReadOnly} is not applicable with a unpersisted database (no path provided).");
 
             //assuming _flushInterval was never overridden if it is still equal to the default.
             if (mode == AccessMode.ReadOnly && _flushInterval != MemDbConfiguration.DefaultFlushIntervalSeconds * 1000)
@@ -104,6 +109,22 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region set snapshot path
+        protected void SetSnapshotPath(string snapshotPath)
+        {
+            if (_snapshotPath is not null)
+                throw new InvalidOperationException("Snapshot path already provided.");
+
+            if (_path is null)
+                throw new InvalidOperationException($"Snapshot path is not applicable with a unpersisted database (no path provided).");
+
+            if (_mode == AccessMode.ReadOnly)
+                throw new InvalidOperationException($"Snapshot path is not applicable when {nameof(AccessMode)} is {AccessMode.ReadOnly}.");
+
+            _snapshotPath = snapshotPath;
+        }
+        #endregion
+
         #region ensure generic type
         internal MemDbConfiguration<T> EnsureGenericType<T>(MemDbConfiguration configuration) where T : class
         {
@@ -148,18 +169,18 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region get full map archive file path
-        internal string GetFullMapArchiveFilePath(DateTime at)
+        internal string GetFullMapArchiveFilePath(DateTime timestamp)
         {
-            string timestamp = at.ToString(ArchiveTimestampFormat);
-            return System.IO.Path.Combine(_archivePath, $"{timestamp}.htl.{_datasetName}.map.arch");
+            string at = timestamp.ToString(MemDbConfiguration.ArchiveTimestampFormat);
+            return System.IO.Path.Combine(_archivePath, $"{at}.htl.{_datasetName}.map.arch");
         }
         #endregion
 
         #region get full db archive file path
-        internal string GetFullDbArchiveFilePath(DateTime at)
+        internal string GetFullDbArchiveFilePath(DateTime timestamp)
         {
-            string timestamp = at.ToString(ArchiveTimestampFormat);
-            return System.IO.Path.Combine(_archivePath, $"{timestamp}.htl.{_datasetName}.db.arch");
+            string at = timestamp.ToString(MemDbConfiguration.ArchiveTimestampFormat);
+            return System.IO.Path.Combine(_archivePath, $"{at}.htl.{_datasetName}.db.arch");
         }
         #endregion
 
@@ -167,6 +188,29 @@ namespace HatTrick.InMemDb
         internal string GetZipArchiveFullFilePath()
         {
             return System.IO.Path.Combine(_archivePath, $"htl.{_datasetName}.zip");
+        }
+        #endregion
+
+        #region get full snapshot map file path
+        public string GetFullSnapshotMapFilePath(DateTime timestamp)
+        {
+            string at = timestamp.ToString(MemDbConfiguration.SnapshotTimestampFormat);
+            return System.IO.Path.Combine(_snapshotPath, $"htl.{_datasetName}.{at}.map");
+        }
+        #endregion
+
+        #region get full snapshot db file path
+        public string GetFullSnapshotDbFilePath(DateTime timestamp)
+        {
+            string at = timestamp.ToString(MemDbConfiguration.SnapshotTimestampFormat);
+            return System.IO.Path.Combine(_snapshotPath, $"htl.{_datasetName}.{at}.db");
+        }
+        #endregion
+
+        #region get snapshotter
+        internal IMemDbSnapshotter GetSnapshotter()
+        {
+            return new MemDbSnapshotter(this);
         }
         #endregion
     }
@@ -315,6 +359,21 @@ namespace HatTrick.InMemDb
                 throw new ArgumentException("Argument must contain a value.", nameof(archivePath));
 
             base.SetArchivePath(archivePath);
+
+            return this;
+        }
+        #endregion
+
+        #region snapshot to
+        public IMemDBConfigurationBuilder<T> SnapshotTo(string snapshotPath)
+        {
+            if (snapshotPath is null)
+                throw new ArgumentNullException(nameof(ArchivePath));
+
+            if (ArchivePath == string.Empty)
+                throw new ArgumentException("Argument must contain a value.", nameof(snapshotPath));
+
+            base.SetSnapshotPath(snapshotPath);
 
             return this;
         }
