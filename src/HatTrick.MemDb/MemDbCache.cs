@@ -469,6 +469,7 @@ namespace HatTrick.InMemDb
         #region dispose
         public void Dispose()
         {
+            _records = null;
             _persister?.Dispose();
         }
         #endregion

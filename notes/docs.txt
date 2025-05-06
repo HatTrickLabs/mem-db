@@ -1,0 +1,9 @@
+MemDb Docs....
+
+-What is MemDb
+ -In Process file backed cache
+ -
+ 
+ 
+ MemDb.ConfigureFor<DigitalAsset>("assets", "c:/_asset_db")
+ .Register();

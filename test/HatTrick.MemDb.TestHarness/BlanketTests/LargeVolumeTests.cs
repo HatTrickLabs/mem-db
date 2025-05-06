@@ -18,6 +18,7 @@ namespace HatTrick.InMemDb.TestHarness
         {
             MemDb.ConfigureFor<DigitalAsset>(_dataset, _dbPath)
                 .SetMode(AccessMode.AppendOnly)
+                .SetFlushInterval(0)
                 .CloneWith(() => new DigitalAssetCloner())
                 .SerializeWith(() => new DigitalAssetBinarySerializer())
                 .EncryptWithPassword(() => "This is a super fancy and complex password!!!!!")
@@ -50,6 +51,8 @@ namespace HatTrick.InMemDb.TestHarness
                 for (int i = 0; i < iterations; i++)
                 {
                     this.LoadDb(db);
+                    if (iterations == 5_000)
+                        db.Flush();
                 }
             }
             sw.Stop();
@@ -58,7 +61,7 @@ namespace HatTrick.InMemDb.TestHarness
 
             MemDb.RemoveConfiguationFor(_dataset);
             MemDb.ConfigureFor<DigitalAsset>(_dataset, _dbPath)
-                .SetMode(AccessMode.ReadOnly)
+                .SetMode(AccessMode.ReadWrite)
                 .CloneWith(() => new DigitalAssetCloner())
                 .SerializeWith(() => new DigitalAssetBinarySerializer())
                 .EncryptWithPassword(() => "This is a super fancy and complex password!!!!!")
@@ -79,13 +82,34 @@ namespace HatTrick.InMemDb.TestHarness
                 sw.Stop();
                 Console.WriteLine($"{sw.ElapsedMilliseconds}\tResolved and cloned {json.Length} json assets.");
                 sw.Reset();
+
+                Console.WriteLine("Starting query for a single element roughly 500k in");
+                sw.Start();
+                var json1 = db.Find(a => a.Id == 500_023);
+                Console.WriteLine(json1.Name);
+                sw.Stop();
+                Console.WriteLine($"{sw.ElapsedMilliseconds}\tResolved and cloned 1 json record.");
+                sw.Reset();
+
                 Console.WriteLine("Starting query for grouping of records by extension.");
                 sw.Start();
                 var groups = db.Query().GroupBy(a => a.Extension).Select(g => (g.Key, g.Count())).ToArray();
                 sw.Stop();
                 Console.WriteLine($"{sw.ElapsedMilliseconds}\tResolved {groups.Length} groups: {string.Join(',', groups.ToList().ConvertAll<string>(g => $"{g.Key}:{g.Item2}"))} ");
+                sw.Restart();
 
+                Console.WriteLine("Starting update first 500K records with fake xxhash values");
+                sw.Start();
+                int updated = db.Update(a => a.XXHash += 1, a => a.Id <= 500_000);
+                sw.Stop();
+                Console.WriteLine($"{sw.ElapsedMilliseconds}\tupdated {updated} records.");
+                sw.Reset();
 
+                Console.WriteLine("Starting cache purge");
+                sw.Start();
+                (int stale, int deleted) purged = db.PurgeCache();
+                sw.Stop();
+                Console.WriteLine($"{sw.ElapsedMilliseconds}\tpurged {purged.stale + purged.deleted} records.");
             }
 
             Console.WriteLine("Done...Press [Enter] to exit.");
