@@ -444,7 +444,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region resolve statistics
-        public MemDbStatistics ResolveStatistics(Stats statistics)
+        MemDbStatistics IMemDbCache<T>.ResolveStatistics(Stats statistics)
         {
             if (_persister is null)
                 throw new InvalidOperationException("Cannot resolve statistics for unpersisted database.");
