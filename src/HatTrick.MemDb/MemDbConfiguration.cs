@@ -18,16 +18,18 @@ namespace HatTrick.InMemDb
         #region internals
         private string _datasetName;
         private string _path;
+        private AccessMode _mode;
+        private bool _indexed;
+        private int _flushInterval;
         private string _archivePath;
         private string _snapshotPath;
-        private AccessMode _mode;
-        private int _flushInterval;
         private Func<byte[]> _encryptionKeyProvider;
         #endregion
 
         #region interface
         public string DatasetName => _datasetName;
         public string Path => _path;
+        public bool IsIndexedOnIdentity => _indexed;
         public bool IsPersisted => _path is not null;
         internal bool ShouldArchive => _archivePath is not null;
         internal string ArchivePath => _archivePath;
@@ -66,6 +68,13 @@ namespace HatTrick.InMemDb
                 throw new InvalidOperationException($"{nameof(AccessMode)}.{AccessMode.ReadOnly} is not applicable with with a flush interval greater than 0.");
 
             _mode = mode;
+        }
+        #endregion
+
+        #region set indexed on identity
+        protected void SetIndexedOnIdentity(bool shouldIndex)
+        {
+            _indexed = shouldIndex;
         }
         #endregion
 
@@ -224,6 +233,7 @@ namespace HatTrick.InMemDb
     public interface IMemDBConfigurationBuilder<T> where T : class
     {
         IMemDBConfigurationBuilder<T> SetMode(AccessMode mode);
+        IMemDBConfigurationBuilder<T> IndexOnIdentity(bool shouldIndex);
         IMemDBConfigurationBuilder<T> SetFlushInterval(int interval);
         IMemDBConfigurationBuilder<T> SerializeWith(Func<IMemDbSerializer<T>> serializerProvider);
         IMemDBConfigurationBuilder<T> CloneWith(Func<IMemDbCloner<T>> clonerProvider);
@@ -265,6 +275,14 @@ namespace HatTrick.InMemDb
         public new IMemDBConfigurationBuilder<T> SetMode(AccessMode mode)
         {
             base.SetMode(mode);
+            return this;
+        }
+        #endregion
+
+        #region index on identity
+        public IMemDBConfigurationBuilder<T> IndexOnIdentity(bool shouldIndex)
+        {
+            base.SetIndexedOnIdentity(shouldIndex);
             return this;
         }
         #endregion

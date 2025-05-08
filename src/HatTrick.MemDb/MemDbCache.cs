@@ -10,6 +10,8 @@ namespace HatTrick.InMemDb
         #region internals
         private string _datasetName;
         private List<MemDbRecord<T>> _records;
+        private bool _isIndexed;
+        private Dictionary<uint, int> _index;
         private Lock _lock;
 
         private IMemDbCloner<T> _cloner;
@@ -36,6 +38,7 @@ namespace HatTrick.InMemDb
                 _idLock = new();
 
             _mode = config.Mode;
+            _isIndexed = config.IsIndexedOnIdentity;
             _memOnlyLastId = 0;
 
             this.Initialize();
@@ -54,9 +57,23 @@ namespace HatTrick.InMemDb
                 //throws an exception...i.e. the timer initiated flush thread throws file access or permissions ex.
                 _persister.ReadMappedRecords(out IList<MemDbRecord<T>> records);
                 _records = records as List<MemDbRecord<T>>;
+                if (_isIndexed)
+                {
+                    _index = new Dictionary<uint, int>(_records.Capacity);
+                    for (int i = 0; i < records.Count; i++)
+                    {
+                        _index.Add(records[i].Id, i);
+                    }
+                }
             }
             else
+            {
                 _records = new List<MemDbRecord<T>>(128);
+                if (_isIndexed)
+                {
+                    _index = new Dictionary<uint, int>(128);
+                }
+            }
         }
         #endregion
 
@@ -91,20 +108,20 @@ namespace HatTrick.InMemDb
             {
                 int capacity = stats.fresh == 0 ? 128 : (int)(stats.fresh * 1.025);
                 var newSet = new List<MemDbRecord<T>>(capacity);
-
+                var newIndex = _isIndexed ? new Dictionary<uint, int>(capacity) : null;
                 for (int i = 0; i < _records.Count; i++)
                 {
                     var record = _records[i];
                     //if the rec inserted or state changed after stats collected, just shift it over so return count is accurate.
-                    if (i > upperBound)
+                    if (i > upperBound || record.State == RecordState.Fresh)
+                    {
+                        newIndex?.Add(record.Id, newSet.Count);
                         newSet.Add(record);
-
-                    else if (record.State == RecordState.Fresh)
-                        newSet.Add(record);
-
+                    }
                     _records[i] = null;//not necessary...
                 } 
                 _records = newSet;
+                _index = newIndex;
             }
 
             return (stats.stale, stats.deleted);
@@ -169,6 +186,22 @@ namespace HatTrick.InMemDb
             }
             return exists;
         }
+
+        public bool Exists(uint id)
+        {
+            this.EnsureReadMode(nameof(Exists));
+
+            bool exists;
+
+            lock (_lock)
+            {
+                exists = _isIndexed 
+                    ? _index.ContainsKey(id)
+                    : _records.Exists(r => r.Id == id && r.State == RecordState.Fresh);
+            }
+
+            return exists;
+        }
         #endregion
 
         #region count
@@ -223,6 +256,27 @@ namespace HatTrick.InMemDb
             }
             return rec is null ? null : _cloner.DeepCopy(rec.Value);
         }
+
+        public T Find(uint id)
+        {
+            this.EnsureReadMode(nameof(Find));
+
+            MemDbRecord<T> rec = null;
+            lock (_lock)
+            {
+                int idx = -1;
+                if (_isIndexed && _index.TryGetValue(id, out int i))
+                    idx = i;
+
+                else
+                    idx = _records.FindIndex((r) => r.Id == id && r.State == RecordState.Fresh);
+
+                if (idx > -1)
+                    rec = _records[idx];
+            }
+
+            return rec is null ? null : _cloner.DeepCopy(rec.Value);
+        }
         #endregion
 
         #region find all
@@ -234,6 +288,32 @@ namespace HatTrick.InMemDb
             lock (_lock)
             {
                 matches = _records.Where(r => r.State == RecordState.Fresh && where(r.Value)).Select(r => r.Value).ToArray();
+            }
+
+            T[] set = _cloner.DeepCopy(matches);
+
+            return set;
+        }
+
+        public T[] FindAll(params uint[] ids)
+        {
+            this.EnsureReadMode(nameof(FindAll));
+            List<T> matches = new List<T>(ids.Length);
+           
+            lock (_lock)
+            {
+                if (_isIndexed)
+                {
+                    foreach (uint id in ids)
+                    {
+                        if (_index.TryGetValue(id, out int index))
+                            matches.Add(_records[index].Value);
+                    }
+                }
+                else
+                {
+                    var march = _records.FindAll((r) => r.State == RecordState.Fresh && Array.Exists(ids, (id) => r.Id == id));
+                }
             }
 
             T[] set = _cloner.DeepCopy(matches);
@@ -361,6 +441,9 @@ namespace HatTrick.InMemDb
             {
                 lock (_lock)
                 {
+                    if (_isIndexed)
+                        _index.Add(id, _records.Count);
+
                     _records.Add(rec);
                 }
             }
@@ -383,38 +466,71 @@ namespace HatTrick.InMemDb
             List<MemDbRecord<T>> matches = null;
             lock (_lock)
             {
-                long utcTimestamp = DateTime.UtcNow.ToBinary();
                 matches = _records.FindAll(r => r.State == RecordState.Fresh && where(r.Value));
-
                 if (matches.Count > 0)
                 {
+                    long utcTimestamp = DateTime.UtcNow.ToBinary();
                     for (int i = 0; i < matches.Count; i++)
                     {
-                        var oldRec = matches[i];
-                        //We must deep copy here...if not, the old cache value(s) (that have not yet been flushed to disk)
-                        //will get the update.  We need a traceable / archiveable state for each update.  If we don't deep copy
-                        //and multi updates are applied to the same record before a disk flush, then all the records updated
-                        //between flushes receive all updates and look identical if archived.
-                        var newRec = new MemDbRecord<T>(oldRec.Id, _cloner.DeepCopy(oldRec.Value), utcTimestamp, oldRec.IsEncrypted);
-
-                        //we know the MemDb instance is encryption ready if anything encrypted was ever read into or inserted
-                        //into the cache (the cache will not contain encrypted data if not encryption ready).
-
-                        oldRec.MarkStale(utcTimestamp);
-                        apply(newRec.Value);
-
-                        _records.Add(newRec);
-
-                        if (_persister is not null)
-                        {
-                            _persister.Insert(newRec);
-                            _persister.MarkStale(oldRec);
-                        }
+                        this.ApplyUpdate(apply, matches[i], utcTimestamp);
                     }
                 }
             }
-
             return matches.Count;
+        }
+
+        public bool Update(Action<T> apply, uint id)
+        {
+            this.EnsureMode(AccessMode.ReadWrite, nameof(Update));
+
+            if (apply == null)
+                throw new ArgumentNullException(nameof(apply));
+
+            int idx = -1;
+            lock (_lock)
+            {
+                if (_isIndexed && _index.TryGetValue(id, out int i))
+                    idx = i;
+
+                else
+                    idx = _records.FindIndex((r) => r.Id == id && r.State == RecordState.Fresh);
+
+                if (idx > -1)
+                {
+                    MemDbRecord<T> match = _records[idx]; ;
+                    long utcTimestamp = DateTime.UtcNow.ToBinary();
+                    this.ApplyUpdate(apply, match, utcTimestamp);
+                }
+            }
+
+            return idx > -1;
+        }
+
+        //ApplyUpdate should always be called within lock(_lock) scope
+        private void ApplyUpdate(Action<T> apply, MemDbRecord<T> to, long utcTimestamp)
+        {
+            //We must deep copy here...if not, the old cache value(s) (that have not yet been flushed to disk)
+            //will get the update.  We need a traceable / archiveable state for each update.  If we don't deep copy
+            //and multi updates are applied to the same record before a disk flush, then all the records updated
+            //between flushes receive all updates and look identical if archived.
+            var newRec = new MemDbRecord<T>(to.Id, _cloner.DeepCopy(to.Value), utcTimestamp, to.IsEncrypted);
+
+            //we know the MemDb instance is encryption ready if anything encrypted was ever read into or inserted
+            //into the cache (the cache will not contain encrypted data if not encryption ready).
+
+            to.MarkStale(utcTimestamp);
+            apply(newRec.Value);
+
+            if (_isIndexed)
+                _index[newRec.Id] = _records.Count;
+
+            _records.Add(newRec);
+
+            if (_persister is not null)
+            {
+                _persister.Insert(newRec);
+                _persister.MarkStale(to);
+            }
         }
         #endregion
 
@@ -426,20 +542,57 @@ namespace HatTrick.InMemDb
             if (where == null)
                 throw new ArgumentNullException(nameof(where));
 
-            int cnt = 0;
+            List<MemDbRecord<T>> matches = null;
             lock (_lock)
             {
-                long utcTimestamp = DateTime.UtcNow.ToBinary();
-                var set = _records.Where(r => r.State == RecordState.Fresh && where(r.Value));
-                foreach (var r in set)
+                matches = _records.FindAll(r => r.State == RecordState.Fresh && where(r.Value));
+                if (matches.Count > 0)
                 {
-                    cnt += 1;
-                    r.MarkDeleted(utcTimestamp);
-                    _persister?.MarkDeleted(r);
+                    long utcTimestamp = DateTime.UtcNow.ToBinary();
+                    for (int i = 0; i < matches.Count; i++)
+                    {
+                        var rec = matches[i];
+
+                        rec.MarkDeleted(utcTimestamp);
+
+                        if (_isIndexed)
+                            _index.Remove(rec.Id);
+
+                        _persister?.MarkDeleted(rec);
+                    }
                 }
             }
 
-            return cnt;
+            return matches.Count;
+        }
+
+        public bool Delete(uint id)
+        {
+            this.EnsureMode(AccessMode.ReadWrite, nameof(Delete));
+
+            int idx = -1;
+            lock (_lock)
+            {
+                if (_isIndexed && _index.TryGetValue(id, out int i))
+                    idx = i;
+
+                else
+                    idx = _records.FindIndex((r) => r.Id == id && r.State == RecordState.Fresh);
+
+                if (idx > -1)
+                {
+                    MemDbRecord<T> match = _records[idx];
+                    long utcTimestamp = DateTime.UtcNow.ToBinary();
+                    match.MarkDeleted(utcTimestamp);
+
+                    if (_isIndexed)
+                        _index.Remove(match.Id);
+
+                    _persister?.MarkDeleted(match);
+                }
+            }
+
+            return idx > -1;
         }
         #endregion
 
@@ -470,6 +623,7 @@ namespace HatTrick.InMemDb
         public void Dispose()
         {
             _records = null;
+            _index = null;
             _persister?.Dispose();
         }
         #endregion

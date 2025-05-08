@@ -227,6 +227,7 @@ namespace HatTrick.InMemDb
         #region internals
         private string _datasetName;
         private IMemDbCache<T> _cache;
+        private bool _cacheIsIndexed;
         private bool _isEncryptionReady;
         private bool _isSnapshotReady;
         private bool _isClosed;
@@ -242,6 +243,7 @@ namespace HatTrick.InMemDb
             _isEncryptionReady = config.IsEncryptionReady;
             _isSnapshotReady = config.IsSnapshotReady;
             _cache = config.GetCache();
+            _cacheIsIndexed = config.IsIndexedOnIdentity;
             //TODO: wire up some way for the cache to notify if a background thread
             //throws an exception...i.e. the timer initiated flush thread throws file access or permissions ex.
         }
@@ -269,6 +271,11 @@ namespace HatTrick.InMemDb
         {
             return _cache.Exists(where);
         }
+
+        public bool Exists(uint id)
+        {
+            return _cache.Exists(id);
+        }
         #endregion
 
         #region count
@@ -288,12 +295,22 @@ namespace HatTrick.InMemDb
         {
             return _cache.Find(where);
         }
+
+        public T Find(uint id)
+        {
+            return (_cache as MemDbCache<T>).Find(id);
+        }
         #endregion
 
         #region find all
         public T[] FindAll(Func<T, bool> where)
         {
             return _cache.FindAll(where);
+        }
+
+        public T[] FindAll(params uint[] ids)
+        {
+            return _cache.FindAll(ids);
         }
         #endregion
 
@@ -316,6 +333,11 @@ namespace HatTrick.InMemDb
         public int Update(Action<T> apply, Func<T, bool> where)
         {
             return _cache.Update(apply, where);
+        }
+
+        public bool Update(Action<T> apply, uint id)
+        {
+            return _cache.Update(apply, id);
         }
         #endregion
 

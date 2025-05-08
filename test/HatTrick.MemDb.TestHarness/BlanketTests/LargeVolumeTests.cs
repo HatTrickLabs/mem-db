@@ -2,12 +2,13 @@
 using System.IO;
 using System.Linq;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace HatTrick.InMemDb.TestHarness
 {
     //TDDO: what do we really want to test here ???
-    internal class LargeVolumeTests : TestBase
+    public class LargeVolumeTests : TestBase
     {
         #region internals
         private static readonly string _dataset = $"assets";
@@ -16,12 +17,13 @@ namespace HatTrick.InMemDb.TestHarness
 
         public LargeVolumeTests(AssetResolver assetResolver) : base(_dataset, _dbPath, assetResolver)
         {
-            MemDb.ConfigureFor<DigitalAsset>(_dataset, _dbPath)
-                .SetMode(AccessMode.AppendOnly)
-                .SetFlushInterval(0)
+            MemDb.ConfigureFor<DigitalAsset>(_dataset/*, _dbPath*/)
+                //.SetMode(AccessMode.AppendOnly)
+                //.SetFlushInterval(0)
                 .CloneWith(() => new DigitalAssetCloner())
                 .SerializeWith(() => new DigitalAssetBinarySerializer())
-                .EncryptWithPassword(() => "This is a super fancy and complex password!!!!!")
+                .IndexOnIdentity(true)
+                //.EncryptWithPassword(() => "This is a super fancy and complex password!!!!!")
                 .Register();
         }
 
@@ -51,66 +53,27 @@ namespace HatTrick.InMemDb.TestHarness
                 for (int i = 0; i < iterations; i++)
                 {
                     this.LoadDb(db);
-                    if (iterations == 5_000)
-                        db.Flush();
                 }
-            }
-            sw.Stop();
-            Console.WriteLine($"{sw.ElapsedMilliseconds}\tCompleted insert, flush to disk and close db after insert of {iterations * setCount} records.");
 
-
-            MemDb.RemoveConfiguationFor(_dataset);
-            MemDb.ConfigureFor<DigitalAsset>(_dataset, _dbPath)
-                .SetMode(AccessMode.ReadWrite)
-                .CloneWith(() => new DigitalAssetCloner())
-                .SerializeWith(() => new DigitalAssetBinarySerializer())
-                .EncryptWithPassword(() => "This is a super fancy and complex password!!!!!")
-                .Register();
-
-            sw.Reset();
-            Console.WriteLine($"Starting re-open and hydrate of {iterations * setCount} record db into RAM.");
-            sw.Start();
-            using (var db = MemDb.Open<DigitalAsset>(_dataset))
-            {
                 sw.Stop();
-                Console.WriteLine($"{sw.ElapsedMilliseconds}\tCompleted re-open and hydrate {iterations * setCount} records");
-
+                Console.WriteLine($"{sw.ElapsedMilliseconds}\tCompleted db load (in mem only) of {iterations * setCount} records.");
                 sw.Reset();
-                Console.WriteLine("Starting query for all records with .json extension");
+                Console.WriteLine("Starting concurrent queries for 100,000 records by id (index assisted)");
+                DigitalAsset[] assets = new DigitalAsset[100_000];
                 sw.Start();
-                var json = db.FindAll(a => string.Compare(a.Extension, ".json", true) == 0);
+                Parallel.For(0, 100_000, (i) => {
+                    assets[i] = db.Find((uint)i + 1);
+                });
                 sw.Stop();
-                Console.WriteLine($"{sw.ElapsedMilliseconds}\tResolved and cloned {json.Length} json assets.");
+                Console.WriteLine($"{sw.ElapsedMilliseconds}\tCompleted concurrent queries for 100,000 records");
                 sw.Reset();
 
-                Console.WriteLine("Starting query for a single element roughly 500k in");
-                sw.Start();
-                var json1 = db.Find(a => a.Id == 500_023);
-                Console.WriteLine(json1.Name);
-                sw.Stop();
-                Console.WriteLine($"{sw.ElapsedMilliseconds}\tResolved and cloned 1 json record.");
-                sw.Reset();
-
-                Console.WriteLine("Starting query for grouping of records by extension.");
-                sw.Start();
-                var groups = db.Query().GroupBy(a => a.Extension).Select(g => (g.Key, g.Count())).ToArray();
-                sw.Stop();
-                Console.WriteLine($"{sw.ElapsedMilliseconds}\tResolved {groups.Length} groups: {string.Join(',', groups.ToList().ConvertAll<string>(g => $"{g.Key}:{g.Item2}"))} ");
-                sw.Restart();
-
-                Console.WriteLine("Starting update first 500K records with fake xxhash values");
-                sw.Start();
-                int updated = db.Update(a => a.XXHash += 1, a => a.Id <= 500_000);
-                sw.Stop();
-                Console.WriteLine($"{sw.ElapsedMilliseconds}\tupdated {updated} records.");
-                sw.Reset();
-
-                Console.WriteLine("Starting cache purge");
-                sw.Start();
-                (int stale, int deleted) purged = db.PurgeCache();
-                sw.Stop();
-                Console.WriteLine($"{sw.ElapsedMilliseconds}\tpurged {purged.stale + purged.deleted} records.");
-            }
+                for (int i = 0; i < assets.Length; i++)
+                {
+                    Assert.IsNotNull(assets[i]);
+                    Assert.IsEqual(assets[i].Id, (uint)i + 1);
+                }
+            }            
 
             Console.WriteLine("Done...Press [Enter] to exit.");
             Console.ReadLine();
