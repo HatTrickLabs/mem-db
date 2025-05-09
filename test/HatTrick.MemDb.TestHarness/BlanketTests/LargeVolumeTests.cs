@@ -60,10 +60,14 @@ namespace HatTrick.InMemDb.TestHarness
                 Console.WriteLine("Starting concurrent queries for 100,000 records by id (index assisted)");
                 DigitalAsset[] assets = new DigitalAsset[100_000];
                 sw.Start();
-                Parallel.For(0, 100_000, (i) => {
+                //Parallel.For(0, 100_000, (i) => {
 
+                //    assets[i] = db.Find((uint)i + 300_001);
+                //});
+                for (int i = 0; i < 100_000; i++)
+                {
                     assets[i] = db.Find((uint)i + 300_001);
-                });
+                }
                 sw.Stop();
                 Console.WriteLine($"{sw.ElapsedMilliseconds}\tCompleted concurrent queries for 100,000 records");
                 sw.Reset();

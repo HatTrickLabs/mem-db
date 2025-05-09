@@ -8,6 +8,8 @@ namespace HatTrick.InMemDb
     internal sealed class MemDbCache<T> : IMemDbCache<T>, IDisposable where T : class
     {
         #region internals
+        private const int _initialCacheCapacity = 128;
+
         private string _datasetName;
         private List<MemDbRecord<T>> _records;
         private bool _isIndexed;
@@ -51,29 +53,35 @@ namespace HatTrick.InMemDb
             if (_mode == AccessMode.AppendOnly)
                 return;
 
-            if (_persister is not null)
-            {
-                //TODO: wire up some way for the persister to notify if a background thread
-                //throws an exception...i.e. the timer initiated flush thread throws file access or permissions ex.
-                _persister.ReadMappedRecords(out IList<MemDbRecord<T>> records);
-                _records = records as List<MemDbRecord<T>>;
-                if (_isIndexed)
-                {
-                    _index = new Dictionary<uint, int>(_records.Capacity);
-                    for (int i = 0; i < records.Count; i++)
-                    {
-                        _index.Add(records[i].Id, i);
-                    }
-                }
-            }
+            if (_persister is null)
+                this.InitializeUnPersisted();
+
             else
+                this.InitializePersisted();
+        }
+
+        private void InitializePersisted()
+        {
+            //TODO: wire up some way for the persister to notify if a background thread
+            //throws an exception...i.e. the timer initiated flush thread throws file access or permissions ex.
+            _persister.ReadMappedRecords(out List<MemDbRecord<T>> records);
+            _records = records as List<MemDbRecord<T>>;
+            if (_isIndexed)
             {
-                _records = new List<MemDbRecord<T>>(128);
-                if (_isIndexed)
+                _index = new Dictionary<uint, int>(_records.Capacity);
+                for (int i = 0; i < records.Count; i++)
                 {
-                    _index = new Dictionary<uint, int>(128);
+                    _index.Add(records[i].Id, i);
                 }
             }
+        }
+
+        private void InitializeUnPersisted()
+        {
+            _records = new List<MemDbRecord<T>>(_initialCacheCapacity);
+
+            if (_isIndexed)
+                _index = new Dictionary<uint, int>(_initialCacheCapacity);
         }
         #endregion
 

@@ -132,7 +132,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region read mapped records
-        void IMemDbPersister<T>.ReadMappedRecords(out IList<MemDbRecord<T>> records)
+        void IMemDbPersister<T>.ReadMappedRecords(out List<MemDbRecord<T>> records)
         {
             this.EnsureMode(AccessMode.ReadOnly | AccessMode.ReadWrite, nameof(IMemDbPersister<T>.ReadMappedRecords));
 
@@ -180,7 +180,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region initialize record list
-        private void InitializeRecordList(out IList<MemDbRecord<T>> records, AccessMode mode, bool cryptoReady)
+        private void InitializeRecordList(out List<MemDbRecord<T>> records, AccessMode mode, bool cryptoReady)
         {
             MemDbMap map = _map;
             int totalFresh = map.FreshCount;
