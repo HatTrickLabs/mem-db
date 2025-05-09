@@ -497,8 +497,8 @@ namespace HatTrick.InMemDb
 
                 if (idx > -1)
                 {
-                    MemDbRecord<T> match = _records[idx]; ;
                     long utcTimestamp = DateTime.UtcNow.ToBinary();
+                    MemDbRecord<T> match = _records[idx]; ;
                     this.ApplyUpdate(apply, match, utcTimestamp);
                 }
             }
@@ -551,14 +551,14 @@ namespace HatTrick.InMemDb
                     long utcTimestamp = DateTime.UtcNow.ToBinary();
                     for (int i = 0; i < matches.Count; i++)
                     {
-                        var rec = matches[i];
+                        var match = matches[i];
 
-                        rec.MarkDeleted(utcTimestamp);
+                        match.MarkDeleted(utcTimestamp);
 
                         if (_isIndexed)
-                            _index.Remove(rec.Id);
+                            _index.Remove(match.Id);
 
-                        _persister?.MarkDeleted(rec);
+                        _persister?.MarkDeleted(match);
                     }
                 }
             }
@@ -581,8 +581,8 @@ namespace HatTrick.InMemDb
 
                 if (idx > -1)
                 {
-                    MemDbRecord<T> match = _records[idx];
                     long utcTimestamp = DateTime.UtcNow.ToBinary();
+                    MemDbRecord<T> match = _records[idx];
                     match.MarkDeleted(utcTimestamp);
 
                     if (_isIndexed)

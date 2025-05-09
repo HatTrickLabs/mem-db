@@ -227,7 +227,6 @@ namespace HatTrick.InMemDb
         #region internals
         private string _datasetName;
         private IMemDbCache<T> _cache;
-        private bool _cacheIsIndexed;
         private bool _isEncryptionReady;
         private bool _isSnapshotReady;
         private bool _isClosed;
@@ -243,7 +242,6 @@ namespace HatTrick.InMemDb
             _isEncryptionReady = config.IsEncryptionReady;
             _isSnapshotReady = config.IsSnapshotReady;
             _cache = config.GetCache();
-            _cacheIsIndexed = config.IsIndexedOnIdentity;
             //TODO: wire up some way for the cache to notify if a background thread
             //throws an exception...i.e. the timer initiated flush thread throws file access or permissions ex.
         }

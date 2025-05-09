@@ -36,8 +36,13 @@ namespace HatTrick.InMemDb
 
         public DigitalAsset[] DeepCopy(IList<DigitalAsset> values)
         {
-            DigitalAsset[] assets = new DigitalAsset[values.Count];
-            for (int i = 0; i < values.Count; i++)
+            int cnt = values?.Count ?? 0;
+
+            if (cnt == 0)
+                return Array.Empty<DigitalAsset>();
+
+            DigitalAsset[] assets = new DigitalAsset[cnt];
+            for (int i = 0; i < cnt; i++)
             {
                 DigitalAsset value = values[i];
                 assets[i] = this.DeepCopy(value);

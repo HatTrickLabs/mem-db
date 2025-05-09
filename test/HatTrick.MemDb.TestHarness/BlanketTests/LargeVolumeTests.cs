@@ -28,9 +28,8 @@ namespace HatTrick.InMemDb.TestHarness
         }
 
         #region load db
-        protected void LoadDb(MemDb<DigitalAsset> db)
+        protected void LoadDb(MemDb<DigitalAsset> db, DigitalAsset[] assets)
         {
-            DigitalAsset[] assets = base.ResolveAssetSet();
             for (int i = 0; i < assets.Length; i++)
             {
                 var asset = assets[i];
@@ -44,25 +43,26 @@ namespace HatTrick.InMemDb.TestHarness
         public void Test_LargeVolume()
         {
             int iterations = 10_000;
-            int setCount = base.ResolveAssetSet().Length;
+            DigitalAsset[] loadAssets = base.ResolveAssetSet();
             Stopwatch sw = new Stopwatch();
-            Console.WriteLine($"Starting load of  {iterations * setCount} into new database.");
+            Console.WriteLine($"Starting load of {(iterations * loadAssets.Length):n0} into new database.");
             sw.Start();
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
                 for (int i = 0; i < iterations; i++)
                 {
-                    this.LoadDb(db);
+                    this.LoadDb(db, loadAssets);
                 }
 
                 sw.Stop();
-                Console.WriteLine($"{sw.ElapsedMilliseconds}\tCompleted db load (in mem only) of {iterations * setCount} records.");
+                Console.WriteLine($"{sw.ElapsedMilliseconds}\tCompleted db load (in mem only) of {(iterations * loadAssets.Length):n0} records.");
                 sw.Reset();
                 Console.WriteLine("Starting concurrent queries for 100,000 records by id (index assisted)");
                 DigitalAsset[] assets = new DigitalAsset[100_000];
                 sw.Start();
                 Parallel.For(0, 100_000, (i) => {
-                    assets[i] = db.Find((uint)i + 1);
+
+                    assets[i] = db.Find((uint)i + 300_001);
                 });
                 sw.Stop();
                 Console.WriteLine($"{sw.ElapsedMilliseconds}\tCompleted concurrent queries for 100,000 records");
@@ -71,7 +71,7 @@ namespace HatTrick.InMemDb.TestHarness
                 for (int i = 0; i < assets.Length; i++)
                 {
                     Assert.IsNotNull(assets[i]);
-                    Assert.IsEqual(assets[i].Id, (uint)i + 1);
+                    Assert.IsEqual(assets[i].Id, (uint)i + 300_001);
                 }
             }            
 

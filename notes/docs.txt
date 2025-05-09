@@ -4,6 +4,41 @@ MemDb Docs....
  -In Process file backed cache
  -
  
+ MemDb.ConfigureFor<DigitalAsset>("assets", "c:/_asset_db").Register();
  
- MemDb.ConfigureFor<DigitalAsset>("assets", "c:/_asset_db")
- .Register();
+ MemDb.ConfigureFor<DigitalAsset>("assets", "c:/")
+	.IndexOn<string>(a => a.Path.spl
+	.Register();
+	
+	
+
+
+public class DigitalAsset 
+{
+	private string[] _meta;
+	
+	public string[] Meta => _meta;
+}
+
+
+mom, dad, brother, sister, wife, husband, pet1, pet2, 
+
+"c:/tmp/apa/sense"
+.IndexOnSet<string>(a => a.Meta, nameof(DigitalAsset.Meta)) wher Meta is Arry of string (IEnumerable)
+.IndexOnSet<string>(a => a.Directory.Split('/'), nameof(DigitalAsset.Directory)
+
+
+db.Find(db.IndexRef[""], "");
+db.FindAll(db.Index[""], "", "", "")
+db.FindById(1000);
+db.Query().ByIndex("Directory", [ "", "", "" ])
+db.Find(SArg.Index("Directory"), [ "", "", "" ]
+
+db.Find((a) => a.Extension == ".json");
+
+db.Find((uint)100);
+
+db.Find(db.IndexOf<string>("Directory"), "")
+
+.ApplyIndex<string>(nameof(DigitalAsset.Directory), (a) => a.Directory)
+.ApplyIndex<int>(nameof(DigitalAsset.Length), (a) => a.Length)
