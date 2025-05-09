@@ -15,6 +15,7 @@ namespace HatTrick.InMemDb.TestHarness
         private static readonly string _dbPath = Path.Combine(TestBase.DbBasePath, "large_volume");
         #endregion
 
+        #region ctor
         public LargeVolumeTests(AssetResolver assetResolver) : base(_dataset, _dbPath, assetResolver)
         {
             MemDb.ConfigureFor<DigitalAsset>(_dataset/*, _dbPath*/)
@@ -26,6 +27,7 @@ namespace HatTrick.InMemDb.TestHarness
                 //.EncryptWithPassword(() => "This is a super fancy and complex password!!!!!")
                 .Register();
         }
+        #endregion
 
         #region load db
         protected void LoadDb(MemDb<DigitalAsset> db, DigitalAsset[] assets)
