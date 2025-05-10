@@ -196,9 +196,12 @@ namespace HatTrick.InMemDb.TestHarness
             MemDb.RemoveConfiguationFor(_dataset);
             this.RegisterMemDb(Path.Combine(_dbPath, "_restore"));
 
+            int total = (txtCnt + jsonCnt + unknownCnt);
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
+                Assert.IsEqual(db.Count(), total);
                 Assert.IsEqual(db.Count(a => a.XXHash == 1), 250);
+                Assert.IsEqual(db.Count(a => a.XXHash != 1), (total - 250));
             }
         }
         #endregion

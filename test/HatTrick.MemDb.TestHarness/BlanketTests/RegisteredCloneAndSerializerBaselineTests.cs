@@ -3,7 +3,7 @@ using System.IO;
 
 namespace HatTrick.InMemDb.TestHarness
 {
-    public class RegisteredCloneAndSerializeBaselineTests : BaselineTests
+    public class RegisteredCloneAndSerializerBaselineTests : BaselineTests
     {
         #region internals
         private DigitalAssetCloner _cloner;
@@ -11,7 +11,7 @@ namespace HatTrick.InMemDb.TestHarness
         #endregion
 
         #region ctors
-        public RegisteredCloneAndSerializeBaselineTests(AssetResolver assetResolver) : base(assetResolver)
+        public RegisteredCloneAndSerializerBaselineTests(AssetResolver assetResolver) : base(assetResolver)
         {
             MemDb.ConfigureFor<DigitalAsset>(base.Dataset, base.DbPath)
                 .CloneWith(() => { _cloner = new DigitalAssetCloner(); return _cloner; })

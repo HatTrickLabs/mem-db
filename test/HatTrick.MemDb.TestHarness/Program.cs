@@ -12,6 +12,12 @@ namespace HatTrick.InMemDb.TestHarness
         #region main
         static void Main(string[] args)
         {
+            string[] set = ["a", "b", "c", "d", "e", "f", "g", "h", "i", /*"j",*/ "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"];
+            List<string> alphabet = new List<string>(set);
+            int i = alphabet.BinarySearch("j");
+            i = ~i;
+            alphabet.Insert(i, "j");
+            return;
             Command cmd = default;
             try
             {

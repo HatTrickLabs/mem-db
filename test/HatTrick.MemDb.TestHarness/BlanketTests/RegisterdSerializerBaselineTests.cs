@@ -3,14 +3,14 @@ using System.IO;
 
 namespace HatTrick.InMemDb.TestHarness
 {
-    public class RegisterdSerializeBaselineTests : BaselineTests
+    public class RegisterdSerializerBaselineTests : BaselineTests
     {
         #region internals
         private DigitalAssetBinarySerializer _serializer;
         #endregion
 
         #region ctors
-        public RegisterdSerializeBaselineTests(AssetResolver assetResolver) : base(assetResolver)
+        public RegisterdSerializerBaselineTests(AssetResolver assetResolver) : base(assetResolver)
         {
             MemDb.ConfigureFor<DigitalAsset>(base.Dataset, base.DbPath)
                 .SerializeWith(() => 

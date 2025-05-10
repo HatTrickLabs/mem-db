@@ -95,16 +95,23 @@ namespace HatTrick.InMemDb.TestHarness
                 .SetFlushInterval(0)
                 .Register();
 
+            int initialCount = 0;
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
                 this.LoadDb(db);
+                initialCount = db.Count();
+            }
+
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                Assert.IsEqual(db.Count(), initialCount); 
             }
 
             MemDb.RemoveConfiguationFor(_dataset);
         }
         #endregion
 
-        #region can disable flush timer
+        #region can manually flush when flush timer disabled
         public void Test_CanManuallyFlushWhenFlushTimerDisabled()
         {
             MemDb.ConfigureFor<DigitalAsset>(_dataset, _dbPath)

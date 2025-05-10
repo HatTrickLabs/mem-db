@@ -35,7 +35,6 @@ namespace HatTrick.InMemDb.TestHarness
             for (int i = 0; i < assets.Length; i++)
             {
                 var asset = assets[i];
-                //db.Insert(asset, (id) => asset.Id = id, (i % 100) == 0);
                 db.Insert(asset, (id) => asset.Id = id);
             }
         }
@@ -46,8 +45,9 @@ namespace HatTrick.InMemDb.TestHarness
         {
             int iterations = 10_000;
             DigitalAsset[] loadAssets = base.ResolveAssetSet();
+            int total = iterations * loadAssets.Length;
             Stopwatch sw = new Stopwatch();
-            Console.WriteLine($"Starting load of {(iterations * loadAssets.Length):n0} into new database.");
+            Console.WriteLine($"Starting load of {total:n0} records into new database.");
             sw.Start();
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
@@ -57,27 +57,36 @@ namespace HatTrick.InMemDb.TestHarness
                 }
 
                 sw.Stop();
-                Console.WriteLine($"{sw.ElapsedMilliseconds}\tCompleted db load (in mem only) of {(iterations * loadAssets.Length):n0} records.");
+                Console.WriteLine($"{sw.ElapsedMilliseconds}\tCompleted db load (in mem only) of {total:n0} records.");
                 sw.Reset();
                 Console.WriteLine("Starting concurrent queries for 100,000 records by id (index assisted)");
                 DigitalAsset[] assets = new DigitalAsset[100_000];
                 sw.Start();
-                //Parallel.For(0, 100_000, (i) => {
-
-                //    assets[i] = db.Find((uint)i + 300_001);
-                //});
-                for (int i = 0; i < 100_000; i++)
+                Parallel.For(0, 100_000, (i) =>
                 {
+
                     assets[i] = db.Find((uint)i + 300_001);
-                }
+                });
                 sw.Stop();
                 Console.WriteLine($"{sw.ElapsedMilliseconds}\tCompleted concurrent queries for 100,000 records");
                 sw.Reset();
+
+                sw.Start();
+                var sets = db.Query()
+                    .GroupBy(a => a.Extension).Select(g => (g.Key, g.Count()))
+                    .ToArray();
+                sw.Stop();
+                Console.WriteLine($"{sw.ElapsedMilliseconds}\tCalcuated total sum of file lengths for {total:n0} records .");
 
                 for (int i = 0; i < assets.Length; i++)
                 {
                     Assert.IsNotNull(assets[i]);
                     Assert.IsEqual(assets[i].Id, (uint)i + 300_001);
+                }
+
+                foreach (var s in sets)
+                {
+                    Console.WriteLine($"{s.Key}\t{s.Item2}");
                 }
             }            
 

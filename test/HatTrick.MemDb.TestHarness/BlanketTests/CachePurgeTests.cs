@@ -90,7 +90,7 @@ namespace HatTrick.InMemDb.TestHarness
         }
         #endregion
 
-        #region purge all
+        #region purge all close reopen
         public void Test_PurgeAllCloseReopen()
         {
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
@@ -139,7 +139,7 @@ namespace HatTrick.InMemDb.TestHarness
         }
         #endregion
 
-        #region purge all
+        #region purge all close defrag reopen
         public void Test_PurgeAllCloseDefragReopen()
         {
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
@@ -190,7 +190,7 @@ namespace HatTrick.InMemDb.TestHarness
         }
         #endregion
 
-        #region concurrency pressure purge
+        #region concurrent pressure purge
         public void Test_ConcurrentInsertPressurePurge()
         {
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
