@@ -40,7 +40,7 @@ namespace HatTrick.InMemDb
         internal delegate int ExecuteDelete(MemDbExpression<T> expression);
         #endregion
 
-        #region constructors
+        #region ctor
         internal MemDbExpression(ExecuteQuery query, ExecuteUpdate update, ExecuteDelete delete)
         {
             _query = query ?? throw new ArgumentNullException(nameof(query));
@@ -53,7 +53,7 @@ namespace HatTrick.InMemDb
         public MemDbExpression<T> Where(Func<T, bool> predicate)
         {
             if (_filter is not null)
-                throw new InvalidOperationException($"{nameof(MemDbException)} already already contains a {nameof(Where)} predicate.");
+                throw new InvalidOperationException($"{nameof(MemDbException)} already contains a {nameof(Where)} predicate.");
 
             _filter = predicate;
             return this;
@@ -64,7 +64,7 @@ namespace HatTrick.InMemDb
         public MemDbExpression<T> OrderBy(Comparison<T> comparison)
         {
             if (_orderBy is not null)
-                throw new InvalidOperationException($"{nameof(MemDbException)} already already contains a {nameof(OrderBy)} comparison.");
+                throw new InvalidOperationException($"{nameof(MemDbException)} already contains a {nameof(OrderBy)} comparison.");
 
             _orderBy = comparison;
             return this;
@@ -85,7 +85,7 @@ namespace HatTrick.InMemDb
         public MemDbExpression<T> Skip(int count)
         {
             if (_skip is not null)
-                throw new InvalidOperationException($"{nameof(MemDbException)} already already contains a {nameof(Skip)} count.");
+                throw new InvalidOperationException($"{nameof(MemDbException)} already contains a {nameof(Skip)} count.");
 
             _skip = count;
             return this;
@@ -96,7 +96,7 @@ namespace HatTrick.InMemDb
         public MemDbExpression<T> Limit(int count)
         {
             if (_limit is not null)
-                throw new InvalidOperationException($"{nameof(MemDbException)} already already contains a {nameof(Limit)} count.");
+                throw new InvalidOperationException($"{nameof(MemDbException)} already contains a {nameof(Limit)} count.");
 
             _limit = count;
             return this;
