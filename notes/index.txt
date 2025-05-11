@@ -1,0 +1,25 @@
+using (var db = MemDb.Open<DigitalAsset>(dataset))
+{
+	db.Find(a => a.Id == 100);
+	db.Find((uint)100);
+
+	db.FindAll(a => a.Length > 100);
+	db.FindViaIndex<string>(nameof(DigitalAsset.Directory), "sense");
+
+	db.FindAllViaIndex<string>(nameof(
+}
+
+
+strings only support direct lookup
+integer, char, floating point, datetime values support relational lookup
+
+
+            string[] set = ["a", "b", "c", "d", "e", "f", "g", "h", "i", /*"j",*/ "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"];
+            List<string> alphabet = new List<string>(set);
+            int i = alphabet.BinarySearch("j");
+            i = ~i;
+            alphabet.Insert(i, "j");
+            return;
+
+
+db.FindViaIndex<DateTime>(db.IndexOf<DateTime>("Created").Where(c => c >= DateTime.Parse("xxxxxx"))
