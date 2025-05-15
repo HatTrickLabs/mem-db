@@ -6,6 +6,7 @@ namespace HatTrick.InMemDb
     internal class MemDbPointer
     {
         #region internals
+        private byte _version = 0;//binary version...binary serialization...
         private long _id;
         private RecordState _state;
         private long _stateSetAt;
@@ -16,7 +17,8 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region interface
-        internal static readonly int Size = sizeof(long)//8:Id
+        internal static readonly int Size = sizeof(byte)//1:version
+                                          + sizeof(long)//8:Id
                                           + sizeof(byte)//1:State enum : byte
                                           + sizeof(long)//8:StateSetAt
                                           + sizeof(long)//8:createdAt
@@ -24,8 +26,8 @@ namespace HatTrick.InMemDb
                                           + sizeof(long)//8:Position
                                           + sizeof(int);//4:Length
                                                         //----------------
-                                                        //38
-
+                                                        //39
+        internal byte Version => _version;
         internal long Id => _id;
         internal RecordState State => _state;
         internal long StateSetAt => _stateSetAt;
@@ -67,6 +69,7 @@ namespace HatTrick.InMemDb
         #region serialize to
         internal void SerializeTo(BinaryWriter writer)
         {
+            writer.Write(_version);
             writer.Write(_id);
             writer.Write((byte)_state);
             writer.Write(_stateSetAt);
@@ -80,6 +83,14 @@ namespace HatTrick.InMemDb
         #region deserializer from
         internal static MemDbPointer DeserializeFrom(BinaryReader reader)
         {
+            //if ever this class must be modified, we will have a version
+            //flag to determine WHAT version the following binary data matches
+            //public virtual class MemDbPointer is version 0
+            //public virtual class MemDbPointerV1 : MemDbPointer is version 1
+            //public virtual class MemDbPointerV2 : MemDbPointer is version 2
+            //etc...
+            byte version = reader.ReadByte();
+
             long id = reader.ReadInt64();
             RecordState state = (RecordState)reader.ReadByte();
             long stateSetAt = reader.ReadInt64();

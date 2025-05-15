@@ -73,6 +73,17 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region calculate size
+        public static long CalcuateBinaryLength(int pointerCount)
+        {
+            //sizeof(int) + sizeof(long) + (pointerCount * PointerByteSize)
+            //the sizeof(int) is to account for the 32 bit int at the very beginning of the file (total pointer count)
+            //the sizeof(long) is to account for the 64 bit int at the beginning of the file (Last Identity)
+            long length =  sizeof(int) + sizeof(long) + (pointerCount * MemDbPointer.Size);
+            return length;
+        }
+        #endregion
+
         #region initialize
         private void Initialize()
         {
@@ -229,8 +240,8 @@ namespace HatTrick.InMemDb
                 {
                     do
                     {
-                        //sizeof(pointercount) + sizeof(lastId) + (idx * pointerSize) + sizeof(id)
-                        fsMap.Position = sizeof(int) + sizeof(long) + (record.MapIndex * MemDbPointer.Size) + sizeof(long);
+                        //sizeof(this.pointercount) + sizeof(this.lastid) + (idx * ptr.Pintersize) + sizeof(ptr.version) + sizeof(ptr.id)
+                        fsMap.Position = sizeof(int) + sizeof(long) + (record.MapIndex * MemDbPointer.Size) + sizeof(byte) + sizeof(long);
                         fsMap.WriteByte((byte)record.State);
                         fsMap.Write(BitConverter.GetBytes(record.StateSetAt));
 
