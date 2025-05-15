@@ -10,7 +10,7 @@ namespace HatTrick.InMemDb
     [JsonDerivedType(typeof(ExtensionlessAsset), typeDiscriminator: (int)DigitalAssetType.Unknown)]
     public interface IDigitalAsset
     {
-        uint Id { get; set; }
+        long Id { get; set; }
         string Name { get; set; }
         string Directory { get; set; }
         DateTime Created { get; set; }
@@ -36,7 +36,7 @@ namespace HatTrick.InMemDb
     {
         private DigitalAssetType _type;
 
-        public uint Id { get; set; }
+        public long Id { get; set; }
         public string Name { get; set; }
         public string Directory { get; set; }
         public DateTime Created { get; set; }

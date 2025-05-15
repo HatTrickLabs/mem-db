@@ -80,9 +80,9 @@ namespace HatTrick.InMemDb.TestHarness
             this.LoadDb(db, out int txtCnt, out int jsonCnt, out int unknownCnt);
 
             //we know the exact serialized size of each of the records...only diff is the file extensions ('.txt', '.json', '')
-            int txtSize = 104;
-            int jsonSize = 105;
-            int unknownSize = 100;
+            int txtSize = 108;
+            int jsonSize = 109;
+            int unknownSize = 104;
 
             db.Flush();
             var stats1 = db.ResolveStatistics(Stats.FreshSize | Stats.StaleSize | Stats.DeletedSize);
@@ -113,9 +113,9 @@ namespace HatTrick.InMemDb.TestHarness
             this.LoadDb(db, out int txtCnt, out int jsonCnt, out int unknownCnt);
 
             //we know the exact serialized size of each of the records...only diff is the file extensions ('.txt', '.json', '')
-            int txtSize = 104;
-            int jsonSize = 105;
-            //int unknownSize = 100;
+            int txtSize = 108;
+            int jsonSize = 109;
+            //int unknownSize = 104;
 
             db.Flush();
             var stats1 = db.ResolveStatistics(Stats.MaxFreshSize | Stats.MaxStaleSize| Stats.MaxDeletedSize);
@@ -146,9 +146,9 @@ namespace HatTrick.InMemDb.TestHarness
             this.LoadDb(db, out int txtCnt, out int jsonCnt, out int unknownCnt);
 
             //we know the exact serialized size of each of the records...only diff is the file extensions ('.txt', '.json', '')
-            int txtSize = 104;
-            //int jsonSize = 105;
-            int unknownSize = 100;
+            int txtSize = 108;
+            //int jsonSize = 109;
+            int unknownSize = 104;
 
             db.Flush();
             var stats1 = db.ResolveStatistics(Stats.MinFreshSize | Stats.MinStaleSize | Stats.MinDeletedSize);
@@ -179,9 +179,9 @@ namespace HatTrick.InMemDb.TestHarness
             this.LoadDb(db, out int txtCnt, out int jsonCnt, out int unknownCnt);
 
             //we know the exact serialized size of each of the records...only diff is the file extensions ('.txt', '.json', '')
-            double txtSize = 104;
-            double jsonSize = 105;
-            double unknownSize = 100;
+            double txtSize = 108;
+            double jsonSize = 109;
+            double unknownSize = 104;
             double txtWeight = txtSize * .5; //there are 500 txt files (50%)
             double jsonWeight = jsonSize * .4; //there are 400 json files (40 %)
             double unknownWeight = unknownSize * .1; //there are 100 extensionless files (10 %)
@@ -219,11 +219,11 @@ namespace HatTrick.InMemDb.TestHarness
             using var db = MemDb.Open<DigitalAsset>(_dataset);
             this.LoadDb(db, out int txtCnt, out int jsonCnt, out int unknownCnt);
 
-            uint total = (uint)(txtCnt + jsonCnt + unknownCnt);
+            long total = (long)(txtCnt + jsonCnt + unknownCnt);
 
             db.Flush();
             var stats1 = db.ResolveStatistics(Stats.LastId);
-            Assert.IsEqual<uint>((uint)stats1.LastId, total);
+            Assert.IsEqual<long>((long)stats1.LastId, total);
 
             var assets = base.ResolveAssetSet();
 
@@ -234,7 +234,7 @@ namespace HatTrick.InMemDb.TestHarness
             db.Insert(assets[4], (id) => assets[4].Id = id);
 
             var stats2 = db.ResolveStatistics(Stats.LastId);
-            Assert.IsEqual<uint>((uint)stats2.LastId, assets[4].Id);
+            Assert.IsEqual<long>((long)stats2.LastId, assets[4].Id);
         }
         #endregion
     }

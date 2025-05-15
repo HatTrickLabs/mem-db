@@ -65,7 +65,7 @@ namespace HatTrick.InMemDb.TestHarness
                 Parallel.For(0, 100_000, (i) =>
                 {
 
-                    assets[i] = db.Find((uint)i + 300_001);
+                    assets[i] = db.Find((long)i + 300_001);
                 });
                 sw.Stop();
                 Console.WriteLine($"{sw.ElapsedMilliseconds}\tCompleted concurrent queries for 100,000 records");
@@ -81,7 +81,7 @@ namespace HatTrick.InMemDb.TestHarness
                 for (int i = 0; i < assets.Length; i++)
                 {
                     Assert.IsNotNull(assets[i]);
-                    Assert.IsEqual(assets[i].Id, (uint)i + 300_001);
+                    Assert.IsEqual(assets[i].Id, (long)i + 300_001);
                 }
 
                 foreach (var s in sets)

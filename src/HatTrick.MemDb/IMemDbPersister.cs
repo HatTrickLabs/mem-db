@@ -9,7 +9,7 @@ namespace HatTrick.InMemDb
         internal int RecordCount { get; }
         internal bool IsEncryptionReady { get; }
         internal void ReadMappedRecords(out List<MemDbRecord<T>> records);
-        internal uint GetNextId();
+        internal long GetNextId();
         internal void Insert(MemDbRecord<T> record);
         internal void MarkStale(MemDbRecord<T> record);
         internal void MarkDeleted(MemDbRecord<T> record);

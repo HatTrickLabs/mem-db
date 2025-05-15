@@ -173,7 +173,7 @@ namespace HatTrick.InMemDb.TestHarness
             long timestamp = 0;
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
-                uint[] ids = db.Query().SelectDistinct(a => a.Id);
+                long[] ids = db.Query().SelectDistinct(a => a.Id);
 
                 for (int i = 0; i < ids.Length; i++)
                 {

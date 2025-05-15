@@ -71,9 +71,9 @@ namespace HatTrick.InMemDb.TestHarness
             //reverse by id...
             var reversed = db.Query().OrderBy((a, b) => b.Id.CompareTo(a.Id)).ToArray();
             //assert that record at index 0 is the highest auto generated id
-            Assert.IsEqual<uint>(reversed[0].Id, (uint)(txtCnt + jsonCnt + unknownCnt));
+            Assert.IsEqual<long>(reversed[0].Id, (long)(txtCnt + jsonCnt + unknownCnt));
             //assert that record at LAST index is the lowest auto generated id
-            Assert.IsEqual<uint>(reversed[^1].Id, 1);
+            Assert.IsEqual<long>(reversed[^1].Id, 1);
 
 
             var nameDesc = db.Query().OrderBy((a, b) => b.Name.CompareTo(a.Name)).ToArray();

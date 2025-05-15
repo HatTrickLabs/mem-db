@@ -6,37 +6,37 @@ namespace HatTrick.InMemDb
     internal class MemDbPointer
     {
         #region internals
-        private uint _id;
+        private long _id;
         private RecordState _state;
         private long _stateSetAt;
         private long _createdAt;
         private bool _isEncrypted;
-        private uint _position;
+        private long _position;
         private int _length;
         #endregion
 
         #region interface
-        internal static readonly int Size = sizeof(uint)//4:Id
+        internal static readonly int Size = sizeof(long)//8:Id
                                           + sizeof(byte)//1:State enum : byte
                                           + sizeof(long)//8:StateSetAt
                                           + sizeof(long)//8:createdAt
                                           + sizeof(bool)//1:IsEncrypted
-                                          + sizeof(uint)//4:Position
+                                          + sizeof(long)//8:Position
                                           + sizeof(int);//4:Length
                                                         //----------------
-                                                        //30
+                                                        //38
 
-        internal uint Id => _id;
+        internal long Id => _id;
         internal RecordState State => _state;
         internal long StateSetAt => _stateSetAt;
         internal long CreatedAt => _createdAt;
         internal bool IsEncrypted => _isEncrypted;
-        internal uint Position => _position;
+        internal long Position => _position;
         internal int Length => _length;
         #endregion
 
         #region constructor
-        internal MemDbPointer(uint id, RecordState state, long stateSetAt, long createdAt, bool isEncrypted, uint startPosition, int length)
+        internal MemDbPointer(long id, RecordState state, long stateSetAt, long createdAt, bool isEncrypted, long startPosition, int length)
         {
             _id = id;
             _state = state;
@@ -80,12 +80,12 @@ namespace HatTrick.InMemDb
         #region deserializer from
         internal static MemDbPointer DeserializeFrom(BinaryReader reader)
         {
-            uint id = reader.ReadUInt32();
+            long id = reader.ReadInt64();
             RecordState state = (RecordState)reader.ReadByte();
             long stateSetAt = reader.ReadInt64();
             long createdAt = reader.ReadInt64();
             bool isEncrypted = reader.ReadBoolean();
-            uint position = reader.ReadUInt32();
+            long position = reader.ReadInt64();
             int length = reader.ReadInt32();
             return new MemDbPointer(id, state, stateSetAt, createdAt, isEncrypted, position, length);
         }

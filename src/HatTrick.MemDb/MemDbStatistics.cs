@@ -23,6 +23,6 @@ namespace HatTrick.InMemDb
         public double?  AvgFreshSize    { get; set; }
         public double?  AvgStaleSize    { get; set; }
         public double?  AvgDeletedSize  { get; set; }
-        public uint?    LastId          { get; set; }
+        public long?    LastId          { get; set; }
     }
 }

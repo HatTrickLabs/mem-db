@@ -6,18 +6,18 @@ namespace HatTrick.InMemDb
     internal abstract class MemDbRecord
     {
         #region read only
-        internal static readonly int Size = sizeof(uint)//4:Id
+        internal static readonly int Size = sizeof(long)//8:Id
                                           + sizeof(byte)//1:State enum : byte
                                           + sizeof(long)//8:StateSetAt
                                           + sizeof(long)//8:CreatedAt
                                           + sizeof(bool)//1:IsEncrypted
                                           + sizeof(int);//4:MapIndex
                                                         //--------------
-                                                        //26
+                                                        //30
         #endregion
 
         #region internals
-        private uint _id;
+        private long _id;
         private RecordState _state;
         private long _stateSetAt;
         private long _createdAt;
@@ -26,7 +26,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region interface
-        internal uint Id => _id;
+        internal long Id => _id;
         internal RecordState State => _state;
         internal long StateSetAt => _stateSetAt;
         internal long CreatedAt => _createdAt;
@@ -35,7 +35,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region constructors
-        internal MemDbRecord(uint id, long createdAt, bool isEncrypted)
+        internal MemDbRecord(long id, long createdAt, bool isEncrypted)
         {
             _id = id;
             _state = RecordState.Fresh;
@@ -45,7 +45,7 @@ namespace HatTrick.InMemDb
             _mapIndex = -1;
         }
 
-        internal MemDbRecord(uint id, RecordState state, long stateSetAt, long createdAt, bool isEncrypted, int mapIndex)
+        internal MemDbRecord(long id, RecordState state, long stateSetAt, long createdAt, bool isEncrypted, int mapIndex)
         {
             _id = id;
             _state = state;
@@ -97,7 +97,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region constructors
-        internal MemDbRecord(uint id, T value, long createdAt, bool isEncrypted) : base(id, createdAt, isEncrypted)
+        internal MemDbRecord(long id, T value, long createdAt, bool isEncrypted) : base(id, createdAt, isEncrypted)
         {
             if (value == null)
                 throw new ArgumentNullException(nameof(value));
@@ -105,7 +105,7 @@ namespace HatTrick.InMemDb
             _value = value;
         }
 
-        internal MemDbRecord(uint id, T value, RecordState state, long stateSetAt, long createdAt, bool isEncrypted, int cacheIndex, int mapIndex) 
+        internal MemDbRecord(long id, T value, RecordState state, long stateSetAt, long createdAt, bool isEncrypted, int cacheIndex, int mapIndex) 
             : base(id, state, stateSetAt, createdAt, isEncrypted, mapIndex)
         {
             if (value is null)

@@ -113,11 +113,11 @@ namespace HatTrick.InMemDb
         private void EnsureAvailableDriveSpace()
         {
             //get file size of the stale and deleted map pointers (needed for archive map)
-            //sizeof(int) + sizeof(uint) + ((stalePointerCount + deletedPointerCount) * PointerByteSize)
+            //sizeof(int) + sizeof(long) + ((stalePointerCount + deletedPointerCount) * PointerByteSize)
             //the sizeof(int) is to account for the 32 bit int at the very beginning of the file (total pointer count)
-            //the sizeof(uint) is to account for the 32 bit unsigned int at the beginning of the file (Last Identity)
+            //the sizeof(long) is to account for the 64 bit int at the beginning of the file (Last Identity)
             //TODO: these (outside of MemDbMap) size calcs are going to bite you in the ASS.
-            long mapSize = sizeof(int) + sizeof(uint) + ((_staleCount + _deletedCount) * MemDbPointer.Size);
+            long mapSize = sizeof(int) + sizeof(long) + ((_staleCount + _deletedCount) * MemDbPointer.Size);
 
             //get file size of the stale and deleted db records
             long dbSize = _map.TotalStaleSize + _map.TotalDeletedSize;
@@ -184,7 +184,7 @@ namespace HatTrick.InMemDb
                 origDb.ReadExactly(buffer, 0, actualLen);
 
                 //the pointer should always store the un-encrypted length...
-                var nPtr = new MemDbPointer(oPtr.Id, oPtr.State, oPtr.StateSetAt, oPtr.CreatedAt, oPtr.IsEncrypted, (uint)archDb.Position, oPtr.Length);
+                var nPtr = new MemDbPointer(oPtr.Id, oPtr.State, oPtr.StateSetAt, oPtr.CreatedAt, oPtr.IsEncrypted, archDb.Position, oPtr.Length);
                 archMap.Add(nPtr);
 
                 archDb.Write(buffer, 0, actualLen);

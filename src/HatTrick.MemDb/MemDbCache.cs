@@ -13,14 +13,14 @@ namespace HatTrick.InMemDb
         private string _datasetName;
         private List<MemDbRecord<T>> _records;
         private bool _isIndexed;
-        private Dictionary<uint, int> _index;
+        private Dictionary<long, int> _index;
         private Lock _lock;
 
         private IMemDbCloner<T> _cloner;
         private IMemDbPersister<T> _persister;
 
         private AccessMode _mode;
-        private uint _memOnlyLastId;
+        private long _memOnlyLastId;
         private Lock _idLock;
         #endregion
 
@@ -68,7 +68,7 @@ namespace HatTrick.InMemDb
             _records = records as List<MemDbRecord<T>>;
             if (_isIndexed)
             {
-                _index = new Dictionary<uint, int>(_records.Capacity);
+                _index = new Dictionary<long, int>(_records.Capacity);
                 for (int i = 0; i < records.Count; i++)
                 {
                     _index.Add(records[i].Id, i);
@@ -81,7 +81,7 @@ namespace HatTrick.InMemDb
             _records = new List<MemDbRecord<T>>(_initialCacheCapacity);
 
             if (_isIndexed)
-                _index = new Dictionary<uint, int>(_initialCacheCapacity);
+                _index = new Dictionary<long, int>(_initialCacheCapacity);
         }
         #endregion
 
@@ -116,7 +116,7 @@ namespace HatTrick.InMemDb
             {
                 int capacity = stats.fresh == 0 ? 128 : (int)(stats.fresh * 1.025);
                 var newSet = new List<MemDbRecord<T>>(capacity);
-                var newIndex = _isIndexed ? new Dictionary<uint, int>(capacity) : null;
+                var newIndex = _isIndexed ? new Dictionary<long, int>(capacity) : null;
                 for (int i = 0; i < _records.Count; i++)
                 {
                     var record = _records[i];
@@ -195,7 +195,7 @@ namespace HatTrick.InMemDb
             return exists;
         }
 
-        public bool Exists(uint id)
+        public bool Exists(long id)
         {
             this.EnsureReadMode(nameof(Exists));
 
@@ -265,7 +265,7 @@ namespace HatTrick.InMemDb
             return rec is null ? null : _cloner.DeepCopy(rec.Value);
         }
 
-        public T Find(uint id)
+        public T Find(long id)
         {
             this.EnsureReadMode(nameof(Find));
 
@@ -303,7 +303,7 @@ namespace HatTrick.InMemDb
             return set;
         }
 
-        public T[] FindAll(params uint[] ids)
+        public T[] FindAll(params long[] ids)
         {
             this.EnsureReadMode(nameof(FindAll));
             List<T> matches = new List<T>(ids.Length);
@@ -312,7 +312,7 @@ namespace HatTrick.InMemDb
             {
                 if (_isIndexed)
                 {
-                    foreach (uint id in ids)
+                    foreach (long id in ids)
                     {
                         if (_index.TryGetValue(id, out int index))
                             matches.Add(_records[index].Value);
@@ -415,7 +415,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region get next id
-        private uint GetNextId()
+        private long GetNextId()
         {
             if (_persister is not null)
                 return _persister.GetNextId();
@@ -433,14 +433,14 @@ namespace HatTrick.InMemDb
             this.Insert(record, null, encrypt);
         }
 
-        public void Insert(T record, Action<uint> idCallback, bool encrypt = false)
+        public void Insert(T record, Action<long> idCallback, bool encrypt = false)
         {
             this.EnsureMode(AccessMode.ReadWrite | AccessMode.AppendOnly, nameof(Insert));
 
             //hint: this must happen before deep copy...
             //we don't even know if they want the Id, but if they do...
             //it MUST be applied WHEREVER they want it BEFORE DeepCopy
-            uint id = this.GetNextId();
+            long id = this.GetNextId();
             idCallback?.Invoke(id);
 
             MemDbRecord<T> rec = new MemDbRecord<T>(id, _cloner.DeepCopy(record), DateTime.UtcNow.ToBinary(), encrypt);
@@ -487,7 +487,7 @@ namespace HatTrick.InMemDb
             return matches.Count;
         }
 
-        public bool Update(Action<T> apply, uint id)
+        public bool Update(Action<T> apply, long id)
         {
             this.EnsureMode(AccessMode.ReadWrite, nameof(Update));
 
@@ -574,7 +574,7 @@ namespace HatTrick.InMemDb
             return matches.Count;
         }
 
-        public bool Delete(uint id)
+        public bool Delete(long id)
         {
             this.EnsureMode(AccessMode.ReadWrite, nameof(Delete));
 

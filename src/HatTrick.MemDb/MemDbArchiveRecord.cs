@@ -5,7 +5,7 @@ namespace HatTrick.InMemDb
     public class MemDbArchivedRecord<T>
     {
         #region internals
-        private uint _id;
+        private long _id;
         private RecordState _state;
         private long _stateSetAt;
         private long _createdAt;
@@ -14,7 +14,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region interface
-        public uint Id => _id;
+        public long Id => _id;
         public RecordState State => _state;
         public long StateSetAt => _stateSetAt;
         public long CreatedAt => _createdAt;
@@ -23,7 +23,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region ctors
-        internal MemDbArchivedRecord(uint id, RecordState state, long stateSetAt, long createdAt, bool isEncrypted, T value)
+        internal MemDbArchivedRecord(long id, RecordState state, long stateSetAt, long createdAt, bool isEncrypted, T value)
         {
             _id = id;
             _state = state;

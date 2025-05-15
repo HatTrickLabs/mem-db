@@ -21,7 +21,7 @@ namespace HatTrick.InMemDb
         private int _nextFlushIdx;
         private Lock _syncLock;
 
-        private uint _lastId;
+        private long _lastId;
         private Lock _idSyncLock;
         #endregion
 
@@ -30,7 +30,7 @@ namespace HatTrick.InMemDb
 
         internal int Count => _pointers.Count;
 
-        internal uint LastId => _lastId;
+        internal long LastId => _lastId;
         
         internal int FreshCount => this.GetCount(RecordState.Fresh);
         internal int StaleCount => this.GetCount(RecordState.Stale);
@@ -104,7 +104,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region override last id
-        internal void OverrideLastId(uint id)
+        internal void OverrideLastId(long id)
         {
             bool outOfRange = false;
             lock (_idSyncLock)
@@ -121,7 +121,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region get next id
-        internal uint GetNextId()
+        internal long GetNextId()
         {
             lock (_idSyncLock)
             {
@@ -230,7 +230,7 @@ namespace HatTrick.InMemDb
                     do
                     {
                         //sizeof(pointercount) + sizeof(lastId) + (idx * pointerSize) + sizeof(id)
-                        fsMap.Position = sizeof(int) + sizeof(uint) + (record.MapIndex * MemDbPointer.Size) + sizeof(int);
+                        fsMap.Position = sizeof(int) + sizeof(long) + (record.MapIndex * MemDbPointer.Size) + sizeof(long);
                         fsMap.WriteByte((byte)record.State);
                         fsMap.Write(BitConverter.GetBytes(record.StateSetAt));
 
@@ -310,7 +310,7 @@ namespace HatTrick.InMemDb
             lock (_syncLock)
             {
                 int count = reader.ReadInt32();
-                _lastId = reader.ReadUInt32();
+                _lastId = reader.ReadInt64();
 
                 //we can only do the corruption check IF the underlying stream is seekable (archive compression streams are NOT seekable).
                 if (reader.BaseStream.CanSeek)
@@ -333,7 +333,7 @@ namespace HatTrick.InMemDb
         private void EnsureNoWriteCorruption(Stream stream, int expected)
         {
             //check for corruption...
-            long pointerLength = (int)stream.Length - (sizeof(int) + sizeof(uint));
+            long pointerLength = stream.Length - (sizeof(int) + sizeof(long));
             long persisted = pointerLength / MemDbPointer.Size;
 
             if (persisted < expected)//TODO: after the integrity checker / corrupt file fixer util is built, reference the util in this exception.

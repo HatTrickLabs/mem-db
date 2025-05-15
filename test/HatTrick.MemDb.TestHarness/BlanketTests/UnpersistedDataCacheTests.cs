@@ -110,11 +110,11 @@ namespace HatTrick.InMemDb.TestHarness
                     db.Insert(assets[i], id => assets[i].Id = id);
                 }
                 Assert.IsEqual(db.Count(), assets.Length);
-                var ids = db.Query().SelectDistinct<uint>(a => a.Id);
+                var ids = db.Query().SelectDistinct<long>(a => a.Id);
                 Assert.IsEqual(ids.Length, assets.Length);
                 for (int i = 0; i < ids.Length; i++)
                 {
-                    Assert.IsEqual(ids[i], (uint)i + 1);
+                    Assert.IsEqual(ids[i], (long)i + 1);
                 }
             }
 

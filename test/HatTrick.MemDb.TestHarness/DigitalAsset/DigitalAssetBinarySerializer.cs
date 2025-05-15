@@ -44,7 +44,7 @@ namespace HatTrick.InMemDb
 
         public byte[] Serialize(DigitalAsset record)
         {
-            int capacity = sizeof(uint) + 255 + (sizeof(long) * 5) + sizeof(ulong);
+            int capacity = sizeof(long) + 255 + (sizeof(long) * 5) + sizeof(ulong);//TODO: WTF is the ulong ????
 
             byte[] raw = null;
             using (var ms = new MemoryStream(capacity))
@@ -65,7 +65,7 @@ namespace HatTrick.InMemDb
             var type = (DigitalAssetType)from.ReadInt32();
             var record = DigitalAsset.CreateNew(type);
 
-            record.Id = from.ReadUInt32();
+            record.Id = from.ReadInt64();
             record.Name = from.ReadString();
             record.Directory = from.ReadString();
             record.Created = DateTime.FromBinary(from.ReadInt64());

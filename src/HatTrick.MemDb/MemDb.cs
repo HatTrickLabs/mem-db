@@ -270,7 +270,7 @@ namespace HatTrick.InMemDb
             return _cache.Exists(where);
         }
 
-        public bool Exists(uint id)
+        public bool Exists(long id)
         {
             return _cache.Exists(id);
         }
@@ -294,7 +294,7 @@ namespace HatTrick.InMemDb
             return _cache.Find(where);
         }
 
-        public T Find(uint id)
+        public T Find(long id)
         {
             return (_cache as MemDbCache<T>).Find(id);
         }
@@ -306,7 +306,7 @@ namespace HatTrick.InMemDb
             return _cache.FindAll(where);
         }
 
-        public T[] FindAll(params uint[] ids)
+        public T[] FindAll(params long[] ids)
         {
             return _cache.FindAll(ids);
         }
@@ -318,7 +318,7 @@ namespace HatTrick.InMemDb
             this.Insert(record, null, encrypt);
         }
 
-        public void Insert(T record, Action<uint> idCallback, bool encrypt = false)
+        public void Insert(T record, Action<long> idCallback, bool encrypt = false)
         {
             if (encrypt && !_isEncryptionReady)
                 throw new NotEncryptionReadyException($"{nameof(MemDbConfiguration)} for '{_datasetName}' does not contain an encryption key or password.");
@@ -333,7 +333,7 @@ namespace HatTrick.InMemDb
             return _cache.Update(apply, where);
         }
 
-        public bool Update(Action<T> apply, uint id)
+        public bool Update(Action<T> apply, long id)
         {
             return _cache.Update(apply, id);
         }

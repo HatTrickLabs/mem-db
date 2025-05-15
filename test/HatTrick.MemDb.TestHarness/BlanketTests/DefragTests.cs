@@ -51,9 +51,9 @@ namespace HatTrick.InMemDb.TestHarness
             MemDbStatistics stats = null;
 
             //we know the constant size of each type of binary serialized asset record.
-            int txtSize = 104;
-            int jsonSize = 105;
-            int unknownSize = 100;
+            int txtSize = 108;
+            int jsonSize = 109;
+            int unknownSize = 104;
 
             int txtCnt;
             int jsonCnt;

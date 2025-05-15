@@ -46,10 +46,10 @@ namespace HatTrick.InMemDb.TestHarness
                 this.LoadDb(db, out int count);
                 for (int i = 0; i < count; i++)
                 {
-                    Assert.IsEqual(db.Exists((uint)i + 1), true);
+                    Assert.IsEqual(db.Exists((long)i + 1), true);
                 }
 
-                Assert.IsEqual(db.Exists((uint)++count), false);
+                Assert.IsEqual(db.Exists((long)++count), false);
             }
         }
         #endregion
@@ -62,10 +62,10 @@ namespace HatTrick.InMemDb.TestHarness
                 this.LoadDb(db, out int count);
                 for (int i = 0; i < count; i++)
                 {
-                    Assert.IsNotNull(db.Find((uint)i + 1));
+                    Assert.IsNotNull(db.Find((long)i + 1));
                 }
 
-                Assert.IsNull(db.Find((uint)++count));
+                Assert.IsNull(db.Find((long)++count));
             }
         }
         #endregion
@@ -81,11 +81,11 @@ namespace HatTrick.InMemDb.TestHarness
 
                 var set2 = db.FindAll(100, 200, 300, 400, 500);
                 Assert.IsEqual(set2.Length, 5);
-                Assert.IsEqual(set2[0].Id, (uint)100);
-                Assert.IsEqual(set2[1].Id, (uint)200);
-                Assert.IsEqual(set2[2].Id, (uint)300);
-                Assert.IsEqual(set2[3].Id, (uint)400);
-                Assert.IsEqual(set2[4].Id, (uint)500);
+                Assert.IsEqual(set2[0].Id, (long)100);
+                Assert.IsEqual(set2[1].Id, (long)200);
+                Assert.IsEqual(set2[2].Id, (long)300);
+                Assert.IsEqual(set2[3].Id, (long)400);
+                Assert.IsEqual(set2[4].Id, (long)500);
             }
         }
         #endregion
@@ -102,7 +102,7 @@ namespace HatTrick.InMemDb.TestHarness
                 var asset = db.Find(100);
 
                 Assert.IsNotNull(asset);
-                Assert.IsEqual(asset.XXHash, (uint)1);
+                Assert.IsEqual(asset.XXHash, (ulong)1);
             }
         }
         #endregion
@@ -119,7 +119,7 @@ namespace HatTrick.InMemDb.TestHarness
                 var asset = db.Find(100);
 
                 Assert.IsNotNull(asset);
-                Assert.IsEqual(asset.XXHash, (uint)1);
+                Assert.IsEqual(asset.XXHash, (ulong)1);
             }
         }
         #endregion
@@ -152,7 +152,7 @@ namespace HatTrick.InMemDb.TestHarness
                 var asset100 = db.Find(100);
                 var asset101 = db.Find(a => a.Id == 101);
                 var asset800 = db.Find(a => a.Id == 800);
-                var asset50 = db.Find((uint)50);
+                var asset50 = db.Find(50);
 
                 Assert.IsNull(asset100);
                 Assert.IsNull(asset101);

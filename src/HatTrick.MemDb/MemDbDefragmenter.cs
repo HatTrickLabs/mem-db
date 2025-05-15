@@ -85,11 +85,11 @@ namespace HatTrick.InMemDb
         private void EnsureAvailableDriveSpace()
         {
             //get file size of the non-stale map pointers (needed for the defragged map)
-            //sizeof(int) + sizeof(uint) + (non-stalePointerCount * PointerByteSize)
+            //sizeof(int) + sizeof(long ) + (non-stalePointerCount * PointerByteSize)
             //the sizeof(int) is to account for the 32 bit int at the very beginning of the file (total pointer count)
-            //the sizeof(uint) is to account for the 32 bit unsigned int at the beginning of the file (Last Identity)
+            //the sizeof(long) is to account for the 64 bit int at the beginning of the file (Last Identity)
             //TODO: these (outside of MemDbMap) size calcs are going to bite you in the ASS.
-            long mapSize = sizeof(int) + sizeof(uint) + ((_originalMap.Count - (_staleCount + _deletedCount)) * MemDbPointer.Size);
+            long mapSize = sizeof(int) + sizeof(long) + ((_originalMap.Count - (_staleCount + _deletedCount)) * MemDbPointer.Size);
 
             //get file size of the non-stale...non-deleted db records
             long dbSize = _originalMap.TotalFreshSize;
@@ -155,7 +155,7 @@ namespace HatTrick.InMemDb
                 oldDb.ReadExactly(buffer, 0, actualLen);
 
                 //the pointer should always store the un-encrypted length...
-                var nPtr = new MemDbPointer(oPtr.Id, RecordState.Fresh, oPtr.StateSetAt, oPtr.CreatedAt, oPtr.IsEncrypted, (uint)newDb.Position, oPtr.Length);
+                var nPtr = new MemDbPointer(oPtr.Id, RecordState.Fresh, oPtr.StateSetAt, oPtr.CreatedAt, oPtr.IsEncrypted, newDb.Position, oPtr.Length);
                 freshMap.Add(nPtr);
 
                 newDb.Write(buffer, 0, actualLen);

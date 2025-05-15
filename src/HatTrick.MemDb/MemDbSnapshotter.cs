@@ -54,7 +54,7 @@ namespace HatTrick.InMemDb
                 fsDb.ReadExactly(buffer, 0, actualLen);
 
                 //the pointer should always store the un-encrypted length...
-                var nPtr = new MemDbPointer(oPtr.Id, RecordState.Fresh, oPtr.StateSetAt, oPtr.CreatedAt, oPtr.IsEncrypted, (uint)fsSnapshotDb.Position, oPtr.Length);
+                var nPtr = new MemDbPointer(oPtr.Id, RecordState.Fresh, oPtr.StateSetAt, oPtr.CreatedAt, oPtr.IsEncrypted, fsSnapshotDb.Position, oPtr.Length);
                 snapshotMap.Add(nPtr);
 
                 fsSnapshotDb.Write(buffer, 0, actualLen);

@@ -81,7 +81,7 @@ namespace HatTrick.InMemDb.TestHarness
                 }
 
                 //query distinct ids
-                uint[] ids = db.Query().SelectDistinct<uint>(a => a.Id);
+                long[] ids = db.Query().SelectDistinct<long>(a => a.Id);
                 Assert.IsEqual<int>(ids.Length, length);
 
                 //we should have 5 sets of the same assets.
@@ -326,9 +326,9 @@ namespace HatTrick.InMemDb.TestHarness
                 //ensure each record has unique / distinct Id
                 Assert.IsEqual<int>(db.Query().SelectDistinct(a => a.Id).Count(), assets.Length);
                 //ensure min id is 1
-                Assert.IsEqual<uint>(db.Query().Min(a => a.Id), 1);
+                Assert.IsEqual<long>(db.Query().Min(a => a.Id), 1);
                 //ensure max id is total record length
-                Assert.IsEqual<uint>(db.Query().Max(a => a.Id), (uint)assets.Length);
+                Assert.IsEqual<long>(db.Query().Max(a => a.Id), assets.Length);
 
                 //t1 will update even number id records xxhash value (increment by 1)
                 Thread t1 = new Thread(() => { db.Update(a => a.XXHash += 1, a => a.Id % 2 == 0 && a.Id <= assets.Length); });
@@ -387,9 +387,9 @@ namespace HatTrick.InMemDb.TestHarness
                 //ensure each record has unique / distinct Id
                 Assert.IsEqual<int>(db.Query().SelectDistinct(a => a.Id).Count(), assets.Length);
                 //ensure min id is 1
-                Assert.IsEqual<uint>(db.Query().Min(a => a.Id), 1);
+                Assert.IsEqual<long>(db.Query().Min(a => a.Id), 1);
                 //ensure max id is total record length
-                Assert.IsEqual<uint>(db.Query().Max(a => a.Id), (uint)assets.Length);
+                Assert.IsEqual<long>(db.Query().Max(a => a.Id), assets.Length);
                 //ensure all updates actually happened
                 Assert.IsEqual<int>(db.Count(a => a.XXHash == 2), assets.Length);
                 //ensure the final 1000 inserted after initial set were deleted.
@@ -405,9 +405,9 @@ namespace HatTrick.InMemDb.TestHarness
                 //ensure each record has unique / distinct Id
                 Assert.IsEqual<int>(db.Query().SelectDistinct(a => a.Id).Count(), assets.Length);
                 //ensure min id is 1
-                Assert.IsEqual<uint>(db.Query().Min(a => a.Id), 1);
+                Assert.IsEqual<long>(db.Query().Min(a => a.Id), 1);
                 //ensure max id is total record length
-                Assert.IsEqual<uint>(db.Query().Max(a => a.Id), (uint)assets.Length);
+                Assert.IsEqual<long>(db.Query().Max(a => a.Id), assets.Length);
                 //ensure all updates actually happened
                 Assert.IsEqual<int>(db.Count(a => a.XXHash == 2), assets.Length);
             }

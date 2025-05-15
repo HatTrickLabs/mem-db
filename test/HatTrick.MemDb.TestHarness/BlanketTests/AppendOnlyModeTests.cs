@@ -143,7 +143,7 @@ namespace HatTrick.InMemDb.TestHarness
             {
                 var all = db.FindAll(a => true);
                 Assert.IsEqual(all.Length, (assetSetlength * 2));
-                var distinctIds = db.Query().SelectDistinct<uint>(a => a.Id);
+                var distinctIds = db.Query().SelectDistinct<long>(a => a.Id);
                 Assert.IsEqual(distinctIds.Length, (assetSetlength * 2));
             }
         }

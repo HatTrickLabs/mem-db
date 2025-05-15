@@ -224,7 +224,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region get next id
-        uint IMemDbPersister<T>.GetNextId()
+        long IMemDbPersister<T>.GetNextId()
         {
             return _map.GetNextId();
         }
@@ -389,7 +389,7 @@ namespace HatTrick.InMemDb
                     fsDb.Position = fsDb.Length;
                     do
                     {
-                        uint startPos = (uint)fsDb.Position;
+                        long startPos = fsDb.Position;
                         try
                         {
                             int length;

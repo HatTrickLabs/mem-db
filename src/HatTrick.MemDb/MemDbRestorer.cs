@@ -20,7 +20,7 @@ namespace HatTrick.InMemDb
         private long _utcTimestamp;
         private bool _overwrite;
 
-        private Dictionary<uint, RestoreRecord> _records;
+        private Dictionary<long, RestoreRecord> _records;
         #endregion
 
         #region ctors
@@ -52,7 +52,7 @@ namespace HatTrick.InMemDb
             if (!File.Exists(_fullDbPath))
                 throw new InvalidOperationException($"No file exists at MemDb data file path '{_fullDbPath}'.");
 
-            _records = new Dictionary<uint, RestoreRecord>(128);
+            _records = new Dictionary<long, RestoreRecord>(128);
         }
         #endregion
 
@@ -241,13 +241,13 @@ namespace HatTrick.InMemDb
             MemDbMap map = new MemDbMap(_fullRestoreMapPath, true);
             using var db = new FileStream(_fullRestoreDbPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None);
 
-            uint[] ids = _records.Keys.ToArray();
+            long[] ids = _records.Keys.ToArray();
             for (int i = 0; i < ids.Length; i++)
             {
                 RestoreRecord record = _records[ids[i]];
 
                 MemDbPointer oPtr = record.Pointer;
-                var nPtr = new MemDbPointer(oPtr.Id, RecordState.Fresh, oPtr.StateSetAt, oPtr.CreatedAt, oPtr.IsEncrypted, (uint)db.Position, oPtr.Length);
+                var nPtr = new MemDbPointer(oPtr.Id, RecordState.Fresh, oPtr.StateSetAt, oPtr.CreatedAt, oPtr.IsEncrypted, db.Position, oPtr.Length);
                 map.Add(nPtr);
                 db.Write(record.RawData);
             }
