@@ -203,11 +203,8 @@ namespace HatTrick.InMemDb.TestHarness
             db.Delete(a => a.AssetType == DigitalAssetType.Text);
             db.Flush();
             //we deleted the 500 txt assets leaving 400 json and 100 unknowns...calc new wieghts for the remaining fresh
-            double txtWeight2 = 0;
-            double jsonWeight2 = jsonSize * ((double)jsonCnt / ((double)jsonCnt + (double)unknownCnt));
-            double unknownWeight2 = unknownSize * ((double)unknownSize / ((double)jsonCnt + (double)unknownCnt));
             var stats3 = db.ResolveStatistics(Stats.AvgFreshSize | Stats.AvgStaleSize | Stats.AvgDeletedSize);
-            Assert.IsEqual(stats3.AvgFreshSize, txtWeight2 + jsonWeight2 + unknownWeight2);
+            Assert.IsEqual(stats3.AvgFreshSize, ((jsonSize * jsonCnt) + (unknownSize * unknownCnt)) / (jsonCnt + unknownCnt));
             Assert.IsEqual(stats3.AvgStaleSize, unknownSize);
             Assert.IsEqual(stats3.AvgDeletedSize, txtSize);
         }
