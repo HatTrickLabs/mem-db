@@ -13,6 +13,7 @@ namespace HatTrick.InMemDb
         private static readonly CipherMode _mode = CipherMode.CBC;
 
         private byte[] _key;
+        private Aes _aes;
         #endregion
 
         #region ctors
@@ -25,6 +26,10 @@ namespace HatTrick.InMemDb
                 throw new InvalidOperationException($"Encryption key is not valid...MemDb AES encryption requires a {_keySize} bit key.");
 
             _key = key;
+            _aes = Aes.Create();
+            _aes.KeySize = _keySize;
+            _aes.BlockSize = _blockSize;
+            _aes.Mode = _mode;
         }
         #endregion
 
@@ -56,16 +61,13 @@ namespace HatTrick.InMemDb
         #region encrypt
         public void Encrypt(ReadOnlySpan<byte> input, Stream output)
         {
-            using (var aes = Aes.Create())
+            _aes.GenerateIV();
+            byte[] iv = _aes.IV;
+
+            output.Write(iv);
+
+            using (var encryptor = _aes.CreateEncryptor(_key, iv))
             {
-                aes.KeySize = _keySize;
-                aes.BlockSize = _blockSize;
-                aes.Mode = _mode;
-                byte[] iv = aes.IV;
-
-                output.Write(iv);
-
-                var encryptor = aes.CreateEncryptor(_key, iv);
                 using (var cryptoStream = new CryptoStream(output, encryptor, CryptoStreamMode.Write, true))
                 {
                     cryptoStream.Write(input);
@@ -83,23 +85,18 @@ namespace HatTrick.InMemDb
             byte[] raw = new byte[length];//hint: raw length not crypto length...
             int read = 0;
 
-            using (var aes = Aes.Create())
+            byte[] iv = new byte[_ivSize / 8];
+            input.ReadExactly(iv);
+
+            using (var decryptor = _aes.CreateDecryptor(_key, iv))
             {
-                aes.KeySize = _keySize;
-                aes.BlockSize = _blockSize;
-                aes.Mode = _mode;
-
-                byte[] iv = new byte[_ivSize / 8];
-                input.ReadExactly(iv);
-
-                var decryptor = aes.CreateDecryptor(_key, iv);
                 using (var cryptoStream = new CryptoStream(input, decryptor, CryptoStreamMode.Read, true))
                 {
                     //the read count is UNENCRYPTED length
                     do
                     {
                         read += cryptoStream.Read(raw, read, (length - read));
-                    } 
+                    }
                     while (read < length);
                 }
             }

@@ -40,8 +40,8 @@ namespace HatTrick.InMemDb.TestHarness
         }
         #endregion
 
-        #region large volume
-        public void Test_LargeVolume()
+        #region large volume in memory
+        public void Test_LargeVolumeInMemory()
         {
             int iterations = 10_000;
             DigitalAsset[] loadAssets = base.ResolveAssetSet();
@@ -72,9 +72,7 @@ namespace HatTrick.InMemDb.TestHarness
                 sw.Reset();
 
                 sw.Start();
-                var sets = db.Query()
-                    .GroupBy(a => a.Extension).Select(g => (g.Key, g.Count()))
-                    .ToArray();
+                var sets = db.Query().GroupBy(a => a.Extension).Select(g => (g.Key, g.Count())).ToArray();
                 sw.Stop();
                 Console.WriteLine($"{sw.ElapsedMilliseconds}\tCalcuated total sum of file lengths for {total:n0} records .");
 
@@ -89,9 +87,6 @@ namespace HatTrick.InMemDb.TestHarness
                     Console.WriteLine($"{s.Key}\t{s.Item2}");
                 }
             }            
-
-            Console.WriteLine("Done...Press [Enter] to exit.");
-            Console.ReadLine();
         }
         #endregion
     }
