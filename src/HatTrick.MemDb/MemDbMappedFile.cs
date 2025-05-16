@@ -108,7 +108,7 @@ namespace HatTrick.InMemDb
             if (mapExists && !dbExists)
                 throw new InvalidOperationException($"No Db file exists for map file: {Path.GetFileName(_fullMapPath)}");
 
-            _map = new MemDbMap(_fullMapPath, true);
+            _map = new MemDbMap(_fullMapPath, true, _encryptor);
 
             if (!dbExists)
             {
@@ -156,7 +156,7 @@ namespace HatTrick.InMemDb
                     if (ptr.State != fresh || (ptr.IsEncrypted && !isCryptoReady))
                     {
                         fsDb.Position += (ptr.IsEncrypted) 
-                            ? MemDbAESEncryptor.CalculateCryptoByteLength(ptr.Length) 
+                            ? _encryptor.GetEncryptedLength(ptr.Length) 
                             : ptr.Length;
 
                         continue;
@@ -313,7 +313,7 @@ namespace HatTrick.InMemDb
                 this.FlushInsertQueue();
                 this.FlushStateChangeQueue();
             }
-            catch (Exception ex)
+            catch
             {
                 //TODO: need some way to bubble an exception up to the main process thread
                 //when the exception is thrown from the timer fired thread
@@ -414,7 +414,7 @@ namespace HatTrick.InMemDb
                             {
                                 //reset the len of file back to position + length of the last pointer.
                                 MemDbPointer lPtr = _map[^1];
-                                int recLength = lPtr.IsEncrypted ? MemDbAESEncryptor.CalculateCryptoByteLength(lPtr.Length) : lPtr.Length;
+                                int recLength = lPtr.IsEncrypted ? _encryptor.GetEncryptedLength(lPtr.Length) : lPtr.Length;
                                 int end = (int)lPtr.Position + lPtr.Length;
                                 if (fsDb.Length > end)
                                     fsDb.SetLength(lPtr.Position + lPtr.Length);

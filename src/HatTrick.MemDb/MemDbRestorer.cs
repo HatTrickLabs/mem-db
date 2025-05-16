@@ -19,6 +19,7 @@ namespace HatTrick.InMemDb
         private string _fullRestoreMapPath;
         private long _utcTimestamp;
         private bool _overwrite;
+        private IMemDbEncryptionInfo _encryptionInfo;
 
         private Dictionary<long, RestoreRecord> _records;
         #endregion
@@ -37,6 +38,7 @@ namespace HatTrick.InMemDb
             _fullMapPath = config.GetFullMapFilePath();
             _outputPath = outputPath;
             _utcTimestamp = utcTimestamp;
+            _encryptionInfo = config.GetEncryptionInfo();
 
             _archivePath = config.ArchivePath;
             _fullZipArchiveFilePath = config.GetZipArchiveFullFilePath();
@@ -74,7 +76,7 @@ namespace HatTrick.InMemDb
             if (exists)
                 File.Delete(path);
 
-            _ = new MemDbMap(path, true);
+            _ = new MemDbMap(path, true, _encryptionInfo);
         }
         #endregion
 
@@ -161,7 +163,7 @@ namespace HatTrick.InMemDb
         {
             //this is just tmp in-mem only, don't init to disk...
             //simply give the ctor a bunk path, do not initialize and never flush
-            MemDbMap map = new MemDbMap("xxx", false);
+            MemDbMap map = new MemDbMap("xxx", false, _encryptionInfo);
             using (var mapStream = mapArchive.Open())
             {
                 using (var mapReader = new BinaryReader(mapStream))
@@ -178,7 +180,7 @@ namespace HatTrick.InMemDb
         {
             //this is just tmp in-mem only, don't init to disk...
             //simply give the ctor a bunk path, do not initialize and never flush
-            MemDbMap map = new MemDbMap("xxx", false);
+            MemDbMap map = new MemDbMap("xxx", false, _encryptionInfo);
             using (var fs = new FileStream(_fullMapPath, FileMode.Open, FileAccess.Read, FileShare.None))
             {
                 using (var mapReader = new BinaryReader(fs))
@@ -226,7 +228,7 @@ namespace HatTrick.InMemDb
                 if (shouldCopy)
                 {
                     db.Position = ptr.Position;
-                    int length = ptr.IsEncrypted ? MemDbAESEncryptor.CalculateCryptoByteLength(ptr.Length) : ptr.Length;
+                    int length = ptr.IsEncrypted ? _encryptionInfo.GetEncryptedLength(ptr.Length) : ptr.Length;
                     var raw = new byte[length];
                     db.ReadExactly(raw, 0, raw.Length);
                     _records[ptr.Id] = new RestoreRecord(ptr, raw);
@@ -238,7 +240,7 @@ namespace HatTrick.InMemDb
         #region write restored db
         private void BuildRestoredFiles ()
         {
-            MemDbMap map = new MemDbMap(_fullRestoreMapPath, true);
+            MemDbMap map = new MemDbMap(_fullRestoreMapPath, true, _encryptionInfo);
             using var db = new FileStream(_fullRestoreDbPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None);
 
             long[] ids = _records.Keys.ToArray();

@@ -14,6 +14,8 @@ namespace HatTrick.InMemDb
         private string _fullMapPath;
         private string _fullDbPath;
 
+        private IMemDbEncryptionInfo _encryptionInfo;
+
         string _fullMapArchivePath;
         string _fullDbArchivePath;
 
@@ -44,7 +46,7 @@ namespace HatTrick.InMemDb
             _datasetName = config.DatasetName;
             _archivePath = config.ArchivePath;
 
-
+            _encryptionInfo = config.GetEncryptionInfo();
 
             _fullDbPath = config.GetFullDbFilePath();
             _fullMapPath = config.GetFullMapFilePath();
@@ -103,7 +105,7 @@ namespace HatTrick.InMemDb
         #region read fragmented map
         private void ReadFragmentedMap()
         {
-            _map = new MemDbMap(_fullMapPath, true);
+            _map = new MemDbMap(_fullMapPath, true, _encryptionInfo);
             _staleCount = _map.StaleCount;
             _deletedCount = _map.DeletedCount;
         }
@@ -145,7 +147,7 @@ namespace HatTrick.InMemDb
                 File.Delete(_fullDbArchivePath);
 
 
-            _archiveMap = new MemDbMap(_fullMapArchivePath, true);
+            _archiveMap = new MemDbMap(_fullMapArchivePath, true, _encryptionInfo);
             File.Create(_fullDbArchivePath).Dispose();
         }
         #endregion
@@ -172,7 +174,7 @@ namespace HatTrick.InMemDb
                     continue;
 
                 origDb.Position = oPtr.Position;
-                int actualLen = oPtr.IsEncrypted ? MemDbAESEncryptor.CalculateCryptoByteLength(oPtr.Length) : oPtr.Length;
+                int actualLen = oPtr.IsEncrypted ? _encryptionInfo.GetEncryptedLength(oPtr.Length) : oPtr.Length;
 
                 //we do not need to decrypt anything when moving to archive, simply copy the encrypted data
                 //directly from the original file stream over to the archive file stream

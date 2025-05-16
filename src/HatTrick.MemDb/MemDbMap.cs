@@ -23,6 +23,8 @@ namespace HatTrick.InMemDb
 
         private long _lastId;
         private Lock _idSyncLock;
+
+        private IMemDbEncryptionInfo _encryptionInfo;
         #endregion
 
         #region interface
@@ -58,9 +60,10 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region constructors
-        internal MemDbMap(string path, bool initialize)
+        internal MemDbMap(string path, bool initialize, IMemDbEncryptionInfo encryptionInfo)
         {
             _path = path ?? throw new ArgumentNullException(nameof(path));
+            _encryptionInfo = encryptionInfo;
             _lastId = 0;
             _nextFlushIdx = 0;
             _syncLock = new();
@@ -163,7 +166,7 @@ namespace HatTrick.InMemDb
         private long GetTotalSize(RecordState state)
         {
             Func<MemDbPointer, long> selector = (p) => p.IsEncrypted 
-                ? (long)MemDbAESEncryptor.CalculateCryptoByteLength(p.Length) 
+                ? (long)_encryptionInfo.GetEncryptedLength(p.Length) 
                 : (long)p.Length;
 
             lock (_syncLock)
@@ -177,7 +180,7 @@ namespace HatTrick.InMemDb
         private int GetMaxRecordSize(RecordState state)
         {
             Func<MemDbPointer, int> selector = (p) => p.IsEncrypted
-                ? MemDbAESEncryptor.CalculateCryptoByteLength(p.Length)
+                ? _encryptionInfo.GetEncryptedLength(p.Length)
                 : p.Length;
 
             lock (_syncLock)
@@ -191,7 +194,7 @@ namespace HatTrick.InMemDb
         private int GetMinRecordSize(RecordState state)
         {
             Func<MemDbPointer, int> selector = (p) => p.IsEncrypted
-                ? MemDbAESEncryptor.CalculateCryptoByteLength(p.Length)
+                ? _encryptionInfo.GetEncryptedLength(p.Length)
                 : p.Length;
 
             lock (_syncLock)
@@ -205,7 +208,7 @@ namespace HatTrick.InMemDb
         private double GetAvgRecordSize(RecordState state)
         {
             Func<MemDbPointer, int> selector = (p) => p.IsEncrypted
-                ? MemDbAESEncryptor.CalculateCryptoByteLength(p.Length)
+                ? _encryptionInfo.GetEncryptedLength(p.Length)
                 : p.Length;
 
             lock (_syncLock)

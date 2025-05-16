@@ -35,7 +35,7 @@ namespace HatTrick.InMemDb.TestHarness
             for (int i = 0; i < assets.Length; i++)
             {
                 var asset = assets[i];
-                db.Insert(asset, (id) => asset.Id = id, true);
+                db.Insert(asset, (id) => asset.Id = id, i % 2 == 0);
             }
         }
         #endregion

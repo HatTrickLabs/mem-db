@@ -9,6 +9,7 @@ namespace HatTrick.InMemDb
         #region internals
         private string _mapPath;
         private string _dbPath;
+        private IMemDbEncryptionInfo _encryptionInfo;
         private Func<DateTime,  string> _snapshotMapPath;
         private Func<DateTime, string> _snapshotDbPath;
         #endregion
@@ -21,6 +22,7 @@ namespace HatTrick.InMemDb
 
             _mapPath = config.GetFullMapFilePath();
             _dbPath = config.GetFullDbFilePath();
+            _encryptionInfo = config.GetEncryptionInfo();
             _snapshotMapPath =(timestamp) => config.GetFullSnapshotMapFilePath(timestamp);
             _snapshotDbPath = (timestamp) => config.GetFullSnapshotDbFilePath(timestamp);
         }
@@ -34,8 +36,8 @@ namespace HatTrick.InMemDb
             using var fsDb = new FileStream(_dbPath, FileMode.Open, FileAccess.Read, FileShare.None);
             using var fsSnapshotDb = new FileStream(_snapshotDbPath(timestamp), FileMode.CreateNew, FileAccess.Write, FileShare.None);
 
-            var map = new MemDbMap(_mapPath, true);
-            var snapshotMap = new MemDbMap(_snapshotMapPath(timestamp), true);
+            var map = new MemDbMap(_mapPath, true, _encryptionInfo);
+            var snapshotMap = new MemDbMap(_snapshotMapPath(timestamp), true, _encryptionInfo);
 
             int maxRecLength = map.MaxFreshRecordSize;
 
@@ -49,7 +51,7 @@ namespace HatTrick.InMemDb
                     continue;
 
                 fsDb.Position = oPtr.Position;
-                int actualLen = oPtr.IsEncrypted ? MemDbAESEncryptor.CalculateCryptoByteLength(oPtr.Length) : oPtr.Length;
+                int actualLen = oPtr.IsEncrypted ? _encryptionInfo.GetEncryptedLength(oPtr.Length) : oPtr.Length;
 
                 fsDb.ReadExactly(buffer, 0, actualLen);
 

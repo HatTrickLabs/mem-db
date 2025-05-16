@@ -36,7 +36,6 @@ namespace HatTrick.InMemDb
         public bool IsSnapshotReady => _snapshotPath is not null;
         internal AccessMode Mode => _mode;
         internal int FlushInterval => _path is null ? 0 : _flushInterval;
-        protected Func<byte[]> EncryptionKeyProvider => _encryptionKeyProvider;
         public bool IsEncryptionReady => _encryptionKeyProvider is not null;
         #endregion
 
@@ -215,6 +214,22 @@ namespace HatTrick.InMemDb
         {
             string at = timestamp.ToString(MemDbConfiguration.SnapshotTimestampFormat);
             return System.IO.Path.Combine(_snapshotPath, $"htl.{_datasetName}.{at}.db");
+        }
+        #endregion
+
+        #region get encryptor
+        public IMemDbEncryptor GetEncryptor()
+        {
+            return _encryptionKeyProvider is not null
+                ? new MemDbAESEncryptor(_encryptionKeyProvider())
+                : null;
+        }
+        #endregion
+
+        #region get encryption info
+        public IMemDbEncryptionInfo GetEncryptionInfo()
+        {
+            return new MemDbAESEncryptionInfo();
         }
         #endregion
 
@@ -414,15 +429,6 @@ namespace HatTrick.InMemDb
         public IMemDbCloner<T> GetCloner()
         {
             return _clonerProvider();
-        }
-        #endregion
-
-        #region get encryptor
-        public IMemDbEncryptor GetEncryptor()
-        {
-            return base.EncryptionKeyProvider is not null 
-                ? new MemDbAESEncryptor(base.EncryptionKeyProvider())
-                : null;
         }
         #endregion
 

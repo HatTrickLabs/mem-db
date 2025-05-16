@@ -4,16 +4,11 @@ using System.Security.Cryptography;
 
 namespace HatTrick.InMemDb
 {
-    public class MemDbAESEncryptor : IMemDbEncryptor
+    public class MemDbAESEncryptor : MemDbAESEncryptionInfo, IMemDbEncryptor
     {
         #region internals
-        private const int _keySize = 256;
-        private const int _blockSize = 128;
-        private const int _ivSize = 128;
-        private static readonly CipherMode _mode = CipherMode.CBC;
-
-        private byte[] _key;
         private Aes _aes;
+        private byte[] _key;
         #endregion
 
         #region ctors
@@ -22,28 +17,14 @@ namespace HatTrick.InMemDb
             if (key is null)
                 throw new ArgumentNullException(nameof(key));
 
-            if (key.Length != (_keySize / 8))
-                throw new InvalidOperationException($"Encryption key is not valid...MemDb AES encryption requires a {_keySize} bit key.");
+            if (key.Length != (base.KeySize / 8))
+                throw new InvalidOperationException($"Encryption key is not valid...MemDb AES encryption requires a {base.KeySize} bit key.");
 
             _key = key;
             _aes = Aes.Create();
-            _aes.KeySize = _keySize;
-            _aes.BlockSize = _blockSize;
-            _aes.Mode = _mode;
-        }
-        #endregion
-
-        #region calculate crypto byte length
-        public static int CalculateCryptoByteLength(int byteLength)
-        {
-            //do everything in byte len vs bit to avoid cast to unsigned int
-            //cryptolen = (inputlen + (blocklen - (inputlen % blocklen))) + ivlen;
-            const int blockLength = _blockSize / 8;
-            const int ivLength = _ivSize / 8;
-
-            int len = (byteLength + (blockLength - (byteLength % blockLength))) + ivLength;
-
-            return len;
+            _aes.KeySize = base.KeySize;
+            _aes.BlockSize = base.BlockSize;
+            _aes.Mode = base.Mode;
         }
         #endregion
 
@@ -66,10 +47,10 @@ namespace HatTrick.InMemDb
         #region decrypt
         public byte[] Decrypt(Stream input, int length)
         {
-            byte[] iv = new byte[_ivSize / 8];
+            byte[] iv = new byte[base.IVSize / 8];
             input.ReadExactly(iv);
 
-            int cryptoLength = CalculateCryptoByteLength(length - iv.Length);
+            int cryptoLength = base.GetEncryptedLength(length - iv.Length);
 
             byte[] encrypted = new byte[cryptoLength];
             input.ReadExactly(encrypted);

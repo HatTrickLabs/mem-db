@@ -64,7 +64,7 @@ namespace HatTrick.InMemDb
 
                 //this is just tmp in-mem only, don't init to disk...
                 //simply give the ctor a bunk path, do not initialize and never flush
-                MemDbMap map = new MemDbMap("xxx", false);
+                MemDbMap map = new MemDbMap("xxx", false, _encryptor);
                 using (var mapStream = mapEntry.Open())
                 {
                     using (var mapReader = new BinaryReader(mapStream))
@@ -123,7 +123,7 @@ namespace HatTrick.InMemDb
 
                 if (ptr.IsEncrypted && !this.IsEncryptionReady)
                 {
-                    fsDb.Position += MemDbAESEncryptor.CalculateCryptoByteLength(ptr.Length);
+                    fsDb.Position += _encryptor.GetEncryptedLength(ptr.Length);
                     continue;
                 }
 

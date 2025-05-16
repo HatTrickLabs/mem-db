@@ -9,6 +9,8 @@ namespace HatTrick.InMemDb
         private string _path;
         private string _datasetName;
 
+        private IMemDbEncryptionInfo _encryptionInfo;
+
         private string _fullMapPath;
         private string _fullDbPath;
 
@@ -30,6 +32,7 @@ namespace HatTrick.InMemDb
 
             _path = config.Path;
             _datasetName = config.DatasetName;
+            _encryptionInfo = config.GetEncryptionInfo();
             _fullDbPath = config.GetFullDbFilePath();
             _fullMapPath = config.GetFullMapFilePath();
 
@@ -75,7 +78,7 @@ namespace HatTrick.InMemDb
         #region read fragmented map
         private void ReadFragmentedMap()
         {
-            _originalMap = new MemDbMap(_fullMapPath, true);
+            _originalMap = new MemDbMap(_fullMapPath, true, _encryptionInfo);
             _staleCount = _originalMap.StaleCount;
             _deletedCount = _originalMap.DeletedCount;
         }
@@ -116,7 +119,7 @@ namespace HatTrick.InMemDb
             if (File.Exists(_fullTempDbPath))
                 File.Delete(_fullTempDbPath);
 
-            _freshMap = new MemDbMap(_fullTempMapPath, true);
+            _freshMap = new MemDbMap(_fullTempMapPath, true, _encryptionInfo);
             File.Create(_fullTempDbPath).Dispose();
         }
         #endregion
@@ -145,7 +148,7 @@ namespace HatTrick.InMemDb
                     continue;
 
                 oldDb.Position = oPtr.Position;
-                int actualLen = oPtr.IsEncrypted ? MemDbAESEncryptor.CalculateCryptoByteLength(oPtr.Length) : oPtr.Length;
+                int actualLen = oPtr.IsEncrypted ? _encryptionInfo.GetEncryptedLength(oPtr.Length) : oPtr.Length;
 
                 oldDb.ReadExactly(buffer, 0, actualLen);
 
