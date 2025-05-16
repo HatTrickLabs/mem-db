@@ -34,21 +34,10 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region calculate crypto byte length
-        /// <summary>
-        /// The 'MemDbAESEncryptor.Decrypt' method requires that we know the unencrypted length of the raw data.
-        /// During the 'Decrypt' process we want to read directly from the mem-db data file stream by providing 
-        /// that data stream into the constructor of the crypto stream.   We then read from the crypto stream until
-        /// we get the exact number of bytes we know is the unencrypted length of the serailized object.  See the notes
-        /// at the end of the 'MemDbAESEncrytor.Decrypt' method for more info.
-        /// </summary>
-        /// <param name="byteLength">The length of an unencrypted span, array or stream of bytes.</param>
-        /// <returns>The byte length of the encrypted output that will be returned from the 'Encrypt' method of this class.</returns>
         public static int CalculateCryptoByteLength(int byteLength)
         {
             //do everything in byte len vs bit to avoid cast to unsigned int
-
             //cryptolen = (inputlen + (blocklen - (inputlen % blocklen))) + ivlen;
-
             const int blockLength = _blockSize / 8;
             const int ivLength = _ivSize / 8;
 
@@ -59,7 +48,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region encrypt
-        public void Encrypt(ReadOnlySpan<byte> input, Stream output)
+        public void Encrypt(byte[] input, Stream output)
         {
             _aes.GenerateIV();
             byte[] iv = _aes.IV;
@@ -68,11 +57,8 @@ namespace HatTrick.InMemDb
 
             using (var encryptor = _aes.CreateEncryptor(_key, iv))
             {
-                using (var cryptoStream = new CryptoStream(output, encryptor, CryptoStreamMode.Write, true))
-                {
-                    cryptoStream.Write(input);
-                    cryptoStream.FlushFinalBlock();
-                }
+                byte[] encrypted = encryptor.TransformFinalBlock(input, 0, input.Length);
+                output.Write(encrypted);
             }
         }
         #endregion
@@ -80,36 +66,19 @@ namespace HatTrick.InMemDb
         #region decrypt
         public byte[] Decrypt(Stream input, int length)
         {
-            long initPos = input.Position;
-
-            byte[] raw = new byte[length];//hint: raw length not crypto length...
-            int read = 0;
-
             byte[] iv = new byte[_ivSize / 8];
             input.ReadExactly(iv);
 
+            int cryptoLength = CalculateCryptoByteLength(length - iv.Length);
+
+            byte[] encrypted = new byte[cryptoLength];
+            input.ReadExactly(encrypted);
+
+            byte[] raw = null;
             using (var decryptor = _aes.CreateDecryptor(_key, iv))
             {
-                using (var cryptoStream = new CryptoStream(input, decryptor, CryptoStreamMode.Read, true))
-                {
-                    //the read count is UNENCRYPTED length
-                    do
-                    {
-                        read += cryptoStream.Read(raw, read, (length - read));
-                    }
-                    while (read < length);
-                }
+                raw = decryptor.TransformFinalBlock(encrypted, 0, encrypted.Length);
             }
-
-            //Obviously this AES implementation does not expect a stream full of intermingled
-            //clear and encrypted data...The crypto stream over reads the provided input stream while buffering...
-            //This is just a hack, I know exactly how much encrypted data I want decrypted, so I'm going to
-            //shift the stream position back to where it should have stopped consuming.
-            //Its either this hack, or alloc ANOTHER stream instance for every encrypted record and copy
-            //the exact amount of encrypted data from the primary memdb.db file stream into the new stream 
-            //before calling Decrypt...This seems a bit more efficient.
-            input.Position = initPos + MemDbAESEncryptor.CalculateCryptoByteLength(length);
-
             return raw;
         }
         #endregion

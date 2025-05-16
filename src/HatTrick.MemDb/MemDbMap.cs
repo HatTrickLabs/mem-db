@@ -73,8 +73,8 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
-        #region calculate size
-        public static long CalcuateBinaryLength(int pointerCount)
+        #region binary length of
+        public static long BinaryLengthOf(int pointerCount)
         {
             //sizeof(int) + sizeof(long) + (pointerCount * PointerByteSize)
             //the sizeof(int) is to account for the 32 bit int at the very beginning of the file (total pointer count)

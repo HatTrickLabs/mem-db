@@ -395,7 +395,7 @@ namespace HatTrick.InMemDb
                             int length;
                             if (record.IsEncrypted)
                             {
-                                Span<byte> raw = this.SerializeRecord(record.Value);
+                                byte[] raw = this.SerializeRecord(record.Value);
                                 _encryptor.Encrypt(raw, fsDb);
                                 //we must record the RAW length of the record NOT crypto...we can calc crypto len on read
                                 length = raw.Length;

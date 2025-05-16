@@ -84,13 +84,7 @@ namespace HatTrick.InMemDb
         #region ensure available drive space
         private void EnsureAvailableDriveSpace()
         {
-            //get file size of the non-stale map pointers (needed for the defragged map)
-            //sizeof(int) + sizeof(long ) + (non-stalePointerCount * PointerByteSize)
-            //the sizeof(int) is to account for the 32 bit int at the very beginning of the file (total pointer count)
-            //the sizeof(long) is to account for the 64 bit int at the beginning of the file (Last Identity)
-            //TODO: these (outside of MemDbMap) size calcs are going to bite you in the ASS.
-            //long mapSize = sizeof(int) + sizeof(long) + ((_originalMap.Count - (_staleCount + _deletedCount)) * MemDbPointer.Size);
-            long mapSize = MemDbMap.CalcuateBinaryLength(_originalMap.Count - (_staleCount + _deletedCount));
+            long mapSize = MemDbMap.BinaryLengthOf(_originalMap.Count - (_staleCount + _deletedCount));
 
             //get file size of the non-stale...non-deleted db records
             long dbSize = _originalMap.TotalFreshSize;

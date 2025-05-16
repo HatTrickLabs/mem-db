@@ -5,7 +5,7 @@ namespace HatTrick.InMemDb
 {
     public interface IMemDbEncryptor
     {
-        public void Encrypt(ReadOnlySpan<byte> input, Stream output);
+        public void Encrypt(byte[] input, Stream output);
 
         public byte[] Decrypt(Stream input, int length);
     }

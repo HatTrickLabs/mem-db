@@ -18,13 +18,13 @@ namespace HatTrick.InMemDb.TestHarness
         #region ctor
         public LargeVolumeTests(AssetResolver assetResolver) : base(_dataset, _dbPath, assetResolver)
         {
-            MemDb.ConfigureFor<DigitalAsset>(_dataset/*, _dbPath*/)
+            MemDb.ConfigureFor<DigitalAsset>(_dataset, _dbPath)
                 //.SetMode(AccessMode.AppendOnly)
-                //.SetFlushInterval(0)
+                .SetFlushInterval(0)
                 .CloneWith(() => new DigitalAssetCloner())
                 .SerializeWith(() => new DigitalAssetBinarySerializer())
                 .IndexOnIdentity(true)
-                //.EncryptWithPassword(() => "This is a super fancy and complex password!!!!!")
+                .EncryptWithPassword(() => "This is a super fancy and complex password!!!!!")
                 .Register();
         }
         #endregion
@@ -35,13 +35,13 @@ namespace HatTrick.InMemDb.TestHarness
             for (int i = 0; i < assets.Length; i++)
             {
                 var asset = assets[i];
-                db.Insert(asset, (id) => asset.Id = id);
+                db.Insert(asset, (id) => asset.Id = id, true);
             }
         }
         #endregion
 
-        #region large volume in memory
-        public void Test_LargeVolumeInMemory()
+        #region large volume
+        public void Test_LargeVolume()
         {
             int iterations = 10_000;
             DigitalAsset[] loadAssets = base.ResolveAssetSet();
@@ -72,7 +72,9 @@ namespace HatTrick.InMemDb.TestHarness
                 sw.Reset();
 
                 sw.Start();
-                var sets = db.Query().GroupBy(a => a.Extension).Select(g => (g.Key, g.Count())).ToArray();
+                var sets = db.Query()
+                    .GroupBy(a => a.Extension).Select(g => (g.Key, g.Count()))
+                    .ToArray();
                 sw.Stop();
                 Console.WriteLine($"{sw.ElapsedMilliseconds}\tCalcuated total sum of file lengths for {total:n0} records .");
 
@@ -86,7 +88,27 @@ namespace HatTrick.InMemDb.TestHarness
                 {
                     Console.WriteLine($"{s.Key}\t{s.Item2}");
                 }
-            }            
+
+                sw.Reset();
+                Console.WriteLine("Kicking off flush");
+                sw.Start();
+                db.Flush();
+                sw.Stop();
+                Console.WriteLine($"{sw.ElapsedMilliseconds}\tFlushed {total:n0} records to disk.");
+            }
+
+            sw.Reset();
+            Console.WriteLine("Kicking off re-open");
+            sw.Start();
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                sw.Stop();
+                Console.WriteLine($"{sw.ElapsedMilliseconds}\tReopened {total:n0} encrypted records.");
+                var asset = db.Find(100);
+            }
+            
+            Console.WriteLine("Done...Press [Enter] to exit.");
+            Console.ReadLine();
         }
         #endregion
     }
