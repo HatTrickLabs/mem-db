@@ -40,7 +40,7 @@ x Implement cache 'Purge()'
   to detect and acknowledge that the process is in an error state and should throw ex and exit.
 x Change identity / id generated and stored from uint to long...4 billion may not be sufficient if heavy delete scenaro such as rolling candle stick data.
 x Change Record.Position from int to long...Need to allow for db files larger than 2GB.
-- Refactor calls to MemDbAESEncryptor.CalculateCryptoByteLength to ref only an interface .... add CalculateCryptoByteLength to IMemDbEncryptor interface.
+x Refactor calls to MemDbAESEncryptor.CalculateCryptoByteLength to ref only an interface .... add CalculateCryptoByteLength to IMemDbEncryptorInfo interface.
   
   
    MemDb.ConfigureFor<DigitalAsset>("assets", "c:/_asset_db").Register();

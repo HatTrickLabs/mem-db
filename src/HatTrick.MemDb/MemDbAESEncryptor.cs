@@ -58,7 +58,7 @@ namespace HatTrick.InMemDb
             byte[] raw = null;
             using (var decryptor = _aes.CreateDecryptor(_key, iv))
             {
-                raw = decryptor.TransformFinalBlock(encrypted, 0, encrypted.Length);
+                raw = decryptor.TransformFinalBlock(encrypted, 0, cryptoLength);
             }
             return raw;
         }
