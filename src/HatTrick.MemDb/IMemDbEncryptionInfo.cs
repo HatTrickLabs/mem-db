@@ -16,13 +16,9 @@ namespace HatTrick.InMemDb
 
         //int GetEncryptedLength(int byteLength)
         //{
-        //    //do everything in byte len vs bit to avoid cast to unsigned int
-        //    //cryptolen = (inputlen + (blocklen - (inputlen % blocklen))) + ivlen;
         //    int blockLength = this.BlockSize / 8;
         //    int ivLength = this.IVSize / 8;
-
         //    int len = (byteLength + (blockLength - (byteLength % blockLength))) + ivLength;
-
         //    return len;
         //}
     }

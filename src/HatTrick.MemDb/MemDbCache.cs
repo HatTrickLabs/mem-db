@@ -62,8 +62,6 @@ namespace HatTrick.InMemDb
 
         private void InitializePersisted()
         {
-            //TODO: wire up some way for the persister to notify if a background thread
-            //throws an exception...i.e. the timer initiated flush thread throws file access or permissions ex.
             _persister.ReadMappedRecords(out List<MemDbRecord<T>> records);
             _records = records as List<MemDbRecord<T>>;
             if (_isIndexed)

@@ -36,7 +36,7 @@ x Implement true RAM only db with no disck read/write (volatile).  MemDb.Open<ob
 x Expose flush interval override on config.
 x Implement 'snapshot' ... dump a db snapshot to disk while live ... must be able to snapshot WHILE the db is open.
 x Implement cache 'Purge()'
-- Implement a way to bubble error state up from persister...If a background thread throws exception attempting to flush to disk, the main thread needs a way
+xxx DONT WANT TO DO THIS>>>JUST LET THE PROCESS TERMINATE. Implement a way to bubble error state up from persister...If a background thread throws exception attempting to flush to disk, the main thread needs a way
   to detect and acknowledge that the process is in an error state and should throw ex and exit.
 x Change identity / id generated and stored from uint to long...4 billion may not be sufficient if heavy delete scenaro such as rolling candle stick data.
 x Change Record.Position from int to long...Need to allow for db files larger than 2GB.

@@ -308,17 +308,11 @@ namespace HatTrick.InMemDb
             if (state == null && _isClosed)
                 return;
 
-            try
-            {
-                this.FlushInsertQueue();
-                this.FlushStateChangeQueue();
-            }
-            catch
-            {
-                //TODO: need some way to bubble an exception up to the main process thread
-                //when the exception is thrown from the timer fired thread
-                //i.e. wire up an OnException delegate that the main thread can bind to 
-            }
+            //NOTE: any exception thrown from this background thread WILL terminate the entire process...
+            //it seems the best way to handle as we DO NOT want consumer to call dispose/flush again
+
+            this.FlushInsertQueue();
+            this.FlushStateChangeQueue();
 
             if (!_isClosed && _flushInterval > 0)
                 _fileSyncTimer.Change(_flushInterval, Timeout.Infinite);
@@ -423,7 +417,7 @@ namespace HatTrick.InMemDb
                                 _map.Flush();
                             };
 
-                            _ = this.TryWrapperOperation(operation);
+                            _ = this.TryOperation(operation);
 
                             throw;
                         }
@@ -434,8 +428,8 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
-        #region try action
-        private bool TryWrapperOperation(Action operation)
+        #region try operation
+        private bool TryOperation(Action operation)
         {
             try
             {
