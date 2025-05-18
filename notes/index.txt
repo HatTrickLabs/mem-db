@@ -6,7 +6,7 @@ using (var db = MemDb.Open<DigitalAsset>(dataset))
 	db.FindAll(a => a.Length > 100);
 	db.FindViaIndex<string>(nameof(DigitalAsset.Directory), "sense");
 
-	db.FindAllViaIndex<string>(nameof(
+	db.QueryViaIndex<string>(nameof(DigitalAsset.Name)).Equal
 }
 
 
@@ -14,12 +14,29 @@ strings only support direct lookup
 integer, char, floating point, datetime values support relational lookup
 
 
-            string[] set = ["a", "b", "c", "d", "e", "f", "g", "h", "i", /*"j",*/ "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"];
-            List<string> alphabet = new List<string>(set);
-            int i = alphabet.BinarySearch("j");
-            i = ~i;
-            alphabet.Insert(i, "j");
-            return;
+string[] set = ["a", "b", "c", "d", "e", "f", "g", "h", "i", /*"j",*/ "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"];
+List<string> alphabet = new List<string>(set);
+int i = alphabet.BinarySearch("j");
+i = ~i;
+alphabet.Insert(i, "j");
+return;
 
 
 db.FindViaIndex<DateTime>(db.IndexOf<DateTime>("Created").Where(c => c >= DateTime.Parse("xxxxxx"))
+
+
+db.QueryViaIndex<string>(nameof(DigitalAsset.Name)).IsEqualTo("");
+												   .IsGreaterThan("").Skip(0).Limit(100).ToArray();
+												   .IsLessThan.Skip(0).Limit(100)
+												   .IsLessThanOrEqualTo("")
+												   .IsGreaterThanOrEqualTo("");
+												   
+												   
+												   
+public class Index<T, Y>
+{
+	public Index(string name, Func<T, Y> resolver)
+	{
+	}
+}
+
