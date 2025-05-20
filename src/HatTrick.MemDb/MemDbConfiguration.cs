@@ -402,6 +402,16 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region apply index
+        public IMemDBConfigurationBuilder<T> ApplyIndex<Y>(string name, Func<T, Y> keyResolver)
+        {
+            var index = new MemDbIndexOf<T, Y>(name, keyResolver);
+            MemDbIndex<Y> i2 = index;
+            MemDbIndex i3 = index;
+            return this;
+        }
+        #endregion
+
         #region register
         public void Register()
         {
