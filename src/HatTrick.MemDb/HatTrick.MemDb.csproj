@@ -4,8 +4,8 @@
     <OutputType>Library</OutputType>
     <AssemblyTitle>HatTrick.MemDb</AssemblyTitle>
     <Product>HatTrick.MemDb</Product>
-    <Copyright>Copyright ©  2024</Copyright>
+    <Copyright>Copyright ©  2025</Copyright>
     <RootNamespace>HatTrick.InMemDb</RootNamespace>
-    <Version>4.0.0</Version>
+    <Version>5.0.0</Version>
   </PropertyGroup>
 </Project>
