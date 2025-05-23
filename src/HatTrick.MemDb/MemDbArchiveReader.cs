@@ -139,7 +139,7 @@ namespace HatTrick.InMemDb
                     value = this.DeserializeRecord(dbReader, ptr.Length);
                 }
 
-                var record = new MemDbRecord<T>(ptr.Id, value, ptr.State, ptr.StateSetAt, ptr.CreatedAt, ptr.IsEncrypted, -1, i);
+                var record = new MemDbRecord<T>(ptr.Id, value, ptr.State, ptr.StateSetAt, ptr.CreatedAt, ptr.IsEncrypted, i);
                 yield return record;
             }
         }

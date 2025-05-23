@@ -231,7 +231,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region update pointer state
-        public void UpdatePointerState(StaleRecordQueue tryGetStaleRecord)
+        public void UpdatePointerStates(StaleRecordQueue tryGetStaleRecord)
         {
             lock (_syncLock)
             {

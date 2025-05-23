@@ -155,10 +155,7 @@ namespace HatTrick.InMemDb
                     ptr = _map[i];
                     if (ptr.State != fresh || (ptr.IsEncrypted && !isCryptoReady))
                     {
-                        fsDb.Position += (ptr.IsEncrypted) 
-                            ? _encryptor.GetEncryptedLength(ptr.Length) 
-                            : ptr.Length;
-
+                        fsDb.Position += (ptr.IsEncrypted) ? _encryptor.GetEncryptedLength(ptr.Length) : ptr.Length;
                         continue;
                     }
 
@@ -172,7 +169,7 @@ namespace HatTrick.InMemDb
                     {
                         value = this.DeserializeRecord(reader, ptr.Length);
                     }
-                    record = new(ptr.Id, value, fresh, ptr.StateSetAt, ptr.CreatedAt, ptr.IsEncrypted, records.Count, i);
+                    record = new(ptr.Id, value, fresh, ptr.StateSetAt, ptr.CreatedAt, ptr.IsEncrypted, i);
                     records.Add(record);
                 }
             }
@@ -330,8 +327,10 @@ namespace HatTrick.InMemDb
             {
                 lock (_flushLock)
                 {
-                    this.AppendInsertedItems();
+                    this.WriteInsertsToDisk();
+                    _map.Flush();
                 }
+
                 if (!_isClosed && _insertQ.Capacity > (_initialQueueCapacity * 4))
                 {
                     lock (_insertQLock)
@@ -355,8 +354,9 @@ namespace HatTrick.InMemDb
             {
                 lock (_flushLock)
                 {
-                    this.UpdateItemStates();
+                    _map.UpdatePointerStates(this.TryPopStateChangeRecord);
                 }
+
                 if (!_isClosed && _stateModQ.Capacity > (_initialQueueCapacity * 4))
                 {
                     lock (_stateModQLock)
@@ -369,84 +369,63 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
-        #region append inserted items
-        private void AppendInsertedItems()
+        #region write inserts to disk
+        private void WriteInsertsToDisk()
         {
-            MemDbRecord<T> record = null;
-            if (!this.TryPopInsertRecord(out record))
-                return;
+            using var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            using var dbWriter = new BinaryWriter(fsDb, Encoding.UTF8, true);
+            fsDb.Position = fsDb.Length;
 
-            using (var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            while (this.TryPopInsertRecord(out MemDbRecord<T> record))
             {
-                using (var dbWriter = new BinaryWriter(fsDb, Encoding.UTF8, true))
+                long startPos = fsDb.Position;
+                try
                 {
-                    fsDb.Position = fsDb.Length;
-                    do
+                    int length;
+                    if (record.IsEncrypted)
                     {
-                        long startPos = fsDb.Position;
-                        try
-                        {
-                            int length;
-                            if (record.IsEncrypted)
-                            {
-                                byte[] raw = this.SerializeRecord(record.Value);
-                                _encryptor.Encrypt(raw, fsDb);
-                                //we must record the RAW length of the record NOT crypto...we can calc crypto len on read
-                                length = raw.Length;
-                            }
-                            else
-                            {
-                                this.SerializeRecord(record.Value, dbWriter);
-                                length = (int)(fsDb.Position - startPos);
-                            }
-                            var pointer = new MemDbPointer(record.Id, RecordState.Fresh, record.StateSetAt, record.CreatedAt, record.IsEncrypted, startPos, length);
-                            record.SetMapIndex(_map.Add(pointer));
-                        }
-                        catch
-                        {
-                            var operation = () =>
-                            {
-                                //reset the len of file back to position + length of the last pointer.
-                                MemDbPointer lPtr = _map[^1];
-                                int recLength = lPtr.IsEncrypted ? _encryptor.GetEncryptedLength(lPtr.Length) : lPtr.Length;
-                                int end = (int)lPtr.Position + lPtr.Length;
-                                if (fsDb.Length > end)
-                                    fsDb.SetLength(lPtr.Position + lPtr.Length);
+                        byte[] raw = this.SerializeRecord(record.Value);
+                        _encryptor.Encrypt(raw, fsDb);
+                        //we must record the RAW length of the record NOT crypto...we can calc crypto len on read
+                        length = raw.Length;
+                    }
+                    else
+                    {
+                        this.SerializeRecord(record.Value, dbWriter);
+                        length = (int)(fsDb.Position - startPos);
+                    }
+                    var pointer = new MemDbPointer(record.Id, RecordState.Fresh, record.StateSetAt, record.CreatedAt, record.IsEncrypted, startPos, length);
+                    record.SetMapIndex(_map.Add(pointer));
+                }
+                catch
+                {
+                    this.SafeInvokeOperation(() =>
+                    {
+                        //reset the len of file back to position + length of the last pointer.
+                        MemDbPointer lPtr = _map[^1];
+                        int recLength = lPtr.IsEncrypted ? _encryptor.GetEncryptedLength(lPtr.Length) : lPtr.Length;
+                        int end = (int)lPtr.Position + lPtr.Length;
+                        if (fsDb.Length > end)
+                            fsDb.SetLength(lPtr.Position + lPtr.Length);
 
-                                //ensure pointers successfully added get flushed before tossing the ex
-                                _map.Flush();
-                            };
-
-                            _ = this.TryOperation(operation);
-
-                            throw;
-                        }
-                    } while (this.TryPopInsertRecord(out record));
+                        //ensure pointers successfully added get flushed before tossing the ex
+                        _map.Flush();
+                    });
+                    throw;
                 }
             }
-            _map.Flush();
         }
         #endregion
 
-        #region try operation
-        private bool TryOperation(Action operation)
+        #region safe invoke operation
+        private void SafeInvokeOperation(Action operation)
         {
             try
             {
                 operation?.Invoke();
-                return true;
             }
             catch//catch all...
-            { 
-                return false; 
-            }
-        }
-        #endregion
-
-        #region update item states
-        private void UpdateItemStates()
-        {
-            _map.UpdatePointerState(this.TryPopStateChangeRecord);
+            { }
         }
         #endregion
 

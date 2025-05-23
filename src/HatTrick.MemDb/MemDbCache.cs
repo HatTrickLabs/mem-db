@@ -157,6 +157,8 @@ namespace HatTrick.InMemDb
                     else if (state == RecordState.Deleted)
                         deleted += 1;
                 }
+                //immediately after exiting lock, new records be added to _records...record
+                //the upper bound so purge doesn't look past upper bound when these stats are recorded
                 upperBound = i;
             }
 

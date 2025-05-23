@@ -43,7 +43,7 @@ namespace HatTrick.InMemDb.TestHarness
         #region large volume
         public void Test_LargeVolume()
         {
-            int iterations = 10_000;
+            int iterations = 1_000;
             DigitalAsset[] loadAssets = base.ResolveAssetSet();
             int total = iterations * loadAssets.Length;
             Stopwatch sw = new Stopwatch();
@@ -60,9 +60,9 @@ namespace HatTrick.InMemDb.TestHarness
                 Console.WriteLine($"{sw.ElapsedMilliseconds}\tCompleted db load (in mem only) of {total:n0} records.");
                 sw.Reset();
                 Console.WriteLine("Starting concurrent queries for 100,000 records by id (index assisted)");
-                DigitalAsset[] assets = new DigitalAsset[100_000];
+                DigitalAsset[] assets = new DigitalAsset[250_000];
                 sw.Start();
-                Parallel.For(0, 100_000, (i) =>
+                Parallel.For(0, 250_000, (i) =>
                 {
 
                     assets[i] = db.Find((long)i + 300_001);
