@@ -174,12 +174,20 @@ namespace HatTrick.InMemDb
 
                 var configOfT = config.EnsureGenericType<T>(config);
 
-                //ensure no other process has the db locked...
-                FileStream lockFile = config.IsPersisted ? MemDb.InitializeLockFile(config) : null;
-
-                var memDb = new MemDb<T>(configOfT);
-
-                _openDatasets.Add(datasetName, lockFile);
+                FileStream lockFile = null;
+                MemDb<T> memDb = null;
+                try
+                {
+                    //ensure no other process has the db locked...
+                     lockFile = config.IsPersisted ? MemDb.InitializeLockFile(config) : null;
+                    memDb = new MemDb<T>(configOfT);
+                    _openDatasets.Add(datasetName, lockFile);
+                }
+                catch//if ex is thrown during open attempt, ensure lock file is cleaned up
+                {
+                    lockFile?.Dispose();
+                    throw;
+                }
 
                 return memDb;
             }
