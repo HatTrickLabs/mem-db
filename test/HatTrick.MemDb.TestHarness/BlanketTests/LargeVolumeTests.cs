@@ -24,7 +24,8 @@ namespace HatTrick.InMemDb.TestHarness
                 .CloneWith(() => new DigitalAssetCloner())
                 .SerializeWith(() => new DigitalAssetBinarySerializer())
                 .IndexOnIdentity(true)
-                .EncryptWithPassword(() => "This is a super fancy and complex password!!!!!")
+                .ApplyIndex<string>(nameof(DigitalAsset.Name), (a) => a.Name)
+                //.EncryptWithPassword(() => "This is a super fancy and complex password!!!!!")
                 .Register();
         }
         #endregion
@@ -35,7 +36,7 @@ namespace HatTrick.InMemDb.TestHarness
             for (int i = 0; i < assets.Length; i++)
             {
                 var asset = assets[i];
-                db.Insert(asset, (id) => asset.Id = id, i % 2 == 0);
+                db.Insert(asset, (id) => asset.Id = id, false);
             }
         }
         #endregion
@@ -43,7 +44,7 @@ namespace HatTrick.InMemDb.TestHarness
         #region large volume
         public void Test_LargeVolume()
         {
-            int iterations = 1_000;
+            int iterations = 10_000;
             DigitalAsset[] loadAssets = base.ResolveAssetSet();
             int total = iterations * loadAssets.Length;
             Stopwatch sw = new Stopwatch();
@@ -59,7 +60,7 @@ namespace HatTrick.InMemDb.TestHarness
                 sw.Stop();
                 Console.WriteLine($"{sw.ElapsedMilliseconds}\tCompleted db load (in mem only) of {total:n0} records.");
                 sw.Reset();
-                Console.WriteLine("Starting concurrent queries for 100,000 records by id (index assisted)");
+                Console.WriteLine("Starting concurrent queries for 250,000 records by id (index assisted)");
                 DigitalAsset[] assets = new DigitalAsset[250_000];
                 sw.Start();
                 Parallel.For(0, 250_000, (i) =>
@@ -68,7 +69,7 @@ namespace HatTrick.InMemDb.TestHarness
                     assets[i] = db.Find((long)i + 300_001);
                 });
                 sw.Stop();
-                Console.WriteLine($"{sw.ElapsedMilliseconds}\tCompleted concurrent queries for 100,000 records");
+                Console.WriteLine($"{sw.ElapsedMilliseconds}\tCompleted concurrent queries for 250,000 records");
                 sw.Reset();
 
                 sw.Start();
@@ -88,6 +89,20 @@ namespace HatTrick.InMemDb.TestHarness
                 {
                     Console.WriteLine($"{s.Key}\t{s.Item2}");
                 }
+
+                sw.Reset();
+                Console.WriteLine("Kicking off find all assets name > '0900' WITHOUT index...");
+                sw.Start();
+                var sets2 = db.Query().Where(a => string.Compare("0900", a.Name, false) <= 0).ToArray();
+                sw.Stop();
+                Console.WriteLine($"{sw.ElapsedMilliseconds}\tqueried for all files name > 0900 WITHOUT index {sets2.Length}");
+
+                sw.Reset();
+                Console.WriteLine("Kicking off find all assets name > '0900' WITH index...");
+                sw.Start();
+                var sets3 = db.QueryViaIndex<string>(nameof(DigitalAsset.Name)).IsGreaterThanEqualTo("0900").ToArray();
+                sw.Stop();
+                Console.WriteLine($"{sw.ElapsedMilliseconds}\tqueried for all files name > 0900 WITH index {sets3.Length}");
 
                 sw.Reset();
                 Console.WriteLine("Kicking off flush");

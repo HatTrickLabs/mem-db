@@ -361,6 +361,13 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region query via index
+        public IMemDbIndexExpression<T, Y> QueryViaIndex<Y>(string indexName)
+        {
+            return _cache.QueryViaIndex<Y>(indexName);
+        }
+        #endregion
+
         #region resolve statistics
         public MemDbStatistics ResolveStatistics(Stats statistics)
         {

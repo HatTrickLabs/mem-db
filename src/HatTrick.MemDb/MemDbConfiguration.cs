@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 
 namespace HatTrick.InMemDb
@@ -249,6 +250,7 @@ namespace HatTrick.InMemDb
     {
         IMemDBConfigurationBuilder<T> SetMode(AccessMode mode);
         IMemDBConfigurationBuilder<T> IndexOnIdentity(bool shouldIndex);
+        IMemDBConfigurationBuilder<T> ApplyIndex<Y>(string name, Func<T, Y> keyResolver);
         IMemDBConfigurationBuilder<T> SetFlushInterval(int interval);
         IMemDBConfigurationBuilder<T> SerializeWith(Func<IMemDbSerializer<T>> serializerProvider);
         IMemDBConfigurationBuilder<T> CloneWith(Func<IMemDbCloner<T>> clonerProvider);
@@ -268,6 +270,8 @@ namespace HatTrick.InMemDb
 
         private Func<IMemDbSerializer<T>> _serializerProvider;
         private Func<IMemDbCloner<T>> _clonerProvider;
+
+        private List<MemDbIndex<T>> _appliedIndexes;
         #endregion
 
         #region constructors
@@ -298,6 +302,19 @@ namespace HatTrick.InMemDb
         public IMemDBConfigurationBuilder<T> IndexOnIdentity(bool shouldIndex)
         {
             base.SetIndexedOnIdentity(shouldIndex);
+            return this;
+        }
+        #endregion
+
+        #region apply index
+        public IMemDBConfigurationBuilder<T> ApplyIndex<Y>(string name, Func<T, Y> keyResolver)
+        {
+            if (_appliedIndexes is null)
+                _appliedIndexes = new List<MemDbIndex<T>>();
+
+            var index = new MemDbIndex<T, Y>(name, keyResolver);
+            _appliedIndexes.Add(index);
+
             return this;
         }
         #endregion
@@ -417,16 +434,6 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
-        #region apply index
-        public IMemDBConfigurationBuilder<T> ApplyIndex<Y>(string name, Func<T, Y> keyResolver)
-        {
-            var index = new MemDbIndexOf<T, Y>(name, keyResolver);
-            MemDbIndex<Y> i2 = index;
-            MemDbIndex i3 = index;
-            return this;
-        }
-        #endregion
-
         #region register
         public void Register()
         {
@@ -460,6 +467,16 @@ namespace HatTrick.InMemDb
         internal IMemDbCache<T> GetCache()
         {
             return new MemDbCache<T>(this);
+        }
+        #endregion
+
+        #region get applied indexes
+        public MemDbIndexCollection<T> GetAppliedIndexes()
+        {
+            if (_appliedIndexes is null)
+                return null;
+
+            return new MemDbIndexCollection<T>(_appliedIndexes.ToArray());
         }
         #endregion
     }

@@ -5,40 +5,68 @@ using System.Linq;
 
 namespace HatTrick.InMemDb
 {
-    public abstract class MemDbIndexCollection
+    #region mem db index collection [class]
+    public class MemDbIndexCollection<T> where T : class
     {
         #region internals
-        private MemDbIndex[] _indexes;
+        private MemDbIndex<T>[] _indexes;
         #endregion
 
         #region ctors
-        public MemDbIndexCollection(MemDbIndex[] indexes)
+        public MemDbIndexCollection(MemDbIndex<T>[] indexes)
         {
             _indexes = indexes ?? throw new ArgumentNullException(nameof(indexes));
         }
         #endregion
 
-        #region get
-        public MemDbIndex Get(string name)
+        #region initialize
+        public void Initialize(int capacity)
         {
-            return Array.Find(_indexes, (i) => i.Name == name);
+            for (int i = 0; i < _indexes.Length; i++)
+            {
+                _indexes[i].Initialize(capacity);
+            }
         }
+        #endregion
 
-        public MemDbIndex<Y> Get<Y>(string name)
+        #region get
+        public MemDbIndex<T> Get(string name)
         {
-            return Array.Find(_indexes, (i) => i.Name == name) as MemDbIndex<Y>;
+            return Array.Find(_indexes, (a) => a.Name == name);
+        }
+        #endregion
+
+        #region apply
+        public void Apply(T record, int pointer)
+        {
+            for (int i = 0; i < _indexes.Length; i++)
+            {
+                _indexes[i].Apply(record, pointer);
+            }
+        }
+        #endregion
+
+        #region remove
+        public void Remove(T record, int pointer)
+        {
+            for (int i = 0; i < _indexes.Length; i++)
+            {
+                _indexes[i].Remove(record, pointer);
+            }
         }
         #endregion
     }
+    #endregion
 
-    public abstract class MemDbIndex
+    #region mem db index of T [class]
+    public abstract class MemDbIndex<T> where T : class
     {
         #region internals
         private string _name;
         #endregion
 
         #region interface
-        public string Name { get; set; }
+        public string Name => _name;
         #endregion
 
         #region ctors
@@ -47,28 +75,56 @@ namespace HatTrick.InMemDb
             _name = name ?? throw new ArgumentNullException(nameof(name));
         }
         #endregion
-    }
 
-    public abstract class MemDbIndex<Y> : MemDbIndex
+        #region initialize
+        internal abstract void Initialize(int capacity);
+        #endregion
+
+        #region apply
+        public abstract void Apply(T record, int pointer);
+        #endregion
+
+        #region remove
+        public abstract void Remove(T record, int pointer);
+        #endregion
+
+        #region of T
+        internal MemDbIndex<T, Y> Of<Y>()
+        {
+            if (this is MemDbIndex<T, Y> index)
+            {
+                return index;
+            }
+
+            throw new InvalidCastException($"Invalid index cast...Index '{_name}' cannot be cast to index of {typeof(Y).Name}");
+        }
+        #endregion
+    }
+    #endregion
+
+    #region mem db index of T,Y [class]
+    public class MemDbIndex<T, Y> : MemDbIndex<T> where T : class
     {
         #region internals
+        private Func<T, Y> _keyResolver;
         private Dictionary<Y, List<int>> _index;
         private List<Y> _lookup;
         private IComparer<Y> _comparer;
         #endregion
 
         #region ctors
-        protected MemDbIndex(string name) : this(name, null)
+        public MemDbIndex(string name, Func<T, Y> keyResolver) : this(name, keyResolver, null)
         { }
 
-        protected MemDbIndex(string name, IComparer<Y> comparer) : base(name)
+        public MemDbIndex(string name, Func<T, Y> keyResolver, IComparer<Y> comparer) : base(name)
         {
+            _keyResolver = keyResolver ?? throw new ArgumentNullException(nameof(keyResolver));
             _comparer = comparer ?? Comparer<Y>.Default;
         }
         #endregion
 
         #region initialize
-        internal void Initialize(int capacity)
+        internal override void Initialize(int capacity)
         {
             _index = new Dictionary<Y, List<int>>(capacity);
             _lookup = new List<Y>(capacity);
@@ -76,7 +132,13 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region apply
-        public void Apply(Y key, int pointer)
+        public override void Apply(T record, int pointer)
+        {
+            Y key = _keyResolver(record);
+            this.Apply(key, pointer);
+        }
+
+        private void Apply(Y key, int pointer)
         {
             List<int> set = null;
             if (_index.TryGetValue(key, out set))
@@ -97,6 +159,12 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region remove
+        public override void Remove(T record, int pointer)
+        {
+            Y key = _keyResolver(record);
+            this.Remove(key, pointer);
+        }
+
         public void Remove(Y key, int pointer)
         {
             List<int> set = _index[key];
@@ -121,9 +189,29 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region get pointers greater than equal to
+        public int[] GetPointersGreaterThan(Y key)
+        {
+            int index = _lookup.BinarySearch(key, _comparer);
+            if (index > -1)
+            {
+                if (index < (_lookup.Count - 1))
+                    index += 1;//shift forward one to only get pointers where value > key (NOT EQUAL)...
+
+                List<int> set = new List<int>(_lookup.Count - index);
+                for (int i = index; i < _lookup.Count; i++)
+                {
+                    set.AddRange(_index[_lookup[i]]);
+                }
+                return set.ToArray();
+            }
+            return Array.Empty<int>();
+        }
+        #endregion
+
+        #region get pointers greater than equal to
         public int[] GetPointersGreaterThanEqualTo(Y key)
         {
-            int index = _lookup.BinarySearch(key);
+            int index = _lookup.BinarySearch(key, _comparer);
             if (index > -1)
             {
                 List<int> set = new List<int>(_lookup.Count - index);
@@ -137,10 +225,30 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region get pointers less than
+        public int[] GetPointersLessThan(Y key)
+        {
+            int index = _lookup.BinarySearch(key, _comparer);
+            if (index > -1)
+            {
+                if (index > 0)
+                    index -= 1;//shift back one to only get pointers where value < key (NOT EQUAL)...
+
+                List<int> set = new List<int>(index + 1);
+                for (int i = index; i > -1; i--)
+                {
+                    set.AddRange(_index[_lookup[i]]);
+                }
+                return set.ToArray();
+            }
+            return Array.Empty<int>();
+        }
+        #endregion
+
         #region get pointers less than equal to
         public int[] GetPointersLessThanEqualTo(Y key)
         {
-            int index = _lookup.BinarySearch(key);
+            int index = _lookup.BinarySearch(key, _comparer);
             if (index > -1)
             {
                 List<int> set = new List<int>(index + 1);
@@ -154,78 +262,49 @@ namespace HatTrick.InMemDb
         }
         #endregion
     }
+    #endregion
 
-    public class MemDbIndexOf<T, Y> : MemDbIndex<Y> where T : class
-    {
-        #region internals
-        private Func<T, Y> _keyResolver;
-        #endregion
+    //public class MemDbIndexOfSet<T, Y> : MemDbIndex<T, Y> where T : class
+    //{
+    //    #region internals
+    //    private Func<T, IEnumerable<Y>> _keyResolver;
+    //    #endregion
 
-        #region ctors
-        public MemDbIndexOf(string name, Func<T, Y> keyResolver) : base(name)
-        {
-            _keyResolver = keyResolver;
-        }
-        #endregion
+    //    #region ctors
+    //    public MemDbIndexOfSet(string name, Func<T, IEnumerable<Y>> keyResolver) : this(name, keyResolver, null)
+    //    {
+    //    }
 
-        #region apply
-        public void Apply(T record, int pointer)
-        {
-            Y key = _keyResolver(record);
-            base.Apply(key, pointer);
-        }
-        #endregion
+    //    public MemDbIndexOfSet(string name, Func<T, IEnumerable<Y>> keyResolver, IComparer<Y> comparer) : base(name, comparer)
+    //    {
+    //        _keyResolver = keyResolver;
+    //    }
+    //    #endregion
 
-        #region remove
-        public void Remove(T record, int pointer)
-        {
-            Y key = _keyResolver(record);
-            base.Remove(key, pointer);
-        }
-        #endregion
-    }
+    //    #region apply
+    //    public void Apply(T record, int pointer)
+    //    {
+    //        var keySet = _keyResolver(record);
+    //        HashSet<Y> distinct = new HashSet<Y>();
+    //        foreach (var key in keySet)
+    //        {
+    //            if (distinct.Add(key))
+    //            {
+    //                base.Apply(record, pointer);
+    //            }
+    //        }
+    //    }
+    //    #endregion
 
-    public class MemDbIndexOfSet<T, Y> : MemDbIndex<Y> where T : class
-    {
-        #region internals
-        private Func<T, IEnumerable<Y>> _keyResolver;
-        #endregion
-
-        #region ctors
-        public MemDbIndexOfSet(string name, Func<T, IEnumerable<Y>> keyResolver) : this(name, keyResolver, null)
-        {
-        }
-
-        public MemDbIndexOfSet(string name, Func<T, IEnumerable<Y>> keyResolver, IComparer<Y> comparer) : base(name, comparer)
-        {
-            _keyResolver = keyResolver;
-        }
-        #endregion
-
-        #region apply
-        public void Apply(T record, int pointer)
-        {
-            var keySet = _keyResolver(record);
-            HashSet<Y> distinct = new HashSet<Y>();
-            foreach (var key in keySet)
-            {
-                if (distinct.Add(key))
-                {
-                    base.Apply(key, pointer);
-                }
-            }
-        }
-        #endregion
-
-        #region remove
-        public void Remove(T record, int pointer)
-        {
-            var keySet = _keyResolver(record);
-            foreach (var key in keySet)
-            {
-                base.Remove(key, pointer);
-            }
-        }
-        #endregion
-    }
+    //    #region remove
+    //    public void Remove(T record, int pointer)
+    //    {
+    //        var keySet = _keyResolver(record);
+    //        foreach (var key in keySet)
+    //        {
+    //            base.Remove(key, pointer);
+    //        }
+    //    }
+    //    #endregion
+    //}
 }

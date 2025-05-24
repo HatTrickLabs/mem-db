@@ -31,5 +31,7 @@ namespace HatTrick.InMemDb
         public int Delete(Func<T, bool> where);
 
         public MemDbExpression<T> Query();
+
+        public IMemDbIndexExpression<T, Y> QueryViaIndex<Y>(string indexName);
     }
 }

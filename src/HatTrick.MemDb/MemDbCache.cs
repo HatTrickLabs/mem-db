@@ -14,6 +14,7 @@ namespace HatTrick.InMemDb
         private List<MemDbRecord<T>> _records;
         private bool _isIndexed;
         private Dictionary<long, int> _index;
+        private MemDbIndexCollection<T> _appliedIndexes;
         private Lock _lock;
 
         private IMemDbCloner<T> _cloner;
@@ -41,6 +42,7 @@ namespace HatTrick.InMemDb
 
             _mode = config.Mode;
             _isIndexed = config.IsIndexedOnIdentity;
+            _appliedIndexes = config.GetAppliedIndexes();
             _memOnlyLastId = 0;
 
             this.Initialize();
@@ -64,12 +66,18 @@ namespace HatTrick.InMemDb
         {
             _persister.ReadMappedRecords(out List<MemDbRecord<T>> records);
             _records = records as List<MemDbRecord<T>>;
-            if (_isIndexed)
+            if (_isIndexed || _appliedIndexes is not null)
             {
-                _index = new Dictionary<long, int>(_records.Capacity);
+                if (_isIndexed)
+                    _index = new Dictionary<long, int>(_records.Capacity);
+
+                if (_appliedIndexes is not null)
+                    _appliedIndexes.Initialize(_records.Capacity);
+
                 for (int i = 0; i < records.Count; i++)
                 {
-                    _index.Add(records[i].Id, i);
+                    _index?.Add(records[i].Id, i);
+                    _appliedIndexes?.Apply(records[i].Value, i);
                 }
             }
         }
@@ -359,7 +367,7 @@ namespace HatTrick.InMemDb
 
                 if (expression.HasSkip)
                 {
-                    int len = expression.HasLimit 
+                    int len = expression.HasLimit
                         ? Math.Min(matches.Length - expression.SkipCount, expression.LimitCount)
                         : matches.Length - expression.SkipCount;
 
@@ -414,6 +422,102 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region query via index
+        public IMemDbIndexExpression<T, Y> QueryViaIndex<Y>(string indexName)
+        {
+            this.EnsureReadMode(nameof(QueryViaIndex));
+
+            if (_appliedIndexes is null)
+                throw new InvalidOperationException($"No custom indexes applied to MemDb Instance '{_datasetName}'");
+
+            var index = _appliedIndexes.Get(indexName);
+            if (index is null)
+                throw new ArgumentException($"No custom index exists on MemDb instance '{_datasetName}' with provided name '{indexName}'", nameof(indexName));
+
+            //ensure generic type requested is a match to the index type...
+            MemDbIndex<T, Y> typeIndex = index.Of<Y>();
+
+            return new MemDbIndexExpression<T, Y>(index.Name, this.ExecuteIndexQueryExpression, this.ExecuteIndexedUpdateExpression, this.ExecuteIndexedDeleteExpression);
+        }
+        #endregion
+
+        #region execute indexed query expression
+        private T[] ExecuteIndexQueryExpression<Y>(MemDbIndexExpression<T, Y> expression, bool deepCopy = true)
+        {
+            string idxName = expression.IndexName;
+            MemDbIndex<T, Y> index = _appliedIndexes.Get(idxName).Of<Y>();
+            Y arg = expression.IndexKey;
+            T[] set = null;
+            lock (_lock)
+            {
+                int[] pointers = null;
+                switch (expression.RelationalOperator)
+                {
+                    case RelationalOperator.EqualTo:
+                        pointers = index.GetPointers(arg);
+                        break;
+                    case RelationalOperator.NotEqualTo:
+                        pointers = index.GetPointers(arg);
+                        break;
+                    case RelationalOperator.GreaterThan:
+                        pointers = index.GetPointersGreaterThan(arg);
+                        break;
+                    case RelationalOperator.LessThan:
+                        pointers = index.GetPointersLessThan(arg);
+                        break;
+                    case RelationalOperator.GreaterThanEqualTo:
+                        pointers = index.GetPointersGreaterThanEqualTo(arg);
+                        break;
+                    case RelationalOperator.LessThanEqualTo:
+                        pointers = index.GetPointersLessThanEqualTo(arg);
+                        break;
+                    default:
+                        break;
+                }
+
+                set = new T[pointers.Length];
+                for (int i = 0; i < pointers.Length; i++)
+                {
+                    set[i] = deepCopy 
+                        ? _cloner.DeepCopy(_records[pointers[i]].Value) 
+                        : _records[pointers[i]].Value;
+                }
+            }
+
+            return set;
+        }
+        #endregion
+
+        #region execute indexed update expression
+        private int ExecuteIndexedUpdateExpression<Y>(MemDbIndexExpression<T, Y> expression, Action<T> apply)
+        {
+            int cnt = 0;
+            lock (_lock)
+            {
+                T[] set = this.ExecuteIndexQueryExpression(expression, false);
+                cnt = (set.Length > 0)
+                    ? this.Update(apply, (r) => Array.IndexOf(set, r) > -1)
+                    : 0;
+            }
+            return cnt;
+        }
+        #endregion
+
+        #region execute indexed delete expression
+        private int ExecuteIndexedDeleteExpression<Y>(MemDbIndexExpression<T, Y> expression)
+        {
+            int cnt = 0;
+            lock (_lock)
+            {
+                T[] set = this.ExecuteIndexQueryExpression(expression, false);
+                cnt = (set.Length > 0)
+                    ? this.Delete((r) => Array.IndexOf(set, r) > -1)
+                    : 0;
+            }
+            return cnt;
+        }
+        #endregion
+
         #region get next id
         private long GetNextId()
         {
@@ -451,6 +555,8 @@ namespace HatTrick.InMemDb
                 {
                     if (_isIndexed)
                         _index.Add(id, _records.Count);
+
+                    _appliedIndexes?.Apply(rec.Value, _records.Count);
 
                     _records.Add(rec);
                 }
@@ -506,7 +612,7 @@ namespace HatTrick.InMemDb
                 if (idx > -1)
                 {
                     long utcTimestamp = DateTime.UtcNow.ToBinary();
-                    MemDbRecord<T> match = _records[idx]; ;
+                    MemDbRecord<T> match = _records[idx];
                     this.ApplyUpdate(apply, match, utcTimestamp);
                 }
             }
@@ -532,6 +638,8 @@ namespace HatTrick.InMemDb
             if (_isIndexed)
                 _index[newRec.Id] = _records.Count;
 
+            _appliedIndexes?.Apply(newRec.Value, _records.Count);
+
             _records.Add(newRec);
 
             if (_persister is not null)
@@ -553,20 +661,20 @@ namespace HatTrick.InMemDb
             List<MemDbRecord<T>> matches = null;
             lock (_lock)
             {
-                matches = _records.FindAll(r => r.State == RecordState.Fresh && where(r.Value));
-                if (matches.Count > 0)
+                for (int i = 0; i < _records.Count; i++)
                 {
+                    MemDbRecord<T> record = _records[i];
                     long utcTimestamp = DateTime.UtcNow.ToBinary();
-                    for (int i = 0; i < matches.Count; i++)
+                    if (record.State == RecordState.Fresh && where(record.Value))
                     {
-                        var match = matches[i];
-
-                        match.MarkDeleted(utcTimestamp);
+                        record.MarkDeleted(utcTimestamp);
 
                         if (_isIndexed)
-                            _index.Remove(match.Id);
+                            _index.Remove(record.Id);
 
-                        _persister?.MarkDeleted(match);
+                        _appliedIndexes?.Remove(record.Value, i);
+
+                        _persister?.MarkDeleted(record);
                     }
                 }
             }
@@ -595,6 +703,8 @@ namespace HatTrick.InMemDb
 
                     if (_isIndexed)
                         _index.Remove(match.Id);
+
+                    _appliedIndexes?.Remove(match.Value, idx);
 
                     _persister?.MarkDeleted(match);
                 }
