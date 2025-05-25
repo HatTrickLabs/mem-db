@@ -12,6 +12,7 @@ namespace HatTrick.InMemDb.TestHarness
         #region main
         static void Main(string[] args)
         {
+            var comp = Comparer<int>.Default;
             Command cmd = default;
             try
             {

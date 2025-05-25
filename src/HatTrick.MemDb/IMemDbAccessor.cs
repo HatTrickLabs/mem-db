@@ -32,6 +32,6 @@ namespace HatTrick.InMemDb
 
         public MemDbExpression<T> Query();
 
-        public IMemDbIndexExpression<T, Y> QueryViaIndex<Y>(string indexName);
+        public IMemDbIndexExpression<T, Y> QueryViaIndex<Y>(string indexName) where Y : IConvertible;
     }
 }

@@ -362,7 +362,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region query via index
-        public IMemDbIndexExpression<T, Y> QueryViaIndex<Y>(string indexName)
+        public IMemDbIndexExpression<T, Y> QueryViaIndex<Y>(string indexName) where Y : IConvertible
         {
             return _cache.QueryViaIndex<Y>(indexName);
         }

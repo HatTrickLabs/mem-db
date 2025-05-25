@@ -250,7 +250,7 @@ namespace HatTrick.InMemDb
     {
         IMemDBConfigurationBuilder<T> SetMode(AccessMode mode);
         IMemDBConfigurationBuilder<T> IndexOnIdentity(bool shouldIndex);
-        IMemDBConfigurationBuilder<T> ApplyIndex<Y>(string name, Func<T, Y> keyResolver);
+        IMemDBConfigurationBuilder<T> ApplyIndex<Y>(string name, Func<T, Y> keyResolver) where Y : IConvertible;
         IMemDBConfigurationBuilder<T> SetFlushInterval(int interval);
         IMemDBConfigurationBuilder<T> SerializeWith(Func<IMemDbSerializer<T>> serializerProvider);
         IMemDBConfigurationBuilder<T> CloneWith(Func<IMemDbCloner<T>> clonerProvider);
@@ -307,12 +307,27 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region apply index
-        public IMemDBConfigurationBuilder<T> ApplyIndex<Y>(string name, Func<T, Y> keyResolver)
+        public IMemDBConfigurationBuilder<T> ApplyIndex<Y>(string name, Func<T, Y> keyResolver) where Y : IConvertible
         {
             if (_appliedIndexes is null)
                 _appliedIndexes = new List<MemDbIndex<T>>();
 
             var index = new MemDbIndex<T, Y>(name, keyResolver);
+            _appliedIndexes.Add(index);
+
+            return this;
+        }
+
+        public IMemDBConfigurationBuilder<T> ApplyIndex<Y>(string name, 
+                                                           Func<T, Y> keyResolver, 
+                                                           IEqualityComparer<Y> equality, 
+                                                           IComparer<Y> relational) where Y : IConvertible
+        {
+            if (_appliedIndexes is null)
+                _appliedIndexes = new List<MemDbIndex<T>>();
+
+            var comparer = new HybridComparer<Y>(equality, relational);
+            var index = new MemDbIndex<T, Y>(name, keyResolver, comparer);
             _appliedIndexes.Add(index);
 
             return this;
@@ -471,7 +486,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region get applied indexes
-        public MemDbIndexCollection<T> GetAppliedIndexes()
+        internal MemDbIndexCollection<T> GetAppliedIndexes()
         {
             if (_appliedIndexes is null)
                 return null;

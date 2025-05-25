@@ -348,44 +348,50 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region execute query expression
-        private T[] ExecuteQueryExpression(MemDbExpression<T> expression, bool deepCopy = true)
+        private T[] ExecuteQueryExpression(MemDbExpression<T> expression, bool deepCopy)
+        {
+            MemDbRecord<T>[] records = this.ExecuteQueryExpression(expression);
+
+            return deepCopy
+                ? Array.ConvertAll(records, r => _cloner.DeepCopy(r.Value))
+                : Array.ConvertAll(records, r => r.Value);
+        }
+
+        private MemDbRecord<T>[] ExecuteQueryExpression(MemDbExpression<T> expression)
         {
             Func<MemDbRecord<T>, bool> filter = expression.HasFilter
                 ? (r) => r.State == RecordState.Fresh && expression.Filter(r.Value)
                 : (r) => r.State == RecordState.Fresh;
 
-            T[] set = Array.Empty<T>();
+            MemDbRecord<T>[] set = Array.Empty<MemDbRecord<T>>();
             lock (_lock)
             {
-                T[] matches = _records.Where(filter).Select(r => r.Value).ToArray();
+                var matches = new List<MemDbRecord<T>>();
+                for (int i = 0; i < _records.Count; i++)
+                {
+                    MemDbRecord<T> r = _records[i];
+                    if (filter(r))
+                        matches.Add(r);
+                }
 
-                if (matches.Length == 0 || (expression.HasSkip && expression.SkipCount >= matches.Length))
+                int skip = expression.HasSkip ? expression.SkipCount : 0;
+                int limit = expression.HasLimit ? expression.LimitCount : int.MaxValue;
+
+                if (matches.Count == 0 || skip >= matches.Count)
                     goto EMPTY;
 
-                if (expression.HasOrderBy && matches.Length > 1)
-                    Array.Sort<T>(matches, expression.OrderByComparison);
+                if (expression.HasOrderBy && matches.Count > 1)
+                    matches.Sort((a, b) => expression.OrderByComparison(a.Value, b.Value));
 
-                if (expression.HasSkip)
+                if (expression.HasSkip || expression.HasLimit)
                 {
-                    int len = expression.HasLimit
-                        ? Math.Min(matches.Length - expression.SkipCount, expression.LimitCount)
-                        : matches.Length - expression.SkipCount;
+                    if (limit > matches.Count - skip)
+                        limit = matches.Count - skip;
 
-                    set = new T[len];
-                    Array.ConstrainedCopy(matches, expression.SkipCount, set, 0, len);
-                }
-                else if (expression.HasLimit && expression.LimitCount < matches.Length)
-                {
-                    set = new T[expression.LimitCount];
-                    Array.ConstrainedCopy(matches, 0, set, 0, expression.LimitCount);
-                }
-                else
-                {
-                    set = matches;
+                    matches = matches.Slice(skip, limit);
                 }
 
-                if (deepCopy)
-                    set = _cloner.DeepCopy(set);
+                set = matches.ToArray();
             }
         EMPTY:
             return set;
@@ -395,35 +401,43 @@ namespace HatTrick.InMemDb
         #region execute update expression
         private int ExecuteUpdateExpression(MemDbExpression<T> expression, Action<T> apply)
         {
-            int cnt = 0;
             lock (_lock)
             {
-                T[] set = this.ExecuteQueryExpression(expression, false);
-                cnt = (set.Length > 0)
-                    ? this.Update(apply, (r) => Array.IndexOf(set, r) > -1)
-                    : 0;
+                MemDbRecord<T>[] set = this.ExecuteQueryExpression(expression);
+                if (set.Length > 0)
+                {
+                    long utcTimestamp = DateTime.UtcNow.ToBinary();
+                    for (int i = 0; i < set.Length; i++)
+                    {
+                        this.ApplyUpdate(apply, set[i], utcTimestamp);
+                    }
+                }
+                return set.Length;
             }
-            return cnt;
         }
         #endregion
 
         #region execute delete expression
         private int ExecuteDeleteExpression(MemDbExpression<T> expression)
         {
-            int cnt = 0;
             lock (_lock)
             {
-                T[] set = this.ExecuteQueryExpression(expression, false);
-                cnt = (set.Length > 0) 
-                    ? this.Delete((r) => Array.IndexOf(set, r) > -1)
-                    : 0;
+                MemDbRecord<T>[] set = this.ExecuteQueryExpression(expression);
+                if (set.Length > 0)
+                {
+                    long utcTimestamp = DateTime.UtcNow.ToBinary();
+                    for (int i = 0; i < set.Length; i++)
+                    {
+                        this.Delete(set[i], utcTimestamp);
+                    }
+                }
+                return set.Length;
             }
-            return cnt;
         }
         #endregion
 
         #region query via index
-        public IMemDbIndexExpression<T, Y> QueryViaIndex<Y>(string indexName)
+        public IMemDbIndexExpression<T, Y> QueryViaIndex<Y>(string indexName) where Y : IConvertible
         {
             this.EnsureReadMode(nameof(QueryViaIndex));
 
@@ -442,79 +456,93 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region execute indexed query expression
-        private T[] ExecuteIndexQueryExpression<Y>(MemDbIndexExpression<T, Y> expression, bool deepCopy = true)
+        private T[] ExecuteIndexQueryExpression<Y>(MemDbIndexExpression<T, Y> expression, bool deepCopy) where Y : IConvertible
+        {
+            MemDbRecord<T>[] records = this.ExecuteIndexQueryExpression(expression);
+
+            return deepCopy
+                ? Array.ConvertAll(records, r => _cloner.DeepCopy(r.Value))
+                : Array.ConvertAll(records, r => r.Value);
+        }
+
+        private MemDbRecord<T>[] ExecuteIndexQueryExpression<Y>(MemDbIndexExpression<T, Y> expression) where Y : IConvertible
         {
             string idxName = expression.IndexName;
             MemDbIndex<T, Y> index = _appliedIndexes.Get(idxName).Of<Y>();
             Y arg = expression.IndexKey;
-            T[] set = null;
             lock (_lock)
             {
                 int[] pointers = null;
                 switch (expression.RelationalOperator)
                 {
                     case RelationalOperator.EqualTo:
-                        pointers = index.GetPointers(arg);
+                        pointers = index.EqualTo(arg);
                         break;
-                    case RelationalOperator.NotEqualTo:
-                        pointers = index.GetPointers(arg);
+                    case RelationalOperator.NotEqualTo://TODO: deprecate
+                        pointers = index.NotEqualTo(arg);
                         break;
                     case RelationalOperator.GreaterThan:
-                        pointers = index.GetPointersGreaterThan(arg);
+                        pointers = index.GreaterThan(arg);
                         break;
                     case RelationalOperator.LessThan:
-                        pointers = index.GetPointersLessThan(arg);
+                        pointers = index.LessThan(arg);
                         break;
                     case RelationalOperator.GreaterThanEqualTo:
-                        pointers = index.GetPointersGreaterThanEqualTo(arg);
+                        pointers = index.GreaterThanEqualTo(arg);
                         break;
                     case RelationalOperator.LessThanEqualTo:
-                        pointers = index.GetPointersLessThanEqualTo(arg);
+                        pointers = index.LessThanEqualTo(arg);
                         break;
                     default:
                         break;
                 }
 
-                set = new T[pointers.Length];
+                var set = new MemDbRecord<T>[pointers.Length];
                 for (int i = 0; i < pointers.Length; i++)
                 {
-                    set[i] = deepCopy 
-                        ? _cloner.DeepCopy(_records[pointers[i]].Value) 
-                        : _records[pointers[i]].Value;
+                    set[i] = _records[pointers[i]];
                 }
-            }
 
-            return set;
+                return set;
+            }
         }
         #endregion
 
         #region execute indexed update expression
-        private int ExecuteIndexedUpdateExpression<Y>(MemDbIndexExpression<T, Y> expression, Action<T> apply)
+        private int ExecuteIndexedUpdateExpression<Y>(MemDbIndexExpression<T, Y> expression, Action<T> apply) where Y : IConvertible
         {
-            int cnt = 0;
             lock (_lock)
             {
-                T[] set = this.ExecuteIndexQueryExpression(expression, false);
-                cnt = (set.Length > 0)
-                    ? this.Update(apply, (r) => Array.IndexOf(set, r) > -1)
-                    : 0;
+                MemDbRecord<T>[] set = this.ExecuteIndexQueryExpression(expression);
+                if (set.Length > 0)
+                {
+                    long utcTimestamp = DateTime.UtcNow.ToBinary();
+                    for (int i = 0; i < set.Length; i++)
+                    {
+                        this.ApplyUpdate(apply, set[i], utcTimestamp);
+                    }
+                }
+                return set.Length;
             }
-            return cnt;
         }
         #endregion
 
         #region execute indexed delete expression
-        private int ExecuteIndexedDeleteExpression<Y>(MemDbIndexExpression<T, Y> expression)
+        private int ExecuteIndexedDeleteExpression<Y>(MemDbIndexExpression<T, Y> expression) where Y : IConvertible
         {
-            int cnt = 0;
             lock (_lock)
             {
-                T[] set = this.ExecuteIndexQueryExpression(expression, false);
-                cnt = (set.Length > 0)
-                    ? this.Delete((r) => Array.IndexOf(set, r) > -1)
-                    : 0;
+                MemDbRecord<T>[] set = this.ExecuteIndexQueryExpression(expression);
+                if (set.Length > 0)
+                {
+                    long utcTimestamp = DateTime.UtcNow.ToBinary();
+                    for (int i = 0; i < set.Length; i++)
+                    {
+                        this.Delete(set[i], utcTimestamp);
+                    }
+                }
+                return set.Length;
             }
-            return cnt;
         }
         #endregion
 
@@ -553,12 +581,13 @@ namespace HatTrick.InMemDb
             {
                 lock (_lock)
                 {
-                    if (_isIndexed)
-                        _index.Add(id, _records.Count);
-
-                    _appliedIndexes?.Apply(rec.Value, _records.Count);
-
+                    rec.CacheIndex = _records.Count;
                     _records.Add(rec);
+
+                    if (_isIndexed)
+                        _index.Add(id, rec.CacheIndex);
+
+                    _appliedIndexes?.Apply(rec.Value, rec.CacheIndex);
                 }
             }
 
@@ -620,7 +649,6 @@ namespace HatTrick.InMemDb
             return idx > -1;
         }
 
-        //ApplyUpdate should always be called within lock(_lock) scope
         private void ApplyUpdate(Action<T> apply, MemDbRecord<T> to, long utcTimestamp)
         {
             //We must deep copy here...if not, the old cache value(s) (that have not yet been flushed to disk)
@@ -635,12 +663,13 @@ namespace HatTrick.InMemDb
             to.MarkStale(utcTimestamp);
             apply(newRec.Value);
 
-            if (_isIndexed)
-                _index[newRec.Id] = _records.Count;
-
-            _appliedIndexes?.Apply(newRec.Value, _records.Count);
-
+            newRec.CacheIndex = _records.Count;
             _records.Add(newRec);
+
+            if (_isIndexed)
+                _index[newRec.Id] = newRec.CacheIndex;
+
+            _appliedIndexes?.Refresh(stale: (to.Value, to.CacheIndex), fresh: (newRec.Value, newRec.CacheIndex) );
 
             if (_persister is not null)
             {
@@ -658,28 +687,22 @@ namespace HatTrick.InMemDb
             if (where == null)
                 throw new ArgumentNullException(nameof(where));
 
-            List<MemDbRecord<T>> matches = null;
+            int cnt = 0;
             lock (_lock)
             {
+                long utcTimestamp = DateTime.UtcNow.ToBinary();
                 for (int i = 0; i < _records.Count; i++)
                 {
                     MemDbRecord<T> record = _records[i];
-                    long utcTimestamp = DateTime.UtcNow.ToBinary();
                     if (record.State == RecordState.Fresh && where(record.Value))
                     {
-                        record.MarkDeleted(utcTimestamp);
-
-                        if (_isIndexed)
-                            _index.Remove(record.Id);
-
-                        _appliedIndexes?.Remove(record.Value, i);
-
-                        _persister?.MarkDeleted(record);
+                        this.Delete(record, utcTimestamp);
+                        cnt += 1;
                     }
                 }
             }
 
-            return matches.Count;
+            return cnt;
         }
 
         public bool Delete(long id)
@@ -699,18 +722,23 @@ namespace HatTrick.InMemDb
                 {
                     long utcTimestamp = DateTime.UtcNow.ToBinary();
                     MemDbRecord<T> match = _records[idx];
-                    match.MarkDeleted(utcTimestamp);
-
-                    if (_isIndexed)
-                        _index.Remove(match.Id);
-
-                    _appliedIndexes?.Remove(match.Value, idx);
-
-                    _persister?.MarkDeleted(match);
+                    this.Delete(match, utcTimestamp);
                 }
             }
 
             return idx > -1;
+        }
+
+        private void Delete(MemDbRecord<T> record, long utcTimestamp)
+        {
+            record.MarkDeleted(utcTimestamp);
+
+            if (_isIndexed)
+                _index.Remove(record.Id);
+
+            _appliedIndexes?.Remove(record.Value, record.CacheIndex);
+
+            _persister?.MarkDeleted(record);
         }
         #endregion
 

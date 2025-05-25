@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text.Json.Serialization;
 
 namespace HatTrick.InMemDb
 {
@@ -32,6 +33,9 @@ namespace HatTrick.InMemDb
         internal long CreatedAt => _createdAt;
         internal bool IsEncrypted => _isEncrypted;
         internal int MapIndex => _mapIndex;
+
+        [JsonIgnore]//Never serialized or cloned and NOT included in Size
+        internal int CacheIndex { get; set; }
         #endregion
 
         #region constructors

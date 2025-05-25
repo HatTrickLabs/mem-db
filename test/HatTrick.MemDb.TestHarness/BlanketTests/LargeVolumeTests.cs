@@ -91,18 +91,26 @@ namespace HatTrick.InMemDb.TestHarness
                 }
 
                 sw.Reset();
-                Console.WriteLine("Kicking off find all assets name > '0900' WITHOUT index...");
+                Console.WriteLine("Kicking off 50 concurrent queries for name >= '0950' WITHOUT index...");
                 sw.Start();
-                var sets2 = db.Query().Where(a => string.Compare("0900", a.Name, false) <= 0).ToArray();
+                DigitalAsset[] noIndex = null;
+                Parallel.For(0, 50, (i) =>
+                {
+                    noIndex = db.Query().Where(a => string.Compare("0950", a.Name, false) == 0).ToArray();
+                });
                 sw.Stop();
-                Console.WriteLine($"{sw.ElapsedMilliseconds}\tqueried for all files name > 0900 WITHOUT index {sets2.Length}");
+                Console.WriteLine($"{sw.ElapsedMilliseconds}\tqueried for all files name >= 0950 WITHOUT index {noIndex.Length:n0}");
 
                 sw.Reset();
-                Console.WriteLine("Kicking off find all assets name > '0900' WITH index...");
+                Console.WriteLine("Kicking off 50 concurrent queries for name >= '0950' WITH index...");
                 sw.Start();
-                var sets3 = db.QueryViaIndex<string>(nameof(DigitalAsset.Name)).IsGreaterThanEqualTo("0900").ToArray();
+                DigitalAsset[] withIndex = null;
+                Parallel.For(0, 100, (i) =>
+                {
+                    withIndex = db.QueryViaIndex<string>(nameof(DigitalAsset.Name)).IsEqualTo("0950").ToArray();
+                });
                 sw.Stop();
-                Console.WriteLine($"{sw.ElapsedMilliseconds}\tqueried for all files name > 0900 WITH index {sets3.Length}");
+                Console.WriteLine($"{sw.ElapsedMilliseconds}\tqueried for all files name >= 0950 WITH index {withIndex.Length:n0}");
 
                 sw.Reset();
                 Console.WriteLine("Kicking off flush");
