@@ -124,13 +124,17 @@ namespace HatTrick.InMemDb
         private HybridComparer<Y> _comparer;
         #endregion
 
+        #region interface
+        protected HybridComparer<Y> Comparer => _comparer;
+        #endregion
+
         #region ctors
-        public MemDbIndex(string name, Func<T, Y> keyResolver) : this(name, keyResolver, null)
+        internal MemDbIndex(string name, Func<T, Y> keyResolver) : this(name, keyResolver, null)
         { }
 
-        public MemDbIndex(string name, Func<T, Y> keyResolver, HybridComparer<Y> comparer) : base(name)
+        internal MemDbIndex(string name, Func<T, Y> keyResolver, HybridComparer<Y> comparer) : base(name)
         {
-            _keyResolver = keyResolver ?? throw new ArgumentNullException(nameof(keyResolver));
+            _keyResolver = keyResolver;// ?? throw new ArgumentNullException(nameof(keyResolver));
             _comparer = comparer ?? new HybridComparer<Y>();
         }
         #endregion
@@ -150,7 +154,7 @@ namespace HatTrick.InMemDb
             this.Apply(key, pointer);
         }
 
-        private void Apply(Y key, int pointer)
+        protected void Apply(Y key, int pointer)
         {
             List<int> pointers = null;
             if (_index.TryGetValue(key, out pointers))
@@ -177,7 +181,7 @@ namespace HatTrick.InMemDb
             this.Remove(key, pointer);
         }
 
-        internal void Remove(Y key, int pointer)
+        protected void Remove(Y key, int pointer)
         {
             List<int> pointers = _index[key];
             bool retain = pointers.Count > 1;
@@ -204,12 +208,12 @@ namespace HatTrick.InMemDb
             );
         }
 
-        internal void Refresh((Y key, int pointer) stale, (Y key, int pointer) fresh)
+        protected void Refresh((Y key, int pointer) stale, (Y key, int pointer) fresh)
         {
             if (_comparer.Equals(stale.key, fresh.key))
             {
-                //this is the fast path...if the update applied did not change the 
-                //property from which this index was built, we only need to swap around the pointers
+                //this is the fast path...if the update applied did not change the property
+                //from which this index was built, we only need to swap around the pointers
                 var pointers = _index[stale.key];
                 pointers.Remove(stale.pointer);
                 pointers.Add(fresh.pointer);
@@ -380,47 +384,77 @@ namespace HatTrick.InMemDb
     }
     #endregion
 
-    //public class MemDbIndexOfSet<T, Y> : MemDbIndex<T, Y> where T : class
-    //{
-    //    #region internals
-    //    private Func<T, IEnumerable<Y>> _keyResolver;
-    //    #endregion
+    #region mem db indexed set of T,IEnumerable<Y> [class]
+    internal class MemDbIndexedSet<T, Y> : MemDbIndex<T,Y> where T : class where Y : IConvertible
+    {
+        #region internals
+        private Func<T, IEnumerable<Y>> _keyResolver;
+        #endregion
 
-    //    #region ctors
-    //    public MemDbIndexOfSet(string name, Func<T, IEnumerable<Y>> keyResolver) : this(name, keyResolver, null)
-    //    {
-    //    }
+        #region ctors
+        public MemDbIndexedSet(string name, Func<T, IEnumerable<Y>> keyResolver) : this(name, keyResolver, null)
+        { }
 
-    //    public MemDbIndexOfSet(string name, Func<T, IEnumerable<Y>> keyResolver, IComparer<Y> comparer) : base(name, comparer)
-    //    {
-    //        _keyResolver = keyResolver;
-    //    }
-    //    #endregion
+        public MemDbIndexedSet(string name, Func<T, IEnumerable<Y>> keyResolver, HybridComparer<Y> comparer) : base(name, null, comparer)
+        {
+            _keyResolver = keyResolver;
+        }
+        #endregion
 
-    //    #region apply
-    //    public void Apply(T record, int pointer)
-    //    {
-    //        var keySet = _keyResolver(record);
-    //        HashSet<Y> distinct = new HashSet<Y>();
-    //        foreach (var key in keySet)
-    //        {
-    //            if (distinct.Add(key))
-    //            {
-    //                base.Apply(record, pointer);
-    //            }
-    //        }
-    //    }
-    //    #endregion
+        internal override void Apply(T record, int pointer)
+        {
+            var keySet = _keyResolver(record);
+            HashSet<Y> distinct = new HashSet<Y>();
+            foreach (var key in keySet)
+            {
+                if (distinct.Add(key))
+                    base.Apply(key, pointer);
+            }
+        }
 
-    //    #region remove
-    //    public void Remove(T record, int pointer)
-    //    {
-    //        var keySet = _keyResolver(record);
-    //        foreach (var key in keySet)
-    //        {
-    //            base.Remove(key, pointer);
-    //        }
-    //    }
-    //    #endregion
-    //}
+        internal override void Remove(T record, int pointer)
+        {
+            var keySet = _keyResolver(record);
+            HashSet<Y> distinct = new HashSet<Y>();
+            foreach (var key in keySet)
+            {
+                if (distinct.Add(key))
+                    base.Remove(key, pointer);
+            }
+        }
+
+        internal override void Refresh((T record, int pointer) stale, (T record, int pointer) fresh)
+        {
+            var freshSet = _keyResolver(fresh.record).ToArray();
+            var staleSet = _keyResolver(stale.record).ToArray();
+
+            Array.Sort(freshSet);
+            Array.Sort(staleSet);
+
+            if (freshSet.Length == staleSet.Length)
+            {
+                HybridComparer<Y> comparer = base.Comparer;
+                for (int i = 0; i < freshSet.Length; i++)
+                {
+                    var f = freshSet[i];
+                    var s = staleSet[i];
+                    if (comparer.Equals(f, s))
+                    {
+                        base.Refresh((s, stale.pointer), (f, fresh.pointer));
+                    }
+                    else
+                    {
+                        base.Remove(s, stale.pointer);
+                        base.Apply(f, fresh.pointer);
+                    }
+                }
+            }
+            else
+            {
+                this.Remove(stale.record, stale.pointer);
+                this.Apply(fresh.record, fresh.pointer);
+            }
+        }
+    }
+    #endregion
 }
