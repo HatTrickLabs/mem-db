@@ -88,6 +88,9 @@ namespace HatTrick.InMemDb
 
             if (_isIndexed)
                 _index = new Dictionary<long, int>(_initialCacheCapacity);
+
+            if (_appliedIndexes is not null)
+                _appliedIndexes.Initialize(_initialCacheCapacity);
         }
         #endregion
 
