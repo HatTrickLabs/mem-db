@@ -6,6 +6,58 @@ using System.Linq;
 
 namespace HatTrick.InMemDb
 {
+    #region hybrid comparer of T
+    public class HybridComparer<Y> : IComparer<Y>, IEqualityComparer<Y>
+    {
+        #region internals
+        private bool _isDefault;
+        private IEqualityComparer<Y> _equality;
+        private IComparer<Y> _relational;
+        #endregion
+
+        #region interface
+        public bool IsDefault => _isDefault;
+        #endregion
+
+        #region ctors
+        public HybridComparer()
+        {
+            _equality = EqualityComparer<Y>.Default;
+            _relational = Comparer<Y>.Default;
+            _isDefault = true;
+        }
+
+        public HybridComparer(IEqualityComparer<Y> equality, IComparer<Y> relational)
+        {
+            _equality = equality ?? throw new ArgumentNullException(nameof(equality));
+            _relational = relational ?? throw new ArgumentNullException(nameof(relational));
+            _isDefault = false;
+        }
+        #endregion
+
+        #region compare
+        public int Compare(Y x, Y y)
+        {
+            return _relational.Compare(x, y);
+        }
+        #endregion
+
+        #region equals
+        public bool Equals(Y x, Y y)
+        {
+            return _equality.Equals(x, y);
+        }
+        #endregion
+
+        #region get hash code
+        public int GetHashCode(Y obj)
+        {
+            return _equality.GetHashCode(obj);
+        }
+        #endregion
+    }
+    #endregion
+
     #region mem db index collection [class]
     internal class MemDbIndexCollection<T> where T : class
     {
@@ -60,7 +112,10 @@ namespace HatTrick.InMemDb
         #region refresh
         public void Refresh((T record, int pointer) stale, (T record, int pointer) fresh)
         {
-
+            for (int i = 0; i < _indexes.Length; i++)
+            {
+                _indexes[i].Refresh(stale, fresh);
+            }
         }
         #endregion
     }
@@ -194,7 +249,7 @@ namespace HatTrick.InMemDb
             {
                 _index.Remove(key);
                 int lookupIndex = _lookup.BinarySearch(key, _comparer);
-                _lookup.RemoveAt(~lookupIndex);
+                _lookup.RemoveAt(lookupIndex);
             }
         }
         #endregion
@@ -212,7 +267,7 @@ namespace HatTrick.InMemDb
         {
             if (_comparer.Equals(stale.key, fresh.key))
             {
-                //this is the fast path...if the update applied did not change the property
+                //this is the fast path...if the update did not change the property
                 //from which this index was built, we only need to swap around the pointers
                 var pointers = _index[stale.key];
                 pointers.Remove(stale.pointer);
@@ -241,7 +296,8 @@ namespace HatTrick.InMemDb
         {
             //TODO: this is terrible...think about just completely removing 'NotEqualTo'
             //This index works best on dense and widely distributed data keys...NotEqualTo requires
-            //a linear roll through all the keys and completely defeats the purpose.
+            //a linear roll through all the keys and completely defeats the purpose...
+            //its just slow as frozen f*ck
             var keys = _index.Keys;
             List<int> pointers = new List<int>();
             foreach (var k in _index.Keys)
@@ -260,19 +316,18 @@ namespace HatTrick.InMemDb
         internal int[] GreaterThan(Y key)
         {
             int index = _lookup.BinarySearch(key, _comparer);
-            if (index > -1)
-            {
-                if (index < (_lookup.Count - 1))
-                    index += 1;//shift forward one to only get pointers where value > key (NOT EQUAL)...
+            if (index < 0)
+                return Array.Empty<int>();
 
-                List<int> set = new List<int>(_lookup.Count - index);
-                for (int i = index; i < _lookup.Count; i++)
-                {
-                    set.AddRange(_index[_lookup[i]]);
-                }
-                return set.ToArray();
+            if (index < (_lookup.Count - 1))
+                index += 1;//shift forward one to only get pointers where value > key (NOT EQUAL)...
+
+            List<int> set = new List<int>(_lookup.Count - index);
+            for (int i = index; i < _lookup.Count; i++)
+            {
+                set.AddRange(_index[_lookup[i]]);
             }
-            return Array.Empty<int>();
+            return set.ToArray();
         }
         #endregion
 
@@ -280,16 +335,15 @@ namespace HatTrick.InMemDb
         internal int[] GreaterThanEqualTo(Y key)
         {
             int index = _lookup.BinarySearch(key, _comparer);
-            if (index > -1)
+            if (index < 0)
+                return Array.Empty<int>();
+
+            List<int> set = new List<int>(_lookup.Count - index);
+            for (int i = index; i < _lookup.Count; i++)
             {
-                List<int> set = new List<int>(_lookup.Count - index);
-                for (int i = index; i < _lookup.Count; i++)
-                {
-                    set.AddRange(_index[_lookup[i]]);
-                }
-                return set.ToArray();
+                set.AddRange(_index[_lookup[i]]);
             }
-            return Array.Empty<int>();
+            return set.ToArray();
         }
         #endregion
 
@@ -297,19 +351,18 @@ namespace HatTrick.InMemDb
         internal int[] LessThan(Y key)
         {
             int index = _lookup.BinarySearch(key, _comparer);
-            if (index > -1)
-            {
-                if (index > 0)
-                    index -= 1;//shift back one to only get pointers where value < key (NOT EQUAL)...
+            if (index < 0)
+                return Array.Empty<int>();
 
-                List<int> set = new List<int>(index + 1);
-                for (int i = index; i > -1; i--)
-                {
-                    set.AddRange(_index[_lookup[i]]);
-                }
-                return set.ToArray();
+            if (index > 0)
+                index -= 1;//shift back one to only get pointers where value < key (NOT EQUAL)...
+
+            List<int> set = new List<int>(index + 1);
+            for (int i = index; i > -1; i--)
+            {
+                set.AddRange(_index[_lookup[i]]);
             }
-            return Array.Empty<int>();
+            return set.ToArray();
         }
         #endregion
 
@@ -317,68 +370,15 @@ namespace HatTrick.InMemDb
         internal int[] LessThanEqualTo(Y key)
         {
             int index = _lookup.BinarySearch(key, _comparer);
-            if (index > -1)
+            if (index < 0)
+                return Array.Empty<int>();
+
+            List<int> set = new List<int>(index + 1);
+            for (int i = index; i > -1; i--)
             {
-                List<int> set = new List<int>(index + 1);
-                for (int i = index; i > -1; i--)
-                {
-                    set.AddRange(_index[_lookup[i]]);
-                }
-                return set.ToArray();
+                set.AddRange(_index[_lookup[i]]);
             }
-            return Array.Empty<int>();
-        }
-        #endregion
-    }
-    #endregion
-
-    #region hybrid comparer
-    public class HybridComparer<T> : IComparer<T>, IEqualityComparer<T>
-    {
-        #region internals
-        private bool _isDefault;
-        private IEqualityComparer<T> _equality;
-        private IComparer<T> _relational;
-        #endregion
-
-        #region interface
-        public bool IsDefault => _isDefault;
-        #endregion
-
-        #region ctors
-        public HybridComparer()
-        {
-            _equality = EqualityComparer<T>.Default;
-            _relational = Comparer<T>.Default;
-            _isDefault = true;
-        }
-
-        public HybridComparer(IEqualityComparer<T> equality, IComparer<T> relational)
-        {
-            _equality = equality ?? throw new ArgumentNullException(nameof(equality));
-            _relational = relational ?? throw new ArgumentNullException(nameof(relational));
-            _isDefault = false;
-        }
-        #endregion
-
-        #region compare
-        public int Compare(T x, T y)
-        {
-            return _relational.Compare(x, y);
-        }
-        #endregion
-
-        #region equals
-        public bool Equals(T x, T y)
-        {
-            return _equality.Equals(x, y);
-        }
-        #endregion
-
-        #region get hash code
-        public int GetHashCode(T obj)
-        {
-            return _equality.GetHashCode(obj);
+            return set.ToArray();
         }
         #endregion
     }
@@ -401,6 +401,7 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region apply
         internal override void Apply(T record, int pointer)
         {
             var keySet = _keyResolver(record);
@@ -411,7 +412,9 @@ namespace HatTrick.InMemDb
                     base.Apply(key, pointer);
             }
         }
+        #endregion
 
+        #region remove
         internal override void Remove(T record, int pointer)
         {
             var keySet = _keyResolver(record);
@@ -422,7 +425,9 @@ namespace HatTrick.InMemDb
                     base.Remove(key, pointer);
             }
         }
+        #endregion
 
+        #region refresh
         internal override void Refresh((T record, int pointer) stale, (T record, int pointer) fresh)
         {
             var freshSet = _keyResolver(fresh.record).ToArray();
@@ -455,6 +460,7 @@ namespace HatTrick.InMemDb
                 this.Apply(fresh.record, fresh.pointer);
             }
         }
+        #endregion
     }
     #endregion
 }
