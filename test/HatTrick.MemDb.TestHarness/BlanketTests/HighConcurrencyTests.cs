@@ -21,6 +21,8 @@ namespace HatTrick.InMemDb.TestHarness
                 .CloneWith(() => new DigitalAssetCloner())
                 .SerializeWith(() => new DigitalAssetBinarySerializer())
                 .EncryptWithPassword(() => "My super complex password....")
+                .IndexOnIdentity(true)
+                .ApplyIndex<string>("Name", a => a.Name)
                 .Register();
         }
         #endregion
@@ -77,7 +79,8 @@ namespace HatTrick.InMemDb.TestHarness
                 for (int i = 0; i < length; i++)
                 {
                     int id = i + 1;
-                    Assert.IsNotNull(db.Find(a => a.Id == id));
+                    //Assert.IsNotNull(db.Find(a => a.Id == id));
+                    Assert.IsNotNull(db.Find(id));
                 }
 
                 //query distinct ids
@@ -129,12 +132,12 @@ namespace HatTrick.InMemDb.TestHarness
                 if (flush)
                     db.Flush();
 
-                Thread t1 = new Thread(() => { Array.ForEach(assets6, (a6) => db.Update(a => a.XXHash = 6, a => a.Id == a6.Id)); });
-                Thread t2 = new Thread(() => { Array.ForEach(assets5, (a5) => db.Update(a => a.XXHash = 5, a => a.Id == a5.Id)); });
-                Thread t3 = new Thread(() => { Array.ForEach(assets4, (a4) => db.Update(a => a.XXHash = 4, a => a.Id == a4.Id)); });
-                Thread t4 = new Thread(() => { Array.ForEach(assets3, (a3) => db.Update(a => a.XXHash = 3, a => a.Id == a3.Id)); });
-                Thread t5 = new Thread(() => { Array.ForEach(assets2, (a2) => db.Update(a => a.XXHash = 2, a => a.Id == a2.Id)); });
-                Thread t6 = new Thread(() => { Array.ForEach(assets1, (a1) => db.Update(a => a.XXHash = 1, a => a.Id == a1.Id)); });
+                Thread t1 = new Thread(() => { Array.ForEach(assets6, (a6) => db.Update(a => a.XXHash = 6, a6.Id)); });
+                Thread t2 = new Thread(() => { Array.ForEach(assets5, (a5) => db.Update(a => a.XXHash = 5, a5.Id)); });
+                Thread t3 = new Thread(() => { Array.ForEach(assets4, (a4) => db.Update(a => a.XXHash = 4, a4.Id)); });
+                Thread t4 = new Thread(() => { Array.ForEach(assets3, (a3) => db.Update(a => a.XXHash = 3, a3.Id)); });
+                Thread t5 = new Thread(() => { Array.ForEach(assets2, (a2) => db.Update(a => a.XXHash = 2, a2.Id)); });
+                Thread t6 = new Thread(() => { Array.ForEach(assets1, (a1) => db.Update(a => a.XXHash = 1, a1.Id)); });
 
                 t1.Start();
                 t2.Start();
@@ -243,7 +246,7 @@ namespace HatTrick.InMemDb.TestHarness
                 Parallel.For(0, allAssets.Count, (i) =>
                 {
                     db.Insert(allAssets[i], (id) => allAssets[i].Id = id);
-                    db.Update(a => a.XXHash += 1, (a) => a.Id == allAssets[i].Id);
+                    db.Update(a => a.XXHash += 1, allAssets[i].Id);
                 });
             });
 

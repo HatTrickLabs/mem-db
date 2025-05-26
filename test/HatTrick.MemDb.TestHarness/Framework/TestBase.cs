@@ -26,6 +26,8 @@ namespace HatTrick.InMemDb.TestHarness
         public TestBase(string datasetName, string dbPath, AssetResolver assetResolver)
         {
             _dataset = datasetName ?? throw new ArgumentNullException(nameof(datasetName));
+            if (datasetName == string.Empty)
+                throw new ArgumentException("Argument cannot be empty.", nameof(datasetName));
             _dbPath = dbPath;//can be null..
             _assetResolver = assetResolver ?? throw new ArgumentNullException(nameof(assetResolver));
         }

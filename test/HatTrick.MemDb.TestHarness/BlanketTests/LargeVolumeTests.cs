@@ -13,18 +13,22 @@ namespace HatTrick.InMemDb.TestHarness
         #region internals
         private static readonly string _dataset = $"assets";
         private static readonly string _dbPath = Path.Combine(TestBase.DbBasePath, "large_volume");
+
+        private Stopwatch _sw = new Stopwatch();
         #endregion
 
         #region ctor
         public LargeVolumeTests(AssetResolver assetResolver) : base(_dataset, _dbPath, assetResolver)
         {
-            MemDb.ConfigureFor<DigitalAsset>(_dataset, _dbPath)
+            MemDb.ConfigureFor<DigitalAsset>(_dataset/*, _dbPath*/)
                 //.SetMode(AccessMode.AppendOnly)
-                .SetFlushInterval(0)
+                //.SetFlushInterval(0)
                 .CloneWith(() => new DigitalAssetCloner())
-                .SerializeWith(() => new DigitalAssetBinarySerializer())
+                //.SerializeWith(() => new DigitalAssetBinarySerializer())
                 .IndexOnIdentity(true)
-                .ApplyIndex<string>(nameof(DigitalAsset.Name), (a) => a.Name)
+                //.ApplyIndex<string>(nameof(DigitalAsset.Name), (a) => a.Name)
+                //.ApplyIndex<DateTime>(nameof(DigitalAsset.Imported), (a) => a.Imported)
+                //.ApplyIndex<long>(nameof(DigitalAsset.Id), (a) => a.Id)
                 //.EncryptWithPassword(() => "This is a super fancy and complex password!!!!!")
                 .Register();
         }
@@ -47,91 +51,158 @@ namespace HatTrick.InMemDb.TestHarness
             int iterations = 10_000;
             DigitalAsset[] loadAssets = base.ResolveAssetSet();
             int total = iterations * loadAssets.Length;
-            Stopwatch sw = new Stopwatch();
             Console.WriteLine($"Starting load of {total:n0} records into new database.");
-            sw.Start();
+            _sw.Start();
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
                 for (int i = 0; i < iterations; i++)
                 {
                     this.LoadDb(db, loadAssets);
                 }
+                _sw.Stop();
+                Console.WriteLine($"{_sw.ElapsedMilliseconds}\tCompleted db load of {total:n0} records.");
 
-                sw.Stop();
-                Console.WriteLine($"{sw.ElapsedMilliseconds}\tCompleted db load (in mem only) of {total:n0} records.");
-                sw.Reset();
-                Console.WriteLine("Starting concurrent queries for 250,000 records by id (index assisted)");
-                DigitalAsset[] assets = new DigitalAsset[250_000];
-                sw.Start();
-                Parallel.For(0, 250_000, (i) =>
-                {
-
-                    assets[i] = db.Find((long)i + 300_001);
-                });
-                sw.Stop();
-                Console.WriteLine($"{sw.ElapsedMilliseconds}\tCompleted concurrent queries for 250,000 records");
-                sw.Reset();
-
-                sw.Start();
-                var sets = db.Query()
-                    .GroupBy(a => a.Extension).Select(g => (g.Key, g.Count()))
-                    .ToArray();
-                sw.Stop();
-                Console.WriteLine($"{sw.ElapsedMilliseconds}\tCalcuated total sum of file lengths for {total:n0} records .");
-
-                for (int i = 0; i < assets.Length; i++)
-                {
-                    Assert.IsNotNull(assets[i]);
-                    Assert.IsEqual(assets[i].Id, (long)i + 300_001);
-                }
-
-                foreach (var s in sets)
-                {
-                    Console.WriteLine($"{s.Key}\t{s.Item2}");
-                }
-
-                sw.Reset();
-                Console.WriteLine("Kicking off 50 concurrent queries for name >= '0950' WITHOUT index...");
-                sw.Start();
-                DigitalAsset[] noIndex = null;
-                Parallel.For(0, 50, (i) =>
-                {
-                    noIndex = db.Query().Where(a => string.Compare("0950", a.Name, false) == 0).ToArray();
-                });
-                sw.Stop();
-                Console.WriteLine($"{sw.ElapsedMilliseconds}\tqueried for all files name >= 0950 WITHOUT index {noIndex.Length:n0}");
-
-                sw.Reset();
-                Console.WriteLine("Kicking off 50 concurrent queries for name >= '0950' WITH index...");
-                sw.Start();
-                DigitalAsset[] withIndex = null;
-                Parallel.For(0, 100, (i) =>
-                {
-                    withIndex = db.QueryViaIndex<string>(nameof(DigitalAsset.Name)).IsEqualTo("0950").ToArray();
-                });
-                sw.Stop();
-                Console.WriteLine($"{sw.ElapsedMilliseconds}\tqueried for all files name >= 0950 WITH index {withIndex.Length:n0}");
-
-                sw.Reset();
-                Console.WriteLine("Kicking off flush");
-                sw.Start();
-                db.Flush();
-                sw.Stop();
-                Console.WriteLine($"{sw.ElapsedMilliseconds}\tFlushed {total:n0} records to disk.");
+                this.QueryByIdNaturalIndexAssisted(db, 250_000);
+                //this.ConcurrentQueriesOnIdAppliedIndexAssisted(db, 250_000);
+                //this.ConcurrentQueriesOnNameWithoutIndex(db, 10);
+                //this.ConcurrentQueriesOnNameIndexAssisted(db, 500);
             }
 
-            sw.Reset();
-            Console.WriteLine("Kicking off re-open");
-            sw.Start();
-            using (var db = MemDb.Open<DigitalAsset>(_dataset))
-            {
-                sw.Stop();
-                Console.WriteLine($"{sw.ElapsedMilliseconds}\tReopened {total:n0} encrypted records.");
-                var asset = db.Find(100);
-            }
-            
             Console.WriteLine("Done...Press [Enter] to exit.");
             Console.ReadLine();
+        }
+        #endregion
+
+        #region query by id natural index assisted
+        private void QueryByIdNaturalIndexAssisted(MemDb<DigitalAsset> db, int iterations)
+        {
+            _sw.Reset();
+
+            Console.WriteLine($"Starting concurrent queries for {iterations:n0} records by id (natural index assisted)");
+            DigitalAsset[] assets = new DigitalAsset[iterations];
+            _sw.Start();
+            Parallel.For(0, iterations, (i) =>
+            {
+
+                assets[i] = db.Find((long)i + 300_001);
+            });
+            _sw.Stop();
+            Console.WriteLine($"{_sw.ElapsedMilliseconds}\tCompleted concurrent queries for {iterations:n0} records");
+
+            //ensure we got the expected output...
+            for (int i = 0; i < iterations; i++)
+            {
+                Assert.IsNotNull(assets[i]);
+                Assert.IsEqual(assets[i].Id, i + 300_001);
+            }
+        }
+        #endregion
+
+        #region concurrent queries on id applied index assisted
+        private void ConcurrentQueriesOnIdAppliedIndexAssisted(MemDb<DigitalAsset> db, int iterations)
+        {
+            _sw.Reset();
+
+            Console.WriteLine($"Starting concurrent queries for {iterations:n0} records by id (applied index assisted)");
+            _sw.Start();
+            DigitalAsset[] assets = new DigitalAsset[iterations];
+            Parallel.For(0, iterations, (i) =>
+            {
+                assets[i] = db.QueryViaIndex<long>(nameof(DigitalAsset.Id)).IsEqualTo(i + 300_001).ToArray()[0];
+            });
+            _sw.Stop();
+            Console.WriteLine($"{_sw.ElapsedMilliseconds}\tCompleted concurrent queries for {iterations:n0} records");
+
+            //ensure we got the expected output...
+            for (int i = 0; i < iterations; i++)
+            {
+                Assert.IsNotNull(assets[i]);
+                Assert.IsEqual(assets[i].Id, i + 300_001);
+            }
+        }
+        #endregion
+
+        #region calculate total sum of all asset lengths
+        private void CalculateTotalSumOfAllAssetLengthsGroupedByExtension(MemDb<DigitalAsset> db, int totalAssets)
+        {
+            _sw.Reset();
+
+            Console.WriteLine($"Kicking off calculate total sum of all asset lengths");
+            _sw.Start();
+            var sets = db.Query()
+                .GroupBy(a => a.Extension).Select(g => (g.Key, g.Count()))
+                .ToArray();
+            _sw.Stop();
+            Console.WriteLine($"{_sw.ElapsedMilliseconds}\tCalcuated total sum of file lengths for {totalAssets:n0} records .");
+
+            Console.WriteLine("Asset Lengths Grouped By Extension");
+            Console.WriteLine("----------------------------------");
+            foreach (var s in sets)
+            {
+                Console.WriteLine($"{s.Key}\t{s.Item2}");
+            }
+        }
+        #endregion
+
+        #region concurrent queries on name without index
+        private void ConcurrentQueriesOnNameWithoutIndex(MemDb<DigitalAsset> db, int iterations)
+        {
+            _sw.Reset();
+
+            Console.WriteLine($"Kicking off {iterations} concurrent queries for name == '0950' WITHOUT index...");
+            _sw.Start();
+            DigitalAsset[] noIndex = null;
+            Parallel.For(0, iterations, (i) =>
+            {
+                noIndex = db.Query().Where(a => string.Compare("0950", a.Name, false) == 0).ToArray();
+            });
+            _sw.Stop();
+            Console.WriteLine($"{_sw.ElapsedMilliseconds}\tqueried for all files name == 0950 WITHOUT index {noIndex.Length:n0}");
+        }
+        #endregion
+
+        #region concurrent queries on name index assisted
+        private void ConcurrentQueriesOnNameIndexAssisted(MemDb<DigitalAsset> db, int iterations)
+        {
+            _sw.Reset();
+
+            Console.WriteLine($"Kicking off {iterations} concurrent queries for name == '0950' applied index assisted...");
+            _sw.Start();
+            DigitalAsset[] withIndex = null;
+            Parallel.For(0, iterations, (i) =>
+            {
+                withIndex = db.QueryViaIndex<string>(nameof(DigitalAsset.Name)).IsEqualTo("0950").ToArray();
+            });
+            _sw.Stop();
+            Console.WriteLine($"{_sw.ElapsedMilliseconds}\tqueried for all files name == 0950 WITH index {withIndex.Length:n0}");
+        }
+        #endregion
+
+        #region flush to disk
+        private void FlushToDisk(MemDb<DigitalAsset> db, int totalAssets)
+        {
+            _sw.Reset();
+
+            Console.WriteLine($"Kicking off flush to disk for {totalAssets:n0} assets.");
+            _sw.Start();
+            db.Flush();
+            _sw.Stop();
+            Console.WriteLine($"{_sw.ElapsedMilliseconds}\tFlushed {totalAssets:n0} records to disk.");
+        }
+        #endregion
+
+        #region re open memdb instance from disk
+        private void ReOpenMemDbInstanceFromDisk(int totalAssets)
+        {
+            _sw.Reset();
+
+            Console.WriteLine($"Kicking off re-open of MemDb instance containing {totalAssets:n0}");
+            _sw.Start();
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                _sw.Stop();
+                Console.WriteLine($"{_sw.ElapsedMilliseconds}\tReopened {totalAssets:n0} records.");
+            }
         }
         #endregion
     }
