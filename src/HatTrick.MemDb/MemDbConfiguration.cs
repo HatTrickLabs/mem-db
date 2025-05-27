@@ -309,6 +309,12 @@ namespace HatTrick.InMemDb
         #region apply index
         public IMemDBConfigurationBuilder<T> ApplyIndex<Y>(string name, Func<T, Y> keyResolver) where Y : IConvertible
         {
+            if (string.IsNullOrEmpty(name))
+                throw new ArgumentException("Argument must contain a value.", nameof(name));
+
+            if (keyResolver is null)
+                throw new ArgumentNullException(nameof(keyResolver));
+
             if (_appliedIndexes is null)
                 _appliedIndexes = new List<MemDbIndex<T>>();
 
@@ -318,15 +324,17 @@ namespace HatTrick.InMemDb
             return this;
         }
 
-        public IMemDBConfigurationBuilder<T> ApplyIndex<Y>(string name, 
-                                                           Func<T, Y> keyResolver, 
-                                                           IEqualityComparer<Y> equality, 
-                                                           IComparer<Y> relational) where Y : IConvertible
+        public IMemDBConfigurationBuilder<T> ApplyIndex<Y>(string name, Func<T, Y> keyResolver, HybridComparer<Y> comparer) where Y : IConvertible
         {
+            if (string.IsNullOrEmpty(name))
+                throw new ArgumentException("Argument must contain a value.", nameof(name));
+
+            if (keyResolver is null)
+                throw new ArgumentNullException(nameof(keyResolver));
+
             if (_appliedIndexes is null)
                 _appliedIndexes = new List<MemDbIndex<T>>();
 
-            var comparer = new HybridComparer<Y>(equality, relational);
             var index = new MemDbIndex<T, Y>(name, keyResolver, comparer);
             _appliedIndexes.Add(index);
 

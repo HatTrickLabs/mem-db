@@ -184,13 +184,14 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region ctors
-        internal MemDbIndex(string name, Func<T, Y> keyResolver) : this(name, keyResolver, null)
+        internal MemDbIndex(string name, Func<T, Y> keyResolver) : this(name, keyResolver, new HybridComparer<Y>())
         { }
 
         internal MemDbIndex(string name, Func<T, Y> keyResolver, HybridComparer<Y> comparer) : base(name)
         {
+            //HMMM....in order for MemDbIndexedSet<T,Y> to use this as it's base class, null must be accepted here...feels janky
             _keyResolver = keyResolver;// ?? throw new ArgumentNullException(nameof(keyResolver));
-            _comparer = comparer ?? new HybridComparer<Y>();
+            _comparer = comparer ?? throw new ArgumentNullException(nameof(comparer));
         }
         #endregion
 
