@@ -284,11 +284,15 @@ namespace HatTrick.InMemDb
             lock (_lock)
             {
                 int idx = -1;
-                if (_isIndexed && _index.TryGetValue(id, out int i))
-                    idx = i;
-
+                if (_isIndexed)
+                {
+                    if (_index.TryGetValue(id, out int i))
+                        idx = i;
+                }
                 else
+                {
                     idx = _records.FindIndex((r) => r.Id == id && r.State == RecordState.Fresh);
+                }
 
                 if (idx > -1)
                     rec = _records[idx];
