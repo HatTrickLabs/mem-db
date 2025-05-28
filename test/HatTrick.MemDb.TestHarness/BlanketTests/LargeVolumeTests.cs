@@ -26,7 +26,7 @@ namespace HatTrick.InMemDb.TestHarness
                 .CloneWith(() => new DigitalAssetCloner())
                 //.SerializeWith(() => new DigitalAssetBinarySerializer())
                 .IndexOnIdentity(true)
-                //.ApplyIndex<string>(nameof(DigitalAsset.Name), (a) => a.Name)
+                .ApplyIndex<string>(nameof(DigitalAsset.Name), (a) => a.Name)
                 //.ApplyIndex<DateTime>(nameof(DigitalAsset.Imported), (a) => a.Imported)
                 //.ApplyIndex<long>(nameof(DigitalAsset.Id), (a) => a.Id)
                 //.EncryptWithPassword(() => "This is a super fancy and complex password!!!!!")
@@ -48,7 +48,7 @@ namespace HatTrick.InMemDb.TestHarness
         #region large volume
         public void Test_LargeVolume()
         {
-            int iterations = 10_000;
+            int iterations = 1_000;
             DigitalAsset[] loadAssets = base.ResolveAssetSet();
             int total = iterations * loadAssets.Length;
             Console.WriteLine($"Starting load of {total:n0} records into new database.");
@@ -62,10 +62,10 @@ namespace HatTrick.InMemDb.TestHarness
                 _sw.Stop();
                 Console.WriteLine($"{_sw.ElapsedMilliseconds}\tCompleted db load of {total:n0} records.");
 
-                this.QueryByIdNaturalIndexAssisted(db, 250_000);
-                //this.ConcurrentQueriesOnIdAppliedIndexAssisted(db, 250_000);
+                //this.QueryByIdNaturalIndexAssisted(db, 2_500_000);
+                //this.ConcurrentQueriesOnIdAppliedIndexAssisted(db, 1_000_000);
                 //this.ConcurrentQueriesOnNameWithoutIndex(db, 10);
-                //this.ConcurrentQueriesOnNameIndexAssisted(db, 500);
+                this.ConcurrentQueriesOnNameIndexAssisted(db, 10_000);
             }
 
             Console.WriteLine("Done...Press [Enter] to exit.");
@@ -83,7 +83,6 @@ namespace HatTrick.InMemDb.TestHarness
             _sw.Start();
             Parallel.For(0, iterations, (i) =>
             {
-
                 assets[i] = db.Find((long)i + 300_001);
             });
             _sw.Stop();

@@ -321,12 +321,13 @@ namespace HatTrick.InMemDb
         public T[] FindAll(params long[] ids)
         {
             this.EnsureReadMode(nameof(FindAll));
-            List<T> matches = new List<T>(ids.Length);
+            List<T> matches = null;
            
             lock (_lock)
             {
                 if (_isIndexed)
                 {
+                    matches = new List<T>(ids.Length);
                     foreach (long id in ids)
                     {
                         if (_index.TryGetValue(id, out int index))

@@ -13,7 +13,6 @@ MemDb Docs....
   - Entire data footprint in Memory
   - File backed (data persisted to disk)
   - Single compact library (~92KB)
-  - Available via nuget package
 
 - Why (did we build it) =>
   - Need for a super simple yet powerful embedded database persisted on local file system.
@@ -28,7 +27,10 @@ MemDb Docs....
   - Powerful extensability points when performance and efficiency are a high priority.
   - 
   
-  
+- Where (where can it be found)
+  - github
+  - nuget
+  - hat trick tech articles
   
   
   

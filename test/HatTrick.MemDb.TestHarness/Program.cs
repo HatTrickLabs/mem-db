@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Collections.Generic;
 using HatTrick.CommandLine;
+using System.Threading.Tasks;
 
 namespace HatTrick.InMemDb.TestHarness
 {
@@ -12,7 +13,6 @@ namespace HatTrick.InMemDb.TestHarness
         #region main
         static void Main(string[] args)
         {
-            var comp = Comparer<int>.Default;
             Command cmd = default;
             try
             {
