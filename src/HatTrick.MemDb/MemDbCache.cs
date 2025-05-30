@@ -640,11 +640,15 @@ namespace HatTrick.InMemDb
             int idx = -1;
             lock (_lock)
             {
-                if (_isIndexed && _index.TryGetValue(id, out int i))
-                    idx = i;
-
+                if (_isIndexed)
+                {
+                    if (_index.TryGetValue(id, out int i))
+                        idx = i;
+                }
                 else
+                {
                     idx = _records.FindIndex((r) => r.Id == id && r.State == RecordState.Fresh);
+                }
 
                 if (idx > -1)
                 {
@@ -677,7 +681,10 @@ namespace HatTrick.InMemDb
             if (_isIndexed)
                 _index[newRec.Id] = newRec.CacheIndex;
 
-            _appliedIndexes?.Refresh(stale: (to.Value, to.CacheIndex), fresh: (newRec.Value, newRec.CacheIndex) );
+            _appliedIndexes?.Refresh(
+                stale: (to.Value, to.CacheIndex), 
+                fresh: (newRec.Value, newRec.CacheIndex)
+            );
 
             if (_persister is not null)
             {
@@ -720,11 +727,15 @@ namespace HatTrick.InMemDb
             int idx = -1;
             lock (_lock)
             {
-                if (_isIndexed && _index.TryGetValue(id, out int i))
-                    idx = i;
-
+                if (_isIndexed)
+                {
+                    if (_index.TryGetValue(id, out int i))
+                        idx = i;
+                }
                 else
+                {
                     idx = _records.FindIndex((r) => r.Id == id && r.State == RecordState.Fresh);
+                }
 
                 if (idx > -1)
                 {
