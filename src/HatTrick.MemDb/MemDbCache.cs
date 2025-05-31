@@ -577,6 +577,9 @@ namespace HatTrick.InMemDb
         {
             this.EnsureMode(AccessMode.ReadWrite | AccessMode.AppendOnly, nameof(Insert));
 
+            if (record is null)
+                throw new ArgumentNullException(nameof(record));
+
             //hint: this must happen before deep copy...
             //we don't even know if they want the Id, but if they do...
             //it MUST be applied WHEREVER they want it BEFORE DeepCopy
