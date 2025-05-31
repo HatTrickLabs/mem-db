@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace HatTrick.InMemDb
 {
+    #region relational operator [enum]
     public enum RelationalOperator
     {
         EqualTo,
@@ -15,7 +16,9 @@ namespace HatTrick.InMemDb
         GreaterThanEqualTo,
         LessThanEqualTo
     }
+    #endregion
 
+    #region i mem db index expression of T, Y [interface]
     public interface IMemDbIndexExpression<T, Y> where T : class
     {
         public MemDbIndexExpression<T> IsEqualTo(Y key);
@@ -24,15 +27,35 @@ namespace HatTrick.InMemDb
         public MemDbIndexExpression<T> IsGreaterThanEqualTo(Y key);
         public MemDbIndexExpression<T> IsLessThanEqualTo(Y key);
     }
+    #endregion
 
+    #region mem db index expression of T [class]
     public abstract class MemDbIndexExpression<T> where T : class
     {
+        #region select
+        public abstract X[] Select<X>(Func<T, X> selector);
+        #endregion
+
+        #region select distinct
+        public abstract X[] SelectDistinct<X>(Func<T, X> selector);
+        #endregion
+
         #region to array
         public abstract T[] ToArray();
         #endregion
-    }
 
-    public class MemDbIndexExpression<T, Y> : MemDbIndexExpression<T>, IMemDbIndexExpression<T, Y>  where T : class
+        #region update
+        public abstract int Update(Action<T> apply);
+        #endregion
+
+        #region delete
+        public abstract int Delete();
+        #endregion
+    }
+    #endregion
+
+    #region mem db index expression of T, Y [class]
+    public class MemDbIndexExpression<T, Y> : MemDbIndexExpression<T>, IMemDbIndexExpression<T, Y> where T : class
     {
         #region internals
         private string _name;
@@ -61,7 +84,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region ctors
-        internal MemDbIndexExpression(string name, ExecuteQuery query, ExecuteUpdate update, ExecuteDelete delete) 
+        internal MemDbIndexExpression(string name, ExecuteQuery query, ExecuteUpdate update, ExecuteDelete delete)
         {
             _name = name;
             _query = query;
@@ -124,11 +147,65 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region select
+        public override X[] Select<X>(Func<T, X> selector)
+        {
+            Type t = typeof(X);
+            bool allowShallowCopy = t == typeof(string) || t.IsValueType;
+
+            //we only want to incur the cost of deep copy if necessary...
+            //returning non ref types does not expose any risk.
+            T[] set = _query(this, !allowShallowCopy);
+            if (set.Length == 0)
+                return Array.Empty<X>();
+
+            X[] result = set.Select(selector).ToArray();
+
+            return result;
+        }
+        #endregion
+
+        #region select distinct
+        public override X[] SelectDistinct<X>(Func<T, X> selector)
+        {
+            Type t = typeof(Y);
+            bool allowShallowCopy = t == typeof(string) || t.IsValueType;
+
+            //we only want to incur the cost of deep copy if necessary...
+            //returning non ref types does not expose any risk.
+            T[] set = _query(this, !allowShallowCopy);
+            if (set.Length == 0)
+                return Array.Empty<X>();
+
+            X[] result = set.Select(selector).Distinct().ToArray();
+
+            return result;
+        }
+        #endregion
+
         #region to array
-        public override  T[] ToArray()
+        public override T[] ToArray()
         {
             return _query(this, true);
         }
         #endregion
+
+        #region update
+        public override int Update(Action<T> apply)
+        {
+            if (apply is null)
+                throw new ArgumentNullException(nameof(apply));
+
+            return _update(this, apply);
+        }
+        #endregion
+
+        #region delete
+        public override int Delete()
+        {
+            return _delete(this);
+        }
+        #endregion
     }
+    #endregion
 }
