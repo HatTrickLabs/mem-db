@@ -352,6 +352,11 @@ namespace HatTrick.InMemDb
         {
             return _cache.Delete(where);
         }
+
+        public bool Delete(long id)
+        {
+            return _cache.Delete(id);
+        }
         #endregion
 
         #region query

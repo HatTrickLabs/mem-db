@@ -30,6 +30,8 @@ namespace HatTrick.InMemDb
 
         public int Delete(Func<T, bool> where);
 
+        public bool Delete(long id);
+
         public MemDbExpression<T> Query();
 
         public IMemDbIndexExpression<T, Y> QueryViaIndex<Y>(string indexName) where Y : IConvertible;
