@@ -22,6 +22,7 @@ namespace HatTrick.InMemDb
     public interface IMemDbIndexExpression<T, Y> where T : class
     {
         public MemDbIndexExpression<T> IsEqualTo(Y key);
+        public MemDbIndexExpression<T> IsNotEqualTo(Y key);
         public MemDbIndexExpression<T> IsGreaterThan(Y key);
         public MemDbIndexExpression<T> IsLessThan(Y key);
         public MemDbIndexExpression<T> IsGreaterThanEqualTo(Y key);
