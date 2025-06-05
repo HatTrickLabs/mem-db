@@ -222,7 +222,7 @@ namespace HatTrick.InMemDb
                 pointers = new List<int>() { pointer };
                 _index.Add(key, pointers);
 
-                //should always be less than 0 here...
+                //should always be less than 0 here...NO DUPLICATES
                 int lookupIndex = _lookup.BinarySearch(key, _comparer);
                 lookupIndex = ~lookupIndex;
                 _lookup.Insert(lookupIndex, key);
@@ -295,33 +295,28 @@ namespace HatTrick.InMemDb
         #region not equal to
         internal int[] NotEqualTo(Y key)
         {
-            //TODO: this is terrible...think about just completely removing 'NotEqualTo'
-            //This index works best on dense and widely distributed data keys...NotEqualTo requires
-            //a linear roll through all the keys and completely defeats the purpose...
-            //its just slow as frozen f*ck
-            var keys = _index.Keys;
-            List<int> pointers = new List<int>();
-            foreach (var k in _index.Keys)
-            {
-                if (!_comparer.Equals(key, k))
-                {
-                    pointers.AddRange(_index[k]);
-                }
-            }
+            int[] less = this.LessThan(key);
+            int[] greater = this.GreaterThan(key);
+            int[] notEq = new int[less.Length + greater.Length];
 
-            return pointers.ToArray();
+            //Array.Copy(less, notEq, less.Length);
+            //Array.Copy(greater, 0, notEq, less.Length, greater.Length);
+            Buffer.BlockCopy(less, 0, notEq, 0, (less.Length * sizeof(int)));
+            Buffer.BlockCopy(greater, 0, notEq, (less.Length * sizeof(int)), (greater.Length * sizeof(int)));
+
+            return notEq;
         }
         #endregion
 
         #region greater than
         internal int[] GreaterThan(Y key)
         {
+            //REMINDER: _lookup should always be a direct copy of _index.Keys, there are NO DUPLICATE ENTRIES...
             int index = _lookup.BinarySearch(key, _comparer);
-            if (index < 0)
-                return Array.Empty<int>();
 
-            if (index < (_lookup.Count - 1))
-                index += 1;//shift forward one to only get pointers where value > key (NOT EQUAL)...
+            //shift forward ++index before upper bound check to only get pointers where value > key (NOT EQUAL)...
+            if (index < 0 || ++index >= _lookup.Count)
+                return Array.Empty<int>();
 
             List<int> set = new List<int>(_lookup.Count - index);
             for (int i = index; i < _lookup.Count; i++)
@@ -335,6 +330,7 @@ namespace HatTrick.InMemDb
         #region greater than equal to
         internal int[] GreaterThanEqualTo(Y key)
         {
+            //REMINDER: _lookup should always be a direct copy of _index.Keys, there are NO DUPLICATE ENTRIES...
             int index = _lookup.BinarySearch(key, _comparer);
             if (index < 0)
                 return Array.Empty<int>();
@@ -351,12 +347,13 @@ namespace HatTrick.InMemDb
         #region less than
         internal int[] LessThan(Y key)
         {
+            //REMINDER: _lookup should always be a direct copy of _index.Keys, there are NO DUPLICATE ENTRIES...
             int index = _lookup.BinarySearch(key, _comparer);
+
+            index -= 1;//shift back one to only get pointers where value < key (NOT EQUAL)...
+
             if (index < 0)
                 return Array.Empty<int>();
-
-            if (index > 0)
-                index -= 1;//shift back one to only get pointers where value < key (NOT EQUAL)...
 
             List<int> set = new List<int>(index + 1);
             for (int i = index; i > -1; i--)
@@ -370,6 +367,7 @@ namespace HatTrick.InMemDb
         #region less than equal to
         internal int[] LessThanEqualTo(Y key)
         {
+            //REMINDER: _lookup should always be a direct copy of _index.Keys, there are NO DUPLICATE ENTRIES...
             int index = _lookup.BinarySearch(key, _comparer);
             if (index < 0)
                 return Array.Empty<int>();
