@@ -18,8 +18,8 @@ namespace HatTrick.InMemDb
     }
     #endregion
 
-    #region i mem db index expression of T, Y [interface]
-    public interface IMemDbIndexExpression<T, Y> where T : class
+    #region i mem db index expression root of T, Y [interface]
+    public interface IMemDbIndexExpressionRoot<T, Y> where T : class
     {
         public MemDbIndexExpression<T> IsEqualTo(Y key);
         public MemDbIndexExpression<T> IsNotEqualTo(Y key);
@@ -41,6 +41,38 @@ namespace HatTrick.InMemDb
         public abstract X[] SelectDistinct<X>(Func<T, X> selector);
         #endregion
 
+        #region sum
+        public abstract int Sum(Func<T, int> selector);
+
+        public abstract long Sum(Func<T, long> selector);
+
+        public abstract float Sum(Func<T, float> selector);
+
+        public abstract double Sum(Func<T, double> selector);
+
+        public abstract decimal Sum(Func<T, decimal> selector);
+        #endregion
+
+        #region max
+        public abstract Y Max<Y>(Func<T, Y> func);
+        #endregion
+
+        #region min
+        public abstract Y Min<Y>(Func<T, Y> func);
+        #endregion
+
+        #region avg
+        public abstract double Avg(Func<T, int> selector);
+
+        public abstract double Avg(Func<T, long> selector);
+
+        public abstract float Avg(Func<T, float> selector);
+
+        public abstract double Avg(Func<T, double> selector);
+
+        public abstract decimal Avg(Func<T, decimal> selector);
+        #endregion
+
         #region to array
         public abstract T[] ToArray();
         #endregion
@@ -56,7 +88,7 @@ namespace HatTrick.InMemDb
     #endregion
 
     #region mem db index expression of T, Y [class]
-    public class MemDbIndexExpression<T, Y> : MemDbIndexExpression<T>, IMemDbIndexExpression<T, Y> where T : class
+    public class MemDbIndexExpression<T, Y> : MemDbIndexExpression<T>, IMemDbIndexExpressionRoot<T, Y> where T : class
     {
         #region internals
         private string _name;
@@ -181,6 +213,136 @@ namespace HatTrick.InMemDb
             X[] result = set.Select(selector).Distinct().ToArray();
 
             return result;
+        }
+        #endregion
+
+        #region sum
+        public override int Sum(Func<T, int> selector)
+        {
+            T[] set = _query(this, false);
+            if (set.Length == 0)
+                return 0;
+
+            int val = set.Sum(selector);
+            return val;
+        }
+
+        public override long Sum(Func<T, long> selector)
+        {
+            T[] set = _query(this, false);
+            if (set.Length == 0)
+                return 0;
+
+            long val = set.Sum(selector);
+            return val;
+        }
+
+        public override float Sum(Func<T, float> selector)
+        {
+            T[] set = _query(this, false);
+            if (set.Length == 0)
+                return 0;
+
+            float val = set.Sum(selector);
+            return val;
+        }
+
+        public override double Sum(Func<T, double> selector)
+        {
+            T[] set = _query(this, false);
+            if (set.Length == 0)
+                return 0;
+
+            double val = set.Sum(selector);
+            return val;
+        }
+
+        public override decimal Sum(Func<T, decimal> selector)
+        {
+            T[] set = _query(this, false);
+            if (set.Length == 0)
+                return 0;
+
+            decimal val = set.Sum(selector);
+            return val;
+        }
+        #endregion
+
+        #region max
+        public override X Max<X>(Func<T, X> func)
+        {
+            T[] set = _query(this, false);
+            if (set.Length == 0)
+                return default(X);
+
+            X max = default(X);
+            max = set.Max<T, X>(func);
+            return max;
+        }
+        #endregion
+
+        #region min
+        public override X Min<X>(Func<T, X> func)
+        {
+            T[] set = _query(this, false);
+            if (set.Length == 0)
+                return default(X);
+
+            X min = default(X);
+            min = set.Min<T, X>(func);
+            return min;
+        }
+        #endregion
+
+        #region avg
+        public override double Avg(Func<T, int> selector)
+        {
+            T[] set = _query(this, false);
+            if (set.Length == 0)
+                return 0;
+
+            double val = set.Average(selector);
+            return val;
+        }
+
+        public override double Avg(Func<T, long> selector)
+        {
+            T[] set = _query(this, false);
+            if (set.Length == 0)
+                return 0;
+
+            double val = set.Average(selector);
+            return val;
+        }
+
+        public override float Avg(Func<T, float> selector)
+        {
+            T[] set = _query(this, false);
+            if (set.Length == 0)
+                return 0;
+
+            float val = set.Average(selector);
+            return val;
+        }
+
+        public override double Avg(Func<T, double> selector)
+        {
+            T[] set = _query(this, false);
+            if (set.Length == 0)
+                return 0;
+
+            double val = set.Average(selector);
+            return val;
+        }
+
+        public override decimal Avg(Func<T, decimal> selector)
+        {
+            T[] set = _query(this, false);
+            if (set.Length == 0)
+                return 0;
+
+            decimal val = set.Average(selector);
+            return val;
         }
         #endregion
 

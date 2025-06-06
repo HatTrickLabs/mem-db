@@ -445,7 +445,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region query via index
-        public IMemDbIndexExpression<T, Y> QueryViaIndex<Y>(string indexName) where Y : IConvertible
+        public IMemDbIndexExpressionRoot<T, Y> QueryViaIndex<Y>(string indexName) where Y : IConvertible
         {
             this.EnsureReadMode(nameof(QueryViaIndex));
 
@@ -486,7 +486,7 @@ namespace HatTrick.InMemDb
                     case RelationalOperator.EqualTo:
                         pointers = index.EqualTo(arg);
                         break;
-                    case RelationalOperator.NotEqualTo://TODO: deprecate
+                    case RelationalOperator.NotEqualTo:
                         pointers = index.NotEqualTo(arg);
                         break;
                     case RelationalOperator.GreaterThan:
@@ -502,7 +502,7 @@ namespace HatTrick.InMemDb
                         pointers = index.LessThanEqualTo(arg);
                         break;
                     default:
-                        break;
+                        throw new NotImplementedException($"Index expression for {expression.RelationalOperator} not implemented.");
                 }
 
                 var set = new MemDbRecord<T>[pointers.Length];
