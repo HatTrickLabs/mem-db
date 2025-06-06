@@ -33,6 +33,21 @@ namespace HatTrick.InMemDb
     #region mem db index expression of T [class]
     public abstract class MemDbIndexExpression<T> where T : class
     {
+        #region internals
+        private string _indexName;
+        #endregion
+
+        #region interface
+        public string IndexName => _indexName;
+        #endregion
+
+        #region ctors
+        protected MemDbIndexExpression(string indexName)
+        {
+            _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
+        }
+        #endregion
+
         #region select
         public abstract X[] Select<X>(Func<T, X> selector);
         #endregion
@@ -91,7 +106,6 @@ namespace HatTrick.InMemDb
     public class MemDbIndexExpression<T, Y> : MemDbIndexExpression<T>, IMemDbIndexExpressionRoot<T, Y> where T : class
     {
         #region internals
-        private string _name;
         private RelationalOperator _relationOp;
         private Y _key;
 
@@ -101,8 +115,6 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region interface
-        public string IndexName => _name;
-
         public RelationalOperator RelationalOperator => _relationOp;
 
         public Y IndexKey => _key;
@@ -117,9 +129,8 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region ctors
-        internal MemDbIndexExpression(string name, ExecuteQuery query, ExecuteUpdate update, ExecuteDelete delete)
+        internal MemDbIndexExpression(string indexName, ExecuteQuery query, ExecuteUpdate update, ExecuteDelete delete) : base(indexName)
         {
-            _name = name;
             _query = query;
             _update = update;
             _delete = delete;
