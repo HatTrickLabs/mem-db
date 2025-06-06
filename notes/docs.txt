@@ -4,33 +4,34 @@ https://themes.gohugo.io/themes/hextra/
 MemDb Docs....
 ------------------------
 - Who (are we) => Hat Trick Labs
-  - Simple efficient software tools.
+  - Simple yet powerful and efficient software tools.
   
-- What (about MemDb) =>
-  - Lightweight database/cache engine
+- What (is MemDb) =>
+  - A lightweight database / data cache engine.
   - Self contained, zero external dependencies outside core .net
-  - Runs in process (embedded)
-  - Entire data footprint in Memory
+  - Runs embeddd in process (no dedicated engine process).
+  - Entire data footprint in RAM.
   - File backed (data persisted to disk)
-  - Single compact library (~92KB)
+  - Single compact library (~92KB HatTrick.MemDb.dll)
 
 - Why (did we build it) =>
-  - Need for a super simple yet powerful embedded database persisted on local file system.
+  - Need for a super simple yet powerful embedded database engine.
+  - File backed data structure (persisted to disk).
   - Entire data set stored in RAM for fast reads (can be used as a file backed cache).
   - Powerful query capabilities using native code (no sql language parsing).
   - Always safe concurrency.
-  - Cached data sactity (never return ref pointers).
+  - Cached data sactity (never return ref pointers to internal objects).
   - Record level encryption (AES 256 bit)
   - Online snapshots.
-  - Archive and restore (ability to restore a database back to a historical point in time).
+  - Archive and restore (ability to restore a database back to a histrical point in time).
   - Super simple implementation given default settings.
-  - Powerful extensability points when performance and efficiency are a high priority.
+  - Powerful extensability points when performance and efficiency are a necessity.
   - 
   
 - Where (where can it be found)
-  - github
-  - nuget
-  - hat trick tech articles
+  - github.com
+  - nuget.org
+  - Hat Trick Tech Articles
   
   
   

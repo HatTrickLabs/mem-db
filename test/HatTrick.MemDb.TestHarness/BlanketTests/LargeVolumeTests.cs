@@ -27,8 +27,7 @@ namespace HatTrick.InMemDb.TestHarness
                 //.SerializeWith(() => new DigitalAssetBinarySerializer())
                 .IndexOnIdentity(true)
                 .ApplyIndex<string>(nameof(DigitalAsset.Name), (a) => a.Name)
-                //.ApplyIndex<DateTime>(nameof(DigitalAsset.Imported), (a) => a.Imported)
-                //.ApplyIndex<long>(nameof(DigitalAsset.Id), (a) => a.Id)
+                .ApplyIndex<long>(nameof(DigitalAsset.Id), (a) => a.Id)
                 //.EncryptWithPassword(() => "This is a super fancy and complex password!!!!!")
                 .Register();
         }
@@ -48,7 +47,7 @@ namespace HatTrick.InMemDb.TestHarness
         #region large volume
         public void Test_LargeVolume()
         {
-            int iterations = 1_000;
+            int iterations = 5_000;
             DigitalAsset[] loadAssets = base.ResolveAssetSet();
             int total = iterations * loadAssets.Length;
             Console.WriteLine($"Starting load of {total:n0} records into new database.");
@@ -62,10 +61,10 @@ namespace HatTrick.InMemDb.TestHarness
                 _sw.Stop();
                 Console.WriteLine($"{_sw.ElapsedMilliseconds}\tCompleted db load of {total:n0} records.");
 
-                //this.QueryByIdNaturalIndexAssisted(db, 2_500_000);
-                //this.ConcurrentQueriesOnIdAppliedIndexAssisted(db, 1_000_000);
-                //this.ConcurrentQueriesOnNameWithoutIndex(db, 10);
-                this.ConcurrentQueriesOnNameIndexAssisted(db, 10_000);
+                this.QueryByIdNaturalIndexAssisted(db, 10_000);
+                this.ConcurrentQueriesOnAppliedIdIndexAssisted(db, 10_000);
+                this.ConcurrentQueriesOnNameWithoutIndex(db, 10);//10k would take eternity
+                this.ConcurrentQueriesOnAppliedNameIndexAssisted(db, 10_000);
             }
 
             Console.WriteLine("Done...Press [Enter] to exit.");
@@ -97,8 +96,8 @@ namespace HatTrick.InMemDb.TestHarness
         }
         #endregion
 
-        #region concurrent queries on id applied index assisted
-        private void ConcurrentQueriesOnIdAppliedIndexAssisted(MemDb<DigitalAsset> db, int iterations)
+        #region concurrent queries on applied id index assisted
+        private void ConcurrentQueriesOnAppliedIdIndexAssisted(MemDb<DigitalAsset> db, int iterations)
         {
             _sw.Reset();
 
@@ -160,12 +159,12 @@ namespace HatTrick.InMemDb.TestHarness
         }
         #endregion
 
-        #region concurrent queries on name index assisted
-        private void ConcurrentQueriesOnNameIndexAssisted(MemDb<DigitalAsset> db, int iterations)
+        #region concurrent queries on applied name index assisted
+        private void ConcurrentQueriesOnAppliedNameIndexAssisted(MemDb<DigitalAsset> db, int iterations)
         {
             _sw.Reset();
 
-            Console.WriteLine($"Kicking off {iterations} concurrent queries for name == '0950' applied index assisted...");
+            Console.WriteLine($"Kicking off {iterations:n0} concurrent queries for name == '0950' (applied index assisted)...");
             _sw.Start();
             DigitalAsset[] withIndex = null;
             Parallel.For(0, iterations, (i) =>

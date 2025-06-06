@@ -40,12 +40,12 @@ namespace HatTrick.InMemDb.TestHarness
 
         public void HighConcurrencyInsertsTarget(bool flush)
         {
-            //pull in the assets 5 times in order to have a large enough parallel set.
-            DigitalAsset[] assets1 = base.ResolveAssetSet();
-            DigitalAsset[] assets2 = base.ResolveAssetSet();
-            DigitalAsset[] assets3 = base.ResolveAssetSet();
-            DigitalAsset[] assets4 = base.ResolveAssetSet();
-            DigitalAsset[] assets5 = base.ResolveAssetSet();
+            //pull in the assets 10 times in order to have a large enough parallel set.
+            DigitalAsset[] assets1 = base.ResolveAssetSet().Concat(base.ResolveAssetSet()).ToArray();
+            DigitalAsset[] assets2 = base.ResolveAssetSet().Concat(base.ResolveAssetSet()).ToArray();
+            DigitalAsset[] assets3 = base.ResolveAssetSet().Concat(base.ResolveAssetSet()).ToArray();
+            DigitalAsset[] assets4 = base.ResolveAssetSet().Concat(base.ResolveAssetSet()).ToArray();
+            DigitalAsset[] assets5 = base.ResolveAssetSet().Concat(base.ResolveAssetSet()).ToArray();
 
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
@@ -73,7 +73,7 @@ namespace HatTrick.InMemDb.TestHarness
                 if (flush)
                     db.Flush();
 
-                //we should have 5,000 records, each with a unique auto incremented Id
+                //we should have 10,000 records, each with a unique auto incremented Id
                 int length = assets1.Length + assets2.Length + assets3.Length + assets4.Length + assets5.Length;
                 Assert.IsEqual<int>(db.Count(), length);
                 for (int i = 0; i < length; i++)
@@ -87,12 +87,12 @@ namespace HatTrick.InMemDb.TestHarness
                 long[] ids = db.Query().SelectDistinct<long>(a => a.Id);
                 Assert.IsEqual<int>(ids.Length, length);
 
-                //we should have 5 sets of the same assets.
+                //we should have 10 sets of the same assets.
                 var sets = db.Query().GroupBy(a => a.Name).Select(g => (g.Key, g.Count())).ToArray();
 
-                //every set should have a count of 5
+                //every set should have a count of 10
                 Array.ForEach(sets,
-                    ((string name, int count) itm) => Assert.IsEqual<int>(itm.count, 5)
+                    ((string name, int count) itm) => Assert.IsEqual<int>(itm.count, 10)
                 );
             }
         }

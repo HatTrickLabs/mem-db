@@ -19,7 +19,7 @@ namespace HatTrick.InMemDb.TestHarness
                 .CloneWith(() => new DigitalAssetCloner())
                 .SerializeWith(() => new DigitalAssetBinarySerializer())
                 .EncryptWithPassword(() => "XXXYYYZZZAAABBBCCCDDDEEEFFFGGGHHHIIIJJJKKKLLLMMMNNN")
-                .SetFlushInterval(2)
+                .SetFlushInterval(1)
                 .IndexOnIdentity(true)
                 .Register();
         }
@@ -140,7 +140,7 @@ namespace HatTrick.InMemDb.TestHarness
         }
         #endregion
 
-        #region single delete index still hits
+        #region batch delete index still hits
         public void Test_BatchDeleteIndexStillHits()
         {
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
@@ -157,6 +157,197 @@ namespace HatTrick.InMemDb.TestHarness
                 Assert.IsNull(asset101);
                 Assert.IsNull(asset800);
                 Assert.IsNotNull(asset50);
+            }
+        }
+        #endregion
+
+        #region multi batch update index still hits
+        public void Test_MultiBatchUpdateIndexStillHits()
+        {
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                this.LoadDb(db, out int count);
+
+                //update ALL assets xet xxhash = 1
+                db.Update(a => a.XXHash += 1, a => true);
+
+                //update ALL assets again, set xxhash = xxhash + i
+                var all = db.FindAll(a => a.Id > 0);
+                for (int i = 0; i < all.Length; i++)
+                {
+                    db.Update(a => a.XXHash += (ulong)i, i + 1);
+                }
+
+                for (int i = 0; i < all.Length; i++)
+                {
+                    var asset = db.Find(i + 1);//find by id index...
+                    Assert.IsEqual(asset.XXHash, (ulong)(i + 1));
+                }
+            }
+        }
+        #endregion
+
+        #region multi batch update plus purge index still hits
+        public void Test_MultiBatchUpdatePlusPurgeIndexStillHits()
+        {
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                this.LoadDb(db, out int count);
+
+                //update ALL assets xet xxhash = 1
+                db.Update(a => a.XXHash += 1, a => true);
+
+                //update ALL assets again, set xxhash = xxhash + i
+                var all = db.FindAll(a => a.Id > 0);
+                for (int i = 0; i < all.Length; i++)
+                {
+                    db.Update(a => a.XXHash += (ulong)i, i + 1);
+                }
+
+                db.PurgeCache();
+
+                for (int i = 0; i < all.Length; i++)
+                {
+                    var asset = db.Find(i + 1);//find by id index...
+                    Assert.IsEqual(asset.XXHash, (ulong)(i + 1));
+                }
+            }
+        }
+        #endregion
+
+        #region mutli batch update and multi batch delete index still hits
+        public void Test_MultiBatchUpdateAndMultiBatchDeleteIndexStillHits()
+        {
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                this.LoadDb(db, out int count);
+
+                int initialCount = db.Count();
+
+                //update ALL assets xet xxhash = 1
+                db.Update(a => a.XXHash += 1, a => true);
+
+                //update ALL assets again, set xxhash = xxhash + i
+                var all = db.FindAll(a => a.Id > 0);
+                for (int i = 0; i < all.Length; i++)
+                {
+                    db.Update(a => a.XXHash += (ulong)i, i + 1);
+                }
+
+                //delete ids 100 to 199
+                db.Delete(a => a.Id >= 100 && a.Id < 200);
+
+
+                //delete ids 300 to 399
+                for (int i = 300; i < 400; i++)
+                {
+                    db.Delete(i);
+                }
+
+                //refresh all...
+                all = db.FindAll(a => true);
+                Assert.IsEqual(all.Length, (initialCount - 200));
+                for (int i = 0; i < all.Length; i++)
+                {
+                    int id = i + 1;
+                    var asset = db.Find(i + 1);//find by id index...
+                    if (asset is null)
+                        Assert.IsEqual(true, (id >= 100 && id < 200) || (id >= 300 && id < 400));
+                    else
+                        Assert.IsEqual(asset.XXHash, (ulong)(i + 1));
+                }
+            }
+        }
+        #endregion
+
+        #region mutli batch update and multi batch delete plus purge index still hits
+        public void Test_MultiBatchUpdateAndMultiBatchDeletePlusPurgeIndexStillHits()
+        {
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                this.LoadDb(db, out int count);
+
+                //update ALL assets xet xxhash = 1
+                db.Update(a => a.XXHash += 1, a => true);
+
+                //update ALL assets again, set xxhash = xxhash + i
+                var all = db.FindAll(a => a.Id > 0);
+                for (int i = 0; i < all.Length; i++)
+                {
+                    db.Update(a => a.XXHash += (ulong)i, i + 1);
+                }
+
+                //delete ids 100 to 199
+                db.Delete(a => a.Id >= 100 && a.Id < 200);
+
+                db.PurgeCache();
+
+                //delete ids 300 to 399
+                for (int i = 300; i < 400; i++)
+                {
+                    db.Delete(i);
+                }
+
+                db.PurgeCache();
+
+                //refresh all...
+                all = db.FindAll(a => true);
+                Assert.IsEqual(all.Length, (count - 200));
+                for (int i = 0; i < all.Length; i++)
+                {
+                    int id = i + 1;
+                    var asset = db.Find(i + 1);//find by id index...
+                    if (asset is null)
+                        Assert.IsEqual(true, (id >= 100 && id < 200) || (id >= 300 && id < 400));
+                    else
+                        Assert.IsEqual(asset.XXHash, (ulong)(i + 1));
+                }
+            }
+        }
+        #endregion
+
+        #region updates against natural index hit
+        public void Test_UpdatesAgainstNaturalIndexHit()
+        {
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                this.LoadDb(db, out int count);
+
+                for (int i = 100; i < 500; i++)
+                {
+                    db.Update(a => a.XXHash += 1, i);
+                }
+                db.Flush();
+                for (int i = 1; i <= count; i++)
+                {
+                    if (i >= 100 && i < 500)
+                        Assert.IsEqual(db.Find(i).XXHash, (ulong)1);
+                    else
+                        Assert.IsEqual(db.Find(i).XXHash, (ulong)0);
+                }
+            }
+        }
+        #endregion
+
+        #region deletes against natural index hit
+        public void Test_DeletessAgainstNaturalIndexHit()
+        {
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                this.LoadDb(db, out int count);
+
+                for (int i = 100; i < 500; i++)
+                {
+                    db.Delete(i);
+                }
+                db.Flush();
+                for (int i = 1; i <= count; i++)
+                {
+                    if (i >= 100 && i < 500)
+                        Assert.IsNull(db.Find(i));
+                    else
+                        Assert.IsEqual(db.Find(i).XXHash, (ulong)0);
+                }
             }
         }
         #endregion

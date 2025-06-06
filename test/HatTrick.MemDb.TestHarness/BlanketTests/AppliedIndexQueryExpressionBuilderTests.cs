@@ -38,40 +38,11 @@ namespace HatTrick.InMemDb.TestHarness
         }
         #endregion
 
-        #region index build
-        public void Test_IndexBuild()
+        #region basic query
+        public void Test_BasicQuery()
         {
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
-                this.LoadDb(db);
-                db.Flush();
-            }
-        }
-        #endregion
-
-        #region index updates
-        public void Test_IndexUpdates()
-        {
-            using (var db = MemDb.Open<DigitalAsset>(_dataset))
-            {
-                this.LoadDb(db);
-                db.Flush();
-
-                var ids = db.Query().Select(a => a.Id).ToArray();
-
-                DateTime dt = db.Find(a => a.Id == 1).Imported;
-
-                for (int i = 0; i < ids.Length; i++)
-                {
-                    db.Update(a => a.XXHash = (ulong)i, ids[i]);
-                    db.Update(a => a.Imported = a.Imported.AddMilliseconds(i + 1), ids[i]);
-                }
-
-                var set = db.QueryViaIndex<ulong>(nameof(DigitalAsset.XXHash)).IsGreaterThanEqualTo(500).ToArray();
-                Console.WriteLine(set.Length);
-
-                var set2 = db.QueryViaIndex<DateTime>(nameof(DigitalAsset.Imported)).IsGreaterThan(dt.AddMilliseconds(100)).ToArray();
-                Console.WriteLine(set2.Length);
             }
         }
         #endregion
