@@ -7,7 +7,7 @@ using System.Linq;
 namespace HatTrick.InMemDb
 {
     #region hybrid comparer of T
-    public class HybridComparer<Y> : IComparer<Y>, IEqualityComparer<Y>
+    public sealed class HybridComparer<Y> : IComparer<Y>, IEqualityComparer<Y>
     {
         #region internals
         private bool _isDefault;
@@ -59,7 +59,7 @@ namespace HatTrick.InMemDb
     #endregion
 
     #region mem db index collection [class]
-    internal class MemDbIndexCollection<T> where T : class
+    internal sealed class MemDbIndexCollection<T> where T : class
     {
         #region internals
         private MemDbIndex<T>[] _indexes;
@@ -184,12 +184,10 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region ctors
-        internal MemDbIndex(string name, Func<T, Y> keyResolver) : this(name, keyResolver, new HybridComparer<Y>())
-        { }
-
         internal MemDbIndex(string name, Func<T, Y> keyResolver, HybridComparer<Y> comparer) : base(name)
         {
             //HMMM....in order for MemDbIndexedSet<T,Y> to use this as it's base class, null must be accepted here...feels janky
+            //However, it's all 'internal'
             _keyResolver = keyResolver;// ?? throw new ArgumentNullException(nameof(keyResolver));
             _comparer = comparer ?? throw new ArgumentNullException(nameof(comparer));
         }
@@ -384,17 +382,14 @@ namespace HatTrick.InMemDb
     #endregion
 
     #region mem db indexed set of T,IEnumerable<Y> [class]
-    internal class MemDbIndexedSet<T, Y> : MemDbIndex<T,Y> where T : class where Y : IConvertible
+    internal sealed class MemDbIndexedSet<T, Y> : MemDbIndex<T,Y> where T : class where Y : IConvertible
     {
         #region internals
-        private Func<T, IEnumerable<Y>> _keyResolver;
+        private Func<T, ICollection<Y>> _keyResolver;
         #endregion
 
         #region ctors
-        public MemDbIndexedSet(string name, Func<T, IEnumerable<Y>> keyResolver) : this(name, keyResolver, null)
-        { }
-
-        public MemDbIndexedSet(string name, Func<T, IEnumerable<Y>> keyResolver, HybridComparer<Y> comparer) : base(name, null, comparer)
+        public MemDbIndexedSet(string name, Func<T, ICollection<Y>> keyResolver, HybridComparer<Y> comparer) : base(name, null, comparer)
         {
             _keyResolver = keyResolver;
         }
@@ -404,7 +399,7 @@ namespace HatTrick.InMemDb
         internal override void Apply(T record, int pointer)
         {
             var keySet = _keyResolver(record);
-            HashSet<Y> distinct = new HashSet<Y>();
+            HashSet<Y> distinct = new HashSet<Y>(keySet.Count);
             foreach (var key in keySet)
             {
                 if (distinct.Add(key))
@@ -417,7 +412,7 @@ namespace HatTrick.InMemDb
         internal override void Remove(T record, int pointer)
         {
             var keySet = _keyResolver(record);
-            HashSet<Y> distinct = new HashSet<Y>();
+            HashSet<Y> distinct = new HashSet<Y>(keySet.Count);
             foreach (var key in keySet)
             {
                 if (distinct.Add(key))
