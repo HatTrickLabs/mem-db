@@ -61,6 +61,7 @@ namespace HatTrick.InMemDb.TestHarness
             for (int i = 0; i < _tests.Length; i++)
             {
                 var test = _tests[i];
+                Console.WriteLine($"Executing {test.Method.Name}.");
                 against.Cleanup();
                 this.ExecuteTest(test);
             }
