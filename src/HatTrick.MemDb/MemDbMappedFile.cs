@@ -123,11 +123,20 @@ namespace HatTrick.InMemDb
         #region ensure mode
         private void EnsureMode(AccessMode isMode, string targetSite)
         {
+            if (_isClosed)
+            {
+                throw new ObjectDisposedException(
+                    objectName: nameof(MemDbMappedFile<T>),
+                    message: "Object has either been closed by consumer OR halted due to flush exception."
+                );
+            }
+
             if ((_mode & isMode) == _mode)
                 return;
 
-            string msg = $"MemDb instance for dataset '{_datasetName}' is running in '{_mode}' mode...{targetSite} disabled.";
-            throw new InvalidOperationException(msg);
+            throw new InvalidOperationException(
+                message: $"MemDb instance for dataset '{_datasetName}' is running in '{_mode}' mode...{targetSite} disabled."
+            );
         }
         #endregion
 
