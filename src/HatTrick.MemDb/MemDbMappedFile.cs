@@ -35,6 +35,8 @@ namespace HatTrick.InMemDb
         private IMemDbEncryptor _encryptor;
         private IMemDbSnapshotter _snapshotter;
 
+        private MemDbException _flushException;
+
         private bool _isClosed;
         #endregion
 
@@ -125,9 +127,9 @@ namespace HatTrick.InMemDb
         {
             if (_isClosed)
             {
-                throw new ObjectDisposedException(
-                    objectName: nameof(MemDbMappedFile<T>),
-                    message: "Object has either been closed by consumer OR halted due to flush exception."
+                throw new MemDbPersisterDisposedException(
+                    message: "Persister has either been closed by consumer OR halted due to flush exception.",
+                    flushException: _flushException//can be null..
                 );
             }
 
@@ -315,14 +317,46 @@ namespace HatTrick.InMemDb
             if (state == null && _isClosed)
                 return;
 
-            //NOTE: any exception thrown from this background thread WILL terminate the entire process...
-            //it seems the best way to handle as we DO NOT want consumer to call dispose/flush again
+            try
+            {
+                this.FlushInserts();
+                this.FlushStateChanges();
+            }
+            catch
+            {
+                //only throw if called from primary thread and NOT being disposed (this is a manual flush call).
+                if (state is false)
+                    throw;
+            }
 
-            this.FlushInsertQueue();
-            this.FlushStateChangeQueue();
-
-            if (!_isClosed && _flushInterval > 0)
+            if (!_isClosed && state is null && _flushInterval > 0)
                 _fileSyncTimer.Change(_flushInterval, Timeout.Infinite);
+        }
+
+        private void FlushInserts()
+        {
+            try
+            {
+                this.FlushInsertQueue();
+            }
+            catch(Exception ex)
+            {
+                this.Halt();
+                throw new MemDbFlushException(ex);
+            }
+        }
+
+        private void FlushStateChanges()
+        {
+            try
+            {
+                this.FlushStateChangeQueue();
+            }
+            catch(Exception ex)
+            {
+                this.Halt();
+                throw new MemDbFlushException(ex);
+            }
         }
         #endregion
 
@@ -409,7 +443,7 @@ namespace HatTrick.InMemDb
                 }
                 catch
                 {
-                    this.SafeInvokeOperation(() =>
+                    try
                     {
                         //reset the len of file back to position + length of the last pointer.
                         MemDbPointer lPtr = _map[^1];
@@ -420,28 +454,20 @@ namespace HatTrick.InMemDb
 
                         //ensure pointers successfully added get flushed before tossing the ex
                         _map.Flush();
-                    });
+                    }
+                    catch { /* must supress this one... */ }
+
                     throw;
                 }
             }
         }
         #endregion
 
-        #region safe invoke operation
-        private void SafeInvokeOperation(Action operation)
-        {
-            try
-            {
-                operation?.Invoke();
-            }
-            catch//catch all...
-            { }
-        }
-        #endregion
-
         #region snapshot
         DateTime IMemDbPersister<T>.Snapshot()
         {
+            this.EnsureMode(AccessMode.ReadWrite, nameof(IMemDbPersister<T>.Snapshot));
+
             (this as IMemDbPersister<T>).Flush(false);
 
             lock (_flushLock)
@@ -506,6 +532,22 @@ namespace HatTrick.InMemDb
                 stats.LastId = _map.LastId;
 
             return stats;
+        }
+        #endregion
+
+        #region halt
+        private void Halt()
+        {
+            _isClosed = true;
+            _fileSyncTimer?.Dispose();
+            GC.SuppressFinalize(this);
+        }
+        #endregion
+
+        #region get flush error
+        public Exception GetFlushException()
+        {
+            return _flushException;
         }
         #endregion
 
