@@ -16,5 +16,7 @@ namespace HatTrick.InMemDb
         internal void Flush(object state);
         internal DateTime Snapshot();
         internal MemDbStatistics ResolveStatistics(Stats statistics);
+        internal void OnHalted(Action onHalted);
+        internal MemDbException GetHaltException();
     }
 }

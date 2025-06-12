@@ -230,7 +230,7 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
-        #region update pointer state
+        #region update pointer states
         public void UpdatePointerStates(StaleRecordQueue tryGetStaleRecord)
         {
             lock (_syncLock)
@@ -275,6 +275,7 @@ namespace HatTrick.InMemDb
                     mapWriter.Write(count);
                     mapWriter.Write(_lastId);
 
+                    //shift postion to the end...
                     fsMap.Position = fsMap.Length;
 
                     //start this for loop at the next index after prev flush

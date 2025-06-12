@@ -250,8 +250,6 @@ namespace HatTrick.InMemDb
             _isEncryptionReady = config.IsEncryptionReady;
             _isSnapshotReady = config.IsSnapshotReady;
             _cache = config.GetCache();
-            //TODO: wire up some way for the cache to notify if a background thread
-            //throws an exception...i.e. the timer initiated flush thread throws file access or permissions ex.
         }
         #endregion
 

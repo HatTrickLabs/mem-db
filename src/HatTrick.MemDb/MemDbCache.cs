@@ -23,6 +23,8 @@ namespace HatTrick.InMemDb
         private AccessMode _mode;
         private long _memOnlyLastId;
         private Lock _idLock;
+
+        private bool _persisterHalted;
         #endregion
 
         #region ctors
@@ -80,6 +82,8 @@ namespace HatTrick.InMemDb
                     _appliedIndexes?.Apply(records[i].Value, i);
                 }
             }
+
+            _persister.OnHalted(this.PersisterHalted);
         }
 
         private void InitializeUnPersisted()
@@ -185,11 +189,20 @@ namespace HatTrick.InMemDb
 
         private void EnsureMode(AccessMode isMode, string targetSite)
         {
+            if (_persisterHalted)
+            {
+                throw new MemDbPersisterDisposedException(
+                    message: "Cache persister has either been closed by consumer OR halted due to flush exception.",
+                    flushException: _persister?.GetHaltException()//can be null..
+                );
+            }
+
             if ((_mode & isMode) == _mode)
                 return;
 
-            string msg = $"MemDb instance for dataset '{_datasetName}' is running in '{_mode}' mode...'{targetSite}' accessor is disabled.";
-            throw new InvalidOperationException(msg);
+            throw new InvalidOperationException(
+                message: $"MemDb instance for dataset '{_datasetName}' is running in '{_mode}' mode...'{targetSite}' accessor is disabled."
+            );
         }
         #endregion
 
@@ -784,6 +797,13 @@ namespace HatTrick.InMemDb
             }
 
             _persister.Flush(false);
+        }
+        #endregion
+
+        #region persister halted
+        private void PersisterHalted()
+        {
+            _persisterHalted = true;
         }
         #endregion
 

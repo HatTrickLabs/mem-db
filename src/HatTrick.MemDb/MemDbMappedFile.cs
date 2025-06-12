@@ -35,7 +35,8 @@ namespace HatTrick.InMemDb
         private IMemDbEncryptor _encryptor;
         private IMemDbSnapshotter _snapshotter;
 
-        private MemDbException _flushException;
+        private Action _onHaltCallback;
+        private MemDbFlushException _flushEx;
 
         private bool _isClosed;
         #endregion
@@ -93,6 +94,13 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region on halted
+        void IMemDbPersister<T>.OnHalted(Action onHaltCallback)
+        {
+            _onHaltCallback = onHaltCallback;
+        }
+        #endregion
+
         #region ensure files
         private void EnsureFiles()
         {
@@ -110,15 +118,15 @@ namespace HatTrick.InMemDb
             if (mapExists && !dbExists)
                 throw new InvalidOperationException($"No Db file exists for map file: {Path.GetFileName(_fullMapPath)}");
 
-            _map = new MemDbMap(_fullMapPath, true, _encryptor);
-
-            if (!dbExists)
+            lock (_flushLock)
             {
-                lock (_flushLock)
+                _map = new MemDbMap(_fullMapPath, true, _encryptor);
+                if (!dbExists)
                 {
                     using var fs = new FileStream(_fullDbPath, FileMode.CreateNew);
                 }
             }
+
         }
         #endregion
 
@@ -129,7 +137,7 @@ namespace HatTrick.InMemDb
             {
                 throw new MemDbPersisterDisposedException(
                     message: "Persister has either been closed by consumer OR halted due to flush exception.",
-                    flushException: _flushException//can be null..
+                    flushException: _flushEx//can be null..
                 );
             }
 
@@ -294,8 +302,8 @@ namespace HatTrick.InMemDb
             bool found = false;
             lock (_stateModQLock)
             {
-                //we must ensure we don't process any updates that need to be applied to records still
-                //sitting in the insert queue...we can simply check that the record to update has a map index.
+                //we must ensure a state change is not attempted on a record that is still sitting in the
+                //insert queue...we can simply check that the record needing state change has a map index.
                 found = _stateModQ.CanProcessHead((rec) => rec.MapIndex > -1);
                 if (found)
                     record = _stateModQ.Dequeue();
@@ -324,15 +332,17 @@ namespace HatTrick.InMemDb
             }
             catch
             {
-                //only throw if called from primary thread and NOT being disposed (this is a manual flush call).
+                //only throw if called from primary thread and NOT being disposed.
                 if (state is false)
-                    throw;
+                    throw;//this is a manual flush call.
             }
 
             if (!_isClosed && state is null && _flushInterval > 0)
                 _fileSyncTimer.Change(_flushInterval, Timeout.Infinite);
         }
+        #endregion
 
+        #region flush inserts
         private void FlushInserts()
         {
             try
@@ -341,11 +351,14 @@ namespace HatTrick.InMemDb
             }
             catch(Exception ex)
             {
-                this.Halt();
-                throw new MemDbFlushException(ex);
+                var flushEx = new MemDbFlushException(ex);
+                this.Halt(flushEx);
+                throw flushEx;
             }
         }
+        #endregion
 
+        #region flush state changes
         private void FlushStateChanges()
         {
             try
@@ -354,8 +367,9 @@ namespace HatTrick.InMemDb
             }
             catch(Exception ex)
             {
-                this.Halt();
-                throw new MemDbFlushException(ex);
+                var flushEx = new MemDbFlushException(ex);
+                this.Halt(flushEx);
+                throw flushEx;
             }
         }
         #endregion
@@ -450,7 +464,7 @@ namespace HatTrick.InMemDb
                         int recLength = lPtr.IsEncrypted ? _encryptor.GetEncryptedLength(lPtr.Length) : lPtr.Length;
                         int end = (int)lPtr.Position + lPtr.Length;
                         if (fsDb.Length > end)
-                            fsDb.SetLength(lPtr.Position + lPtr.Length);
+                            fsDb.SetLength(end);
 
                         //ensure pointers successfully added get flushed before tossing the ex
                         _map.Flush();
@@ -536,18 +550,20 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region halt
-        private void Halt()
+        private void Halt(MemDbFlushException flushEx)
         {
             _isClosed = true;
             _fileSyncTimer?.Dispose();
             GC.SuppressFinalize(this);
+            _flushEx = flushEx;
+            _onHaltCallback?.Invoke();
         }
         #endregion
 
-        #region get flush error
-        public Exception GetFlushException()
+        #region get halt exception
+        MemDbException IMemDbPersister<T>.GetHaltException()
         {
-            return _flushException;
+            return _flushEx;
         }
         #endregion
 

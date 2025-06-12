@@ -21,7 +21,7 @@ namespace HatTrick.InMemDb
     {
         #region ctors
         public MemDbFlushException(Exception original) : base(
-            message: "Inner exception was thrown on a secondary thread during MemDb 'Flush'.", 
+            message: "An exception was thrown on a timer thread during MemDb 'Flush'.", 
             original: original
             )
         {
