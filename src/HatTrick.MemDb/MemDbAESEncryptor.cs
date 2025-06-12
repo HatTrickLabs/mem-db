@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 
 namespace HatTrick.InMemDb
 {
+    //NOTE: this class is NOT thread safe due to the re-use of Aes internal...
     public class MemDbAESEncryptor : MemDbAESEncryptionInfo, IMemDbEncryptor
     {
         #region internals

@@ -172,8 +172,8 @@ namespace HatTrick.InMemDb
                     else if (state == RecordState.Deleted)
                         deleted += 1;
                 }
-                //immediately after exiting lock, new records be added to _records...record
-                //the upper bound so purge doesn't look past upper bound when these stats are recorded
+                //immediately after exiting lock, new records may be added to _records...return the upper
+                //bound so purge doesn't look past the upper bound index of when these stats are were resolved
                 upperBound = i;
             }
 
@@ -189,10 +189,10 @@ namespace HatTrick.InMemDb
 
         private void EnsureMode(AccessMode isMode, string targetSite)
         {
-            if (_persisterHalted)
+            if (_persisterHalted)//if we are in readonly mode, the persister never existed and therefore cannot be halted.
             {
                 throw new MemDbPersisterDisposedException(
-                    message: "Cache persister has either been closed by consumer OR halted due to flush exception.",
+                    message: "Cache persister has been halted due to a flush exception.",
                     flushException: _persister?.GetHaltException()//can be null..
                 );
             }

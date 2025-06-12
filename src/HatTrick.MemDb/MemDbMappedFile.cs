@@ -462,7 +462,7 @@ namespace HatTrick.InMemDb
                         //reset the len of file back to position + length of the last pointer.
                         MemDbPointer lPtr = _map[^1];
                         int recLength = lPtr.IsEncrypted ? _encryptor.GetEncryptedLength(lPtr.Length) : lPtr.Length;
-                        int end = (int)lPtr.Position + lPtr.Length;
+                        int end = (int)lPtr.Position + recLength;
                         if (fsDb.Length > end)
                             fsDb.SetLength(end);
 

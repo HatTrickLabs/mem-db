@@ -17,6 +17,7 @@ namespace HatTrick.InMemDb.TestHarness
                 .SetFlushInterval(5)
                 .CloneWith(() => new DigitalAssetCloner())
                 .SerializeWith(() => new DigitalAssetBinarySerializer())
+                .EncryptWithPassword(() => "TestPasswordHere!!!...")
                 .Register();
         }
         #endregion
@@ -26,17 +27,32 @@ namespace HatTrick.InMemDb.TestHarness
         {
             var assets = base.ResolveAssetSet();
 
-            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            try
             {
-                for (int i = 0; i < assets.Length; i++)
+                using (var db = MemDb.Open<DigitalAsset>(_dataset))
                 {
-                    db.Insert(assets[i], (id) => assets[i].Id = id);
-                }
+                    try
+                    {
+                        for (int i = 0; i < assets.Length; i++)
+                        {
+                            db.Insert(assets[i], (id) => assets[i].Id = id, true);
+                        }
 
-                Console.WriteLine("Pausing...Press [Enter] to continue.");
+                        Console.WriteLine("Pausing...Press [Enter] to continue.");
+                        Console.ReadLine();
+                        //db.Insert(assets[550], (id) => assets[550].Id = id);
+                        var a = db.Find(300);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("...." + ex.Message);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
                 Console.ReadLine();
-                //db.Insert(assets[550], (id) => assets[550].Id = id);
-                var a = db.Find(300);
             }
 
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
