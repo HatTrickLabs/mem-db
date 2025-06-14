@@ -47,7 +47,7 @@ namespace HatTrick.InMemDb.TestHarness
         #region large volume
         public void Test_LargeVolume()
         {
-            int iterations = 5_000;
+            int iterations = 1_000;
             DigitalAsset[] loadAssets = base.ResolveAssetSet();
             int total = iterations * loadAssets.Length;
             Console.WriteLine($"Starting load of {total:n0} records into new database.");

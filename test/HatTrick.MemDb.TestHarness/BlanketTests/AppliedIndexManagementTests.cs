@@ -39,12 +39,36 @@ namespace HatTrick.InMemDb.TestHarness
         #endregion
 
         #region index build
-        public void Test_IndexBuild()
+        public void Test_IndexBuildAndMatch()
         {
+            DateTime now = DateTime.Now;
+            System.Threading.Thread.Sleep(10);
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
                 this.LoadDb(db);
+                int cnt = db.Count();
                 db.Flush();
+
+                var all = db.QueryViaIndex<DateTime>(nameof(DigitalAsset.Imported)).IsGreaterThan(now).ToArray();
+                var all2 = db.QueryViaIndex<DateTime>(nameof(DigitalAsset.Imported)).IsGreaterThanEqualTo(now).ToArray();
+                Assert.IsEqual(all.Length, cnt);
+                Assert.IsEqual(all2.Length, cnt);
+
+                System.Threading.Thread.Sleep(10);
+
+                DateTime now2 = DateTime.Now;
+                var all3 = db.QueryViaIndex<DateTime>(nameof(DigitalAsset.Imported)).IsLessThan(now2).ToArray();
+                var all4 = db.QueryViaIndex<DateTime>(nameof(DigitalAsset.Imported)).IsLessThanEqualTo(now2).ToArray();
+                Assert.IsEqual(all3.Length, cnt);
+                Assert.IsEqual(all4.Length, cnt);
+
+
+                DateTime importedAt = db.Find(1).Imported;//all record will have the same imported timestamp
+                var all5 = db.QueryViaIndex<DateTime>(nameof(DigitalAsset.Imported)).IsEqualTo(importedAt).ToArray();
+                Assert.IsEqual(all5.Length, cnt);
+
+                var none = db.QueryViaIndex<DateTime>(nameof(DigitalAsset.Imported)).IsNotEqualTo(importedAt).ToArray();
+                Assert.IsEqual(none.Length, 0);
             }
         }
         #endregion
@@ -57,7 +81,7 @@ namespace HatTrick.InMemDb.TestHarness
                 this.LoadDb(db);
                 db.Flush();
 
-                //at this point asset.XXHash values are 0, index will keyOf(0) is int[1000] pointers
+                //at this point asset.XXHash values are all 0, index with keyOf(0) is int[1000] pointers
 
                 var ids = db.Query().Select(a => a.Id).ToArray();
 

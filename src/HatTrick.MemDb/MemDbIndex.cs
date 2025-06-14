@@ -295,10 +295,13 @@ namespace HatTrick.InMemDb
         {
             int[] less = this.LessThan(key);
             int[] greater = this.GreaterThan(key);
-            int[] notEq = new int[less.Length + greater.Length];
 
-            //Array.Copy(less, notEq, less.Length);
-            //Array.Copy(greater, 0, notEq, less.Length, greater.Length);
+            int count = less.Length + greater.Length;
+
+            if (count == 0)
+                return Array.Empty<int>();
+
+            int[] notEq = new int[count];
             Buffer.BlockCopy(less, 0, notEq, 0, (less.Length * sizeof(int)));
             Buffer.BlockCopy(greater, 0, notEq, (less.Length * sizeof(int)), (greater.Length * sizeof(int)));
 
@@ -312,8 +315,18 @@ namespace HatTrick.InMemDb
             //REMINDER: _lookup should always be a direct copy of _index.Keys, there are NO DUPLICATE ENTRIES...
             int index = _lookup.BinarySearch(key, _comparer);
 
-            //shift forward ++index before upper bound check to only get pointers where value > key (NOT EQUAL)...
-            if (index < 0 || ++index >= _lookup.Count)
+            //if the result is < 0, the key doesn't exist and anything at or above the bitwise complement is a hit
+            //the 'at' is included because if the key were inserted into the set, 'at' would shift to (~index + 1);
+            if (index < 0)
+                index = ~index;
+
+            //if the result is >= 0, we got a direct key match and need to shift index + 1 to get only
+            //items GREATER than and not equal to.
+            else
+                index += 1;
+
+
+            if (index >= _lookup.Count)
                 return Array.Empty<int>();
 
             List<int> set = new List<int>(_lookup.Count - index);
@@ -330,7 +343,14 @@ namespace HatTrick.InMemDb
         {
             //REMINDER: _lookup should always be a direct copy of _index.Keys, there are NO DUPLICATE ENTRIES...
             int index = _lookup.BinarySearch(key, _comparer);
+
+            //if the result is < 0, the key doesn't exist and anything at or above the bitwise complement is a hit
             if (index < 0)
+                index = ~index;
+
+            //if the result is >= 0, we got a direct match and want to get everything at or above
+
+            if (index >= _lookup.Count)
                 return Array.Empty<int>();
 
             List<int> set = new List<int>(_lookup.Count - index);
@@ -347,6 +367,9 @@ namespace HatTrick.InMemDb
         {
             //REMINDER: _lookup should always be a direct copy of _index.Keys, there are NO DUPLICATE ENTRIES...
             int index = _lookup.BinarySearch(key, _comparer);
+
+            if (index < 0)
+                index = ~index;
 
             index -= 1;//shift back one to only get pointers where value < key (NOT EQUAL)...
 
@@ -367,8 +390,14 @@ namespace HatTrick.InMemDb
         {
             //REMINDER: _lookup should always be a direct copy of _index.Keys, there are NO DUPLICATE ENTRIES...
             int index = _lookup.BinarySearch(key, _comparer);
+
             if (index < 0)
-                return Array.Empty<int>();
+            {
+                index = ~index;
+                index -= 1;
+            }
+
+            //if the result is >= 0, we got a direct match and want everything at or below
 
             List<int> set = new List<int>(index + 1);
             for (int i = index; i > -1; i--)
