@@ -5,6 +5,7 @@ using HatTrick.InMemDb;
 
 namespace HatTrick.InMemDb.TestHarness
 {
+    //TODO...
     public class AppliedIndexQueryExpressionBuilderTests : TestBase
     {
         #region internals
@@ -19,9 +20,12 @@ namespace HatTrick.InMemDb.TestHarness
                 .CloneWith(() => new DigitalAssetCloner())
                 .SerializeWith(() => new DigitalAssetBinarySerializer())
                 .IndexOnIdentity(true)
+                .ApplyIndex<string>(nameof(DigitalAsset.Extension), (a) => a.Extension)
                 .ApplyIndex<string>(nameof(DigitalAsset.Name), (a) => a.Name)
+                .ApplyIndex<long>(nameof(DigitalAsset.Length), (a) => a.Length)
                 .ApplyIndex<DateTime>(nameof(DigitalAsset.Imported), (a) => a.Imported)
                 .ApplyIndex<ulong>(nameof(DigitalAsset.XXHash), (a) => a.XXHash)
+                .ApplyIndex<DigitalAssetType>(nameof(DigitalAsset.AssetType), a => a.AssetType)
                 .Register();
         }
         #endregion
@@ -43,6 +47,7 @@ namespace HatTrick.InMemDb.TestHarness
         {
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
+                this.LoadDb(db);
             }
         }
         #endregion

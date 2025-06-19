@@ -48,6 +48,10 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region count
+        public abstract int Count();
+        #endregion
+
         #region select
         public abstract X[] Select<X>(Func<T, X> selector);
         #endregion
@@ -188,6 +192,14 @@ namespace HatTrick.InMemDb
             _relationOp = RelationalOperator.LessThanEqualTo;
             _key = key;
             return this;
+        }
+        #endregion
+
+        #region count
+        public override int Count()
+        {
+            T[] set = _query(this, false);
+            return set.Length;
         }
         #endregion
 

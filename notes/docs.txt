@@ -34,5 +34,109 @@ MemDb Docs....
   - Hat Trick Tech Articles
   
   
+- Getting Started
+-----------------
+- Nuget package
+- Namespace
+- Definition of T (Person)
+- MemDb.Register<T>
+- MemDb.Open<T>
+- Insert(p) Eric Cartman
+- Update(
+	apply: (p) => p.MiddleName = "Theodore", 
+	where: (p) => p.LastName == "Cartman"
+  );
+- Delete((p) => p.LastName == "Cartman");
   
  
+ The Basics
+ ----------
+ - Insert
+  - simple
+  - capture natural key (id) =>
+  - encrypted
+ - Update
+   - by id
+   - predicated
+ - Delete
+   - by id
+   - predicated
+ - Count
+  - simple
+  - predicated
+ - Find
+  - by id
+  - predicated
+ - FindAll
+   - by id set
+   - pridicated
+ 
+Advanced Queries (Query Expression)
+----------------
+- Where
+- Skip
+- Limit
+- OrderBy
+- GroupBy
+- Sum
+- Min
+- Max
+- Avg
+- Count
+- ToArray
+- Update
+- Delete
+- Select
+- SelectDistinct
+
+Query via Index
+---------------
+- Natural
+ - Find(1)
+ - FindAll([1,2,3,4,5])
+- Applied
+  QueryViaIndex<string>("LastName")
+ 
+Core Concepts
+-------------
+- Modes (ReadWrite, ReadOnly, AppendOnly)
+- Persistence (optional)
+  - Files (.db | .map | .lock)
+- Flush (timed and manual)
+- Cache<T>
+  - where T class (ref type)
+  - Log structured cache, new versions of records always appended to the end of the cache and old versions marked stale (see purge)
+- Data Integrity via cloning (see serialization) (see points of 
+ - ref pointers never cross boundries
+- Log structured files, new versions of records always appended to the end of the data files and old versions marked stale (see defragment)
+- Serialization
+  - System.Text.Json.JsonSerializer
+
+Encryption (AES 256 bit)
+-------------------------
+- Configuration Key 
+- Configuratoin Password
+- Record level (intermingled)
+
+Snapshots
+----------
+- Online point in time backups
+
+Defragmentation
+- Offline process of removing the stale and deleted records from the database files.
+- Archive option (see point in time restore)
+
+Point In Time Restore
+----------------------
+- Restore archived database back to a specific point in time.
+
+Performance Consideration
+--------------------------
+- Custom Serializer
+- Custom Cloner
+- Indexes
+  - Natural (id)
+  - AppliedIndexes
+
+
+   

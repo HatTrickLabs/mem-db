@@ -185,5 +185,35 @@ namespace HatTrick.InMemDb.TestHarness
             }
         }
         #endregion
+
+        #region index refresh plus purge
+        public void Test_IndexRefreshPlushPurge()
+        {
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                this.LoadDb(db);
+                db.Update(a => a.XXHash = (ulong)a.Id, a => true);
+                var purged = db.PurgeCache();
+
+                int seconds = 0;
+                DateTime now = DateTime.Now;
+                db.Update(a => a.Imported = now.AddSeconds(++seconds), a => true);
+                purged = db.PurgeCache();
+
+                DateTime[] distinctImported = db.Query()
+                    .OrderBy((a, b) => a.Imported.CompareTo(b.Imported))
+                    .SelectDistinct(a => a.Imported)
+                    .ToArray();
+
+                Assert.IsEqual(distinctImported.Length, db.Count());
+
+                seconds = 0;
+                for (int i = 0; i < distinctImported.Length; i++)
+                {
+                    Assert.IsEqual(distinctImported[i], now.AddSeconds(++seconds));
+                }
+            }
+        }
+        #endregion
     }
 }
