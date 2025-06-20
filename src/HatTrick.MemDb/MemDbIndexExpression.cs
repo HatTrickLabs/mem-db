@@ -52,6 +52,18 @@ namespace HatTrick.InMemDb
         public abstract int Count();
         #endregion
 
+        #region order by
+        public abstract MemDbIndexExpression<T> OrderBy(Comparison<T> comparison);
+        #endregion
+
+        #region skip
+        public abstract MemDbIndexExpression<T> Skip(int count);
+        #endregion
+
+        #region limit
+        public abstract MemDbIndexExpression<T> Limit(int count);
+        #endregion
+
         #region select
         public abstract X[] Select<X>(Func<T, X> selector);
         #endregion
@@ -113,6 +125,10 @@ namespace HatTrick.InMemDb
         private RelationalOperator _relationOp;
         private Y _key;
 
+        private Comparison<T> _orderBy;
+        private int? _skip;
+        private int? _limit;
+
         private ExecuteQuery _query;
         private ExecuteUpdate _update;
         private ExecuteDelete _delete;
@@ -122,6 +138,18 @@ namespace HatTrick.InMemDb
         public RelationalOperator RelationalOperator => _relationOp;
 
         public Y IndexKey => _key;
+
+        internal bool HasOrderBy => _orderBy is not null;
+
+        public Comparison<T> OrderByComparison => _orderBy;
+
+        internal bool HasSkip => _skip.HasValue;
+
+        internal int SkipCount => _skip ?? 0;
+
+        internal bool HasLimit => _limit.HasValue;
+
+        internal int LimitCount => _limit ?? int.MaxValue;
         #endregion
 
         #region delegates
@@ -200,6 +228,39 @@ namespace HatTrick.InMemDb
         {
             T[] set = _query(this, false);
             return set.Length;
+        }
+        #endregion
+
+        #region order by
+        public override MemDbIndexExpression<T> OrderBy(Comparison<T> comparison)
+        {
+            if (_orderBy is not null)
+                throw new InvalidOperationException($"{nameof(MemDbException)} already contains a {nameof(OrderBy)} comparison.");
+
+            _orderBy = comparison;
+            return this;
+        }
+        #endregion
+
+        #region skip
+        public override MemDbIndexExpression<T> Skip(int count)
+        {
+            if (_skip is not null)
+                throw new InvalidOperationException($"{nameof(MemDbException)} already contains a {nameof(Skip)} count.");
+
+            _skip = count;
+            return this;
+        }
+        #endregion
+
+        #region limit
+        public override MemDbIndexExpression<T> Limit(int count)
+        {
+            if (_limit is not null)
+                throw new InvalidOperationException($"{nameof(MemDbException)} already contains a {nameof(Limit)} count.");
+
+            _limit = count;
+            return this;
         }
         #endregion
 

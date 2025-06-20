@@ -145,10 +145,28 @@ namespace HatTrick.InMemDb.TestHarness
             var remainder = db.Query().Skip(txtCnt).ToArray();
             Assert.IsEqual<int>(remainder.Length, (jsonCnt + unknownCnt));
 
+            var remainder2 = db.Query().Where(a => a.AssetType == DigitalAssetType.Json).Limit(200).ToArray();
+            Assert.IsEqual(remainder2.Length, 200);
+
             //simple skip + limit
             var jsonChunk = db.Query().Skip(txtCnt).Limit(jsonCnt).ToArray();//skip the txt assets, limit to the json assets
             Assert.IsEqual<int>(jsonChunk.Length, jsonCnt);
             Assert.IsEqual(jsonChunk.All(a => a.Extension == ".json"), true);
+        }
+        #endregion
+
+        #region skip / limit (exhaustion)
+        public void Test_SkipAndSkipLimitExhaustionExpressions()
+        {
+            using var db = MemDb.Open<DigitalAsset>(_dataset);
+            this.LoadDb(db, out int txtCnt, out int jsonCnt, out int unknownCnt);
+
+            //simple skip
+            var remainder = db.Query().Skip(txtCnt + jsonCnt + unknownCnt).ToArray();
+            Assert.IsEqual(remainder.Length, 0);
+
+            var remainder2 = db.Query().Skip(txtCnt + jsonCnt + unknownCnt).Limit(100).ToArray();
+            Assert.IsEqual(remainder2.Length, 0);
         }
         #endregion
 

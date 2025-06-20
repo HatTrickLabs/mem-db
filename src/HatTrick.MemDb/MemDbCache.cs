@@ -384,7 +384,6 @@ namespace HatTrick.InMemDb
                 ? (r) => r.State == RecordState.Fresh && expression.Filter(r.Value)
                 : (r) => r.State == RecordState.Fresh;
 
-            MemDbRecord<T>[] set = Array.Empty<MemDbRecord<T>>();
             lock (_lock)
             {
                 var matches = new List<MemDbRecord<T>>();
@@ -395,11 +394,11 @@ namespace HatTrick.InMemDb
                         matches.Add(r);
                 }
 
-                int skip = expression.HasSkip ? expression.SkipCount : 0;
-                int limit = expression.HasLimit ? expression.LimitCount : int.MaxValue;
+                int skip = expression.SkipCount;
+                int limit = expression.LimitCount;
 
                 if (matches.Count == 0 || skip >= matches.Count)
-                    goto EMPTY;
+                    return Array.Empty<MemDbRecord<T>>();
 
                 if (expression.HasOrderBy && matches.Count > 1)
                     matches.Sort((a, b) => expression.OrderByComparison(a.Value, b.Value));
@@ -412,10 +411,8 @@ namespace HatTrick.InMemDb
                     matches = matches.Slice(skip, limit);
                 }
 
-                set = matches.ToArray();
+                return matches.ToArray();
             }
-        EMPTY:
-            return set;
         }
         #endregion
 
@@ -518,12 +515,30 @@ namespace HatTrick.InMemDb
                         throw new NotImplementedException($"Index expression for {expression.RelationalOperator} not implemented.");
                 }
 
-                var set = new MemDbRecord<T>[pointers.Length];
+                int length = pointers.Length;
+                var set = new MemDbRecord<T>[length];
+
+                int skip = expression.SkipCount;
+                int limit = expression.LimitCount;
+
+                if (length == 0 || skip >= length)
+                    return Array.Empty<MemDbRecord<T>>();
+
                 for (int i = 0; i < pointers.Length; i++)
                 {
                     set[i] = _records[pointers[i]];
                 }
 
+                if (expression.HasOrderBy && length > 1)
+                    Array.Sort(set, (a,b) => expression.OrderByComparison(a.Value, b.Value));
+
+                if (expression.HasSkip || expression.HasLimit)
+                {
+                    if (limit > length - skip)
+                        limit = length - skip;
+
+                    set = set[skip..(skip + limit)]; //matches.Slice(skip, limit);
+                }
                 return set;
             }
         }

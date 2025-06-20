@@ -26,10 +26,10 @@ namespace HatTrick.InMemDb
         internal Comparison<T> OrderByComparison => _orderBy;
 
         internal bool HasSkip => _skip.HasValue;
-        internal int SkipCount => _skip.HasValue ? _skip.Value : 0;
+        internal int SkipCount => _skip ?? 0;
 
         internal bool HasLimit => _limit.HasValue;
-        internal int LimitCount => _limit.HasValue ? _limit.Value : 0;
+        internal int LimitCount => _limit ?? int.MaxValue;
         #endregion
 
         #region delegates
