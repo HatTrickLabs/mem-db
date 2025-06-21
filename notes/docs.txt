@@ -20,7 +20,7 @@ MemDb Docs....
   - Entire data set stored in RAM for fast reads (can be used as a file backed cache).
   - Powerful query capabilities using native code (no sql language parsing).
   - Always safe concurrency.
-  - Cached data sactity (never return ref pointers to internal objects).
+  - Cached data integrity (never return ref pointers to internal objects).
   - Record level encryption (AES 256 bit)
   - Online snapshots.
   - Archive and restore (ability to restore a database back to a histrical point in time).
@@ -133,10 +133,13 @@ Point In Time Restore
 Performance Consideration
 --------------------------
 - Custom Serializer
-- Custom Cloner
+- Custom Clonerip
 - Indexes
   - Natural (id)
   - AppliedIndexes
+
+Store Data by Interface or Covariance
+--------------------
 
 
    

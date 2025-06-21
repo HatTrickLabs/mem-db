@@ -24,8 +24,7 @@ namespace HatTrick.InMemDb
             message: "An exception was thrown on a timer thread during MemDb 'Flush'.", 
             original: original
             )
-        {
-        }
+        { }
         #endregion
     }
     #endregion

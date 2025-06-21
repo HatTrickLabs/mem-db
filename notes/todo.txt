@@ -11,7 +11,7 @@ x Refactor into layer MemDb Engine:
   x IMemDbAccessor: Implement all access methods (Find, FindAll, Exists, Sum, etc...).
   x IMemDbCacheProvider: : Implement the thread safe internal cached list of objects.
   x IMemDbPersistenceProvider: Implement of persistence (Disk).
-x Eliminate the 'Pointers' interface propery on MemDbMap...Make it all internal
+x Eliminate the 'Pointers' interface property on MemDbMap...Make it all internal
 x Return some type of IMemDbConfiguration on the fluent configure methods to eliminate all the flak methods available in intellisense
 x Implement some type of block or guard against opening MemDb<T>("datasetName") more than 1 time within a process.
 x Research some type of block or guard against opening MemDb<T>("datasetName") across processes (maybe exclusive file lock)...
@@ -32,54 +32,18 @@ x Blanket Tests:
   x Defrag
   x Defrag with Archive
 x Refactor configuration builder.  Eliminate all internal persistance and the 'Clear()' method (let the consumre always dictate the source via provider functions).
-x Implement true RAM only db with no disck read/write (volatile).  MemDb.Open<object>("datasetname") ... no directory path provided.
+x Implement true RAM only db with no disk read/write (volatile).  MemDb.Open<object>("datasetname") ... no directory path provided.
 x Expose flush interval override on config.
 x Implement 'snapshot' ... dump a db snapshot to disk while live ... must be able to snapshot WHILE the db is open.
 x Implement cache 'Purge()'
-- Implement a way to bubble error state up from persister...If a background thread throws exception attempting to flush to disk, the main thread needs a way
+x Implement a way to bubble error state up from persister...If a background thread throws exception attempting to flush to disk, the main thread needs a way
   to detect and acknowledge that the process is in an error state and should throw ex and exit.
 x Change identity / id generated and stored from uint to long...4 billion may not be sufficient if heavy delete scenaro such as rolling candle stick data.
 x Change Record.Position from int to long...Need to allow for db files larger than 2GB.
 x Refactor calls to MemDbAESEncryptor.CalculateCryptoByteLength to ref only an interface .... add CalculateCryptoByteLength to IMemDbEncryptorInfo interface.
-  
-  
-   MemDb.ConfigureFor<DigitalAsset>("assets", "c:/_asset_db").Register();
- 
- MemDb.ConfigureFor<DigitalAsset>("assets", "c:/")
-	.IndexOn<string>(a => a.Path.spl
-	.Register();
-	
-	
-
-
-public class DigitalAsset 
-{
-	private string[] _meta;
-	
-	public string[] Meta => _meta;
-}
-
-
-mom, dad, brother, sister, wife, husband, pet1, pet2, 
-
-"c:/tmp/apa/sense"
-.IndexOnSet<string>(a => a.Meta, nameof(DigitalAsset.Meta)) wher Meta is Arry of string (IEnumerable)
-.IndexOnSet<string>(a => a.Directory.Split('/'), nameof(DigitalAsset.Directory)
-
-
-db.Find(db.IndexRef[""], "");
-db.FindAll(db.Index[""], "", "", "")
-db.FindById(1000);
-db.Query().ByIndex("Directory", [ "", "", "" ] );
-db.Find(SArg.Index("Directory"), [ "", "", "" ] );
-
-db.Find((a) => a.Extension == ".json");
-
-db.Find((uint)100);
-
-db.Find(db.IndexOf<string>("Directory"), "")
-
-.ApplyIndex<string>(nameof(DigitalAsset.Directory), (a) => a.Directory)
-.ApplyIndex<int>(nameof(DigitalAsset.Length), (a) => a.Length)
-  
-  
+- Time to identify perf improvements via inter function concurrency.
+- From defrag archives (this may be an external tool):
+  - Find and restore a specific record by id.
+  - Find and restore a specific set of records by predicate.
+  - Build a db and map file set (restore) up to a specific point in time.
+  - Build ad db/map file set up to a fail point or point of corruption (until an error is encountered).
