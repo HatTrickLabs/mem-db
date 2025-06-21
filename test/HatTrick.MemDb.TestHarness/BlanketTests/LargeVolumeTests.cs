@@ -47,7 +47,7 @@ namespace HatTrick.InMemDb.TestHarness
         #region large volume
         public void Test_LargeVolume()
         {
-            int iterations = 500;
+            int iterations = 1_000;
             DigitalAsset[] loadAssets = base.ResolveAssetSet();
             int total = iterations * loadAssets.Length;
             Console.WriteLine($"Starting load of {total:n0} records into new database.");
@@ -63,8 +63,13 @@ namespace HatTrick.InMemDb.TestHarness
 
                 //this.QueryByIdNaturalIndexAssisted(db, 10_000);
                 //this.ConcurrentQueriesOnAppliedIdIndexAssisted(db, 10_000);
-                this.ConcurrentQueriesOnNameWithoutIndex(db, 100);//10k would take eternity
-                this.ConcurrentQueriesOnAppliedNameIndexAssisted(db, 100);
+                var noIndex = this.ConcurrentQueriesOnNameWithoutIndex(db, 100);//10k would take eternity
+                var withIndex = this.ConcurrentQueriesOnAppliedNameIndexAssisted(db, 100);
+
+                for (int i = 0; i < noIndex.Length; i++)
+                {
+                    Assert.IsEqual(noIndex[i].Id, withIndex[i].Id);
+                }
             }
 
             Console.WriteLine("Done...Press [Enter] to exit.");
@@ -143,38 +148,48 @@ namespace HatTrick.InMemDb.TestHarness
         #endregion
 
         #region concurrent queries on name without index
-        private void ConcurrentQueriesOnNameWithoutIndex(MemDb<DigitalAsset> db, int iterations)
+        private DigitalAsset[] ConcurrentQueriesOnNameWithoutIndex(MemDb<DigitalAsset> db, int iterations)
         {
             _sw.Reset();
 
-            Console.WriteLine($"Kicking off {iterations} concurrent queries for name == '0950' WITHOUT index...");
+            Console.WriteLine($"Kicking off {iterations} concurrent queries for name >= '0950' Skip(500).Limit(250) WITHOUT index...");
             _sw.Start();
             DigitalAsset[] noIndex = null;
             Parallel.For(0, iterations, (i) =>
             {
-                //noIndex = db.Query().Where(a => string.Compare("0950", a.Name, false) == 0).ToArray();
-                noIndex = db.Query().Where(a => string.Compare("0950", a.Name, false) >= 0).ToArray();
-                //noIndex = db.FindAll(a => string.Compare("0950", a.Name, false) >= 0);
+                noIndex = db.Query()
+                .Where(a => string.Compare(a.Name, "0950", false) >= 0)
+                .OrderBy((a, b) => b.Id.CompareTo(a.Id))
+                .Skip(500)
+                .Limit(250)
+                .ToArray();
             });
             _sw.Stop();
-            Console.WriteLine($"{_sw.ElapsedMilliseconds}\tqueried for all files name == 0950 WITHOUT index {noIndex.Length:n0}");
+            Console.WriteLine($"{_sw.ElapsedMilliseconds}\tqueried for all files name >= '0950' Skip(500).Limit(250) WITHOUT index {noIndex.Length:n0}");
+            return noIndex;
         }
         #endregion
 
         #region concurrent queries on applied name index assisted
-        private void ConcurrentQueriesOnAppliedNameIndexAssisted(MemDb<DigitalAsset> db, int iterations)
+        private DigitalAsset[] ConcurrentQueriesOnAppliedNameIndexAssisted(MemDb<DigitalAsset> db, int iterations)
         {
             _sw.Reset();
 
-            Console.WriteLine($"Kicking off {iterations:n0} concurrent queries for name == '0950' (applied index assisted)...");
+            Console.WriteLine($"Kicking off {iterations:n0} concurrent queries for name >= '0950' Skip(500).Limit(250) (applied index assisted)...");
             _sw.Start();
             DigitalAsset[] withIndex = null;
             Parallel.For(0, iterations, (i) =>
             {
-                withIndex = db.QueryViaIndex<string>(nameof(DigitalAsset.Name)).IsLessThanEqualTo("0950").ToArray();
+                withIndex = db.QueryViaIndex<string>(nameof(DigitalAsset.Name))
+                .IsGreaterThanEqualTo("0950")
+                .OrderBy((a,b) => b.Id.CompareTo(a.Id))
+                .Skip(500)
+                .Limit(250)
+                .ToArray();
             });
             _sw.Stop();
-            Console.WriteLine($"{_sw.ElapsedMilliseconds}\tqueried for all files name == 0950 WITH index {withIndex.Length:n0}");
+            Console.WriteLine($"{_sw.ElapsedMilliseconds}\tqueried for all files name >= '0950' Skip(500).Limit(250) WITH index {withIndex.Length:n0}");
+            return withIndex;
         }
         #endregion
 

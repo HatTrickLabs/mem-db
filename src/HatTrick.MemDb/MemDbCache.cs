@@ -394,19 +394,20 @@ namespace HatTrick.InMemDb
                         matches.Add(r);
                 }
 
+                int count = matches.Count;
                 int skip = expression.SkipCount;
                 int limit = expression.LimitCount;
 
-                if (matches.Count == 0 || skip >= matches.Count)
+                if (count == 0 || skip >= count)
                     return Array.Empty<MemDbRecord<T>>();
 
-                if (expression.HasOrderBy && matches.Count > 1)
+                if (expression.HasOrderBy && count > 1)
                     matches.Sort((a, b) => expression.OrderByComparison(a.Value, b.Value));
 
                 if (expression.HasSkip || expression.HasLimit)
                 {
-                    if (limit > matches.Count - skip)
-                        limit = matches.Count - skip;
+                    if (limit > count - skip)
+                        limit = count - skip;
 
                     matches = matches.Slice(skip, limit);
                 }
@@ -537,7 +538,7 @@ namespace HatTrick.InMemDb
                     if (limit > length - skip)
                         limit = length - skip;
 
-                    set = set[skip..(skip + limit)]; //matches.Slice(skip, limit);
+                    set = set[skip..(skip + limit)];
                 }
                 return set;
             }
