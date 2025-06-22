@@ -25,9 +25,9 @@ namespace HatTrick.InMemDb.TestHarness
                 //.SetFlushInterval(0)
                 .CloneWith(() => new DigitalAssetCloner())
                 //.SerializeWith(() => new DigitalAssetBinarySerializer())
-                //.IndexOnIdentity(true)
+                .IndexOnIdentity(true)
                 .ApplyIndex<string>(nameof(DigitalAsset.Name), (a) => a.Name)
-                //.ApplyIndex<long>(nameof(DigitalAsset.Id), (a) => a.Id)
+                .ApplyIndex<long>(nameof(DigitalAsset.Id), (a) => a.Id)
                 //.EncryptWithPassword(() => "This is a super fancy and complex password!!!!!")
                 .Register();
         }
@@ -61,15 +61,17 @@ namespace HatTrick.InMemDb.TestHarness
                 _sw.Stop();
                 Console.WriteLine($"{_sw.ElapsedMilliseconds}\tCompleted db load of {total:n0} records.");
 
-                //this.QueryByIdNaturalIndexAssisted(db, 10_000);
-                //this.ConcurrentQueriesOnAppliedIdIndexAssisted(db, 10_000);
-                var noIndex = this.ConcurrentQueriesOnNameWithoutIndex(db, 100);//10k would take eternity
-                var withIndex = this.ConcurrentQueriesOnAppliedNameIndexAssisted(db, 100);
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true);
 
-                for (int i = 0; i < noIndex.Length; i++)
-                {
-                    Assert.IsEqual(noIndex[i].Id, withIndex[i].Id);
-                }
+                this.QueryByIdNaturalIndexAssisted(db, 10_000);
+                this.ConcurrentQueriesOnAppliedIdIndexAssisted(db, 10_000);
+                //var noIndex = this.ConcurrentQueriesOnNameWithoutIndex(db, 1_000);//10k would take eternity
+                //var withIndex = this.ConcurrentQueriesOnAppliedNameIndexAssisted(db, 1_000);
+
+                //for (int i = 0; i < noIndex.Length; i++)
+                //{
+                //    Assert.IsEqual(noIndex[i].Id, withIndex[i].Id);
+                //}
             }
 
             Console.WriteLine("Done...Press [Enter] to exit.");
@@ -87,7 +89,7 @@ namespace HatTrick.InMemDb.TestHarness
             _sw.Start();
             Parallel.For(0, iterations, (i) =>
             {
-                assets[i] = db.Find((long)i + 300_001);
+                assets[i] = db.Find((long)i + 250_000);
             });
             _sw.Stop();
             Console.WriteLine($"{_sw.ElapsedMilliseconds}\tCompleted concurrent queries for {iterations:n0} records");
@@ -96,7 +98,7 @@ namespace HatTrick.InMemDb.TestHarness
             for (int i = 0; i < iterations; i++)
             {
                 Assert.IsNotNull(assets[i]);
-                Assert.IsEqual(assets[i].Id, i + 300_001);
+                Assert.IsEqual(assets[i].Id, i + 250_000);
             }
         }
         #endregion
@@ -107,11 +109,11 @@ namespace HatTrick.InMemDb.TestHarness
             _sw.Reset();
 
             Console.WriteLine($"Starting concurrent queries for {iterations:n0} records by id (applied index assisted)");
-            _sw.Start();
             DigitalAsset[] assets = new DigitalAsset[iterations];
+            _sw.Start();
             Parallel.For(0, iterations, (i) =>
             {
-                assets[i] = db.QueryViaIndex<long>(nameof(DigitalAsset.Id)).IsEqualTo(i + 300_001).ToArray()[0];
+                assets[i] = db.QueryViaIndex<long>(nameof(DigitalAsset.Id)).IsEqualTo(i + 250_000).ToArray()[0];
             });
             _sw.Stop();
             Console.WriteLine($"{_sw.ElapsedMilliseconds}\tCompleted concurrent queries for {iterations:n0} records");
@@ -120,7 +122,7 @@ namespace HatTrick.InMemDb.TestHarness
             for (int i = 0; i < iterations; i++)
             {
                 Assert.IsNotNull(assets[i]);
-                Assert.IsEqual(assets[i].Id, i + 300_001);
+                Assert.IsEqual(assets[i].Id, i + 250_000);
             }
         }
         #endregion
@@ -153,8 +155,8 @@ namespace HatTrick.InMemDb.TestHarness
             _sw.Reset();
 
             Console.WriteLine($"Kicking off {iterations} concurrent queries for name >= '0950' Skip(500).Limit(250) WITHOUT index...");
-            _sw.Start();
             DigitalAsset[] noIndex = null;
+            _sw.Start();
             Parallel.For(0, iterations, (i) =>
             {
                 noIndex = db.Query()
