@@ -136,10 +136,15 @@ namespace HatTrick.InMemDb
                     //if the rec inserted or state changed after stats collected, just shift it over so return count is accurate.
                     if (i > upperBound || record.State == RecordState.Fresh)
                     {
-                        newIndex?.Add(record.Id, newSet.Count);
+                        int idx = newSet.Count;
                         newSet.Add(record);
+                        newIndex?.Add(record.Id, idx);
+                        _appliedIndexes?.Refresh
+                        (
+                            stale: (record.Value, i),
+                            fresh: (record.Value, idx)
+                        );
                     }
-                    _records[i] = null;//not necessary...
                 } 
                 _records = newSet;
                 _index = newIndex;
@@ -713,7 +718,8 @@ namespace HatTrick.InMemDb
             if (_isIndexed)
                 _index[newRec.Id] = newRec.CacheIndex;
 
-            _appliedIndexes?.Refresh(
+            _appliedIndexes?.Refresh
+            (
                 stale: (to.Value, to.CacheIndex), 
                 fresh: (newRec.Value, newRec.CacheIndex)
             );

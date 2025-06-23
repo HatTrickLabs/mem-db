@@ -15,6 +15,8 @@ namespace HatTrick.InMemDb.TestHarness
         public CachePurgeTests(AssetResolver assetResolver) : base(_dataset, _dbPath, assetResolver)
         {
             MemDb.ConfigureFor<DigitalAsset>(_dataset, _dbPath)
+                .IndexOnIdentity(true)
+                .ApplyIndex<string>(nameof(DigitalAsset.Name), (a) => a.Name)
                 .Register();
         }
         #endregion
@@ -222,6 +224,35 @@ namespace HatTrick.InMemDb.TestHarness
 
                 //should be 8 sets of txt, 8 sets of json, 3 sets of unknown remaining within the db...
                 Assert.IsEqual(db.Count(), (txtCnt * 8) + (jsonCnt * 8) + (unknownCnt * 3));
+            }
+        }
+        #endregion
+
+        #region ensure index assisted query post purge
+        public void Test_EnsureIndexAssistedQueryPostPurge()
+        {
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                this.LoadDb(db, out int txtCnt, out int jsonCnt, out int unknownCnt);
+
+                long idOf0500 = db.Query().Where(a => a.Name == "0500.json").Select(a => a.Id)[0];
+
+                db.Update(a => a.XXHash += 1, a => a.AssetType == DigitalAssetType.Text);
+                db.Update(a => a.XXHash += 1, a => a.AssetType == DigitalAssetType.Json);
+                db.Update(a => a.XXHash += 1, a => a.AssetType == DigitalAssetType.Unknown);
+
+                db.PurgeCache();
+
+                DigitalAsset assetViaNaturalIdx = db.Find(idOf0500);
+
+                Assert.IsEqual(assetViaNaturalIdx.Name, "0500.json");
+
+                long idOf500ViaAppliedIdx = db.QueryViaIndex<string>(nameof(DigitalAsset.Name))
+                    .IsEqualTo("0500.json")
+                    .Select(a => a.Id)[0];
+
+                Assert.IsEqual(idOf0500, idOf500ViaAppliedIdx);
+
             }
         }
         #endregion

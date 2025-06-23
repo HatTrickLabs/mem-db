@@ -175,6 +175,7 @@ namespace HatTrick.InMemDb.TestHarness
                 Assert.IsEqual(db.Count(), txtCnt + jsonCnt);
                 Assert.IsEqual(db.Count(a => a.AssetType == DigitalAssetType.Text), txtCnt);
                 Assert.IsEqual(db.Count(a => a.AssetType == DigitalAssetType.Json), jsonCnt);
+                Assert.IsEqual(db.Count(a => a.AssetType == DigitalAssetType.Json && a.XXHash == 1), jsonCnt);
                 Assert.IsEqual(db.Count(a => a.AssetType == DigitalAssetType.Unknown), 0);
             }
         }
