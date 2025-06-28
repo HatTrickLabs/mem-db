@@ -47,7 +47,7 @@ namespace HatTrick.InMemDb.TestHarness
         #region large volume
         public void Test_LargeVolume()
         {
-            int iterations = 1_000;
+            int iterations = 1_00;
             DigitalAsset[] loadAssets = base.ResolveAssetSet();
             int total = iterations * loadAssets.Length;
             Console.WriteLine($"Starting load of {total:n0} records into new database.");
@@ -56,7 +56,25 @@ namespace HatTrick.InMemDb.TestHarness
             {
                 for (int i = 0; i < iterations; i++)
                 {
-                    this.LoadDb(db, loadAssets);
+                    Console.WriteLine($"started iteration {i}");
+                    try
+                    {
+                        this.LoadDb(db, loadAssets);
+                        Console.WriteLine($"Inserted 1_000 records @ {_sw.ElapsedMilliseconds}");
+                        int affected = db.QueryViaIndex<string>(nameof(DigitalAsset.Name))
+                            .IsLessThan("0950")
+                            .Update(a => a.Name = "_" + a.Name);
+
+                        Console.WriteLine($"Updaated {affected} records @ {_sw.ElapsedMilliseconds}");
+
+                        var purged = db.PurgeCache();
+
+                        Console.WriteLine($"Purge completed @ {_sw.ElapsedMilliseconds} result {purged}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.Message + Environment.NewLine + ex.StackTrace);
+                    }
                 }
                 _sw.Stop();
                 Console.WriteLine($"{_sw.ElapsedMilliseconds}\tCompleted db load of {total:n0} records.");
@@ -66,7 +84,7 @@ namespace HatTrick.InMemDb.TestHarness
                 this.QueryByIdNaturalIndexAssisted(db, 10_000);
                 this.ConcurrentQueriesOnAppliedIdIndexAssisted(db, 10_000);
                 //var noIndex = this.ConcurrentQueriesOnNameWithoutIndex(db, 1_000);//10k would take eternity
-                //var withIndex = this.ConcurrentQueriesOnAppliedNameIndexAssisted(db, 1_000);
+                var withIndex = this.ConcurrentQueriesOnAppliedNameIndexAssisted(db, 1_000);
 
                 //for (int i = 0; i < noIndex.Length; i++)
                 //{

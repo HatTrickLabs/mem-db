@@ -133,17 +133,17 @@ namespace HatTrick.InMemDb
                 for (int i = 0; i < _records.Count; i++)
                 {
                     var record = _records[i];
-                    //if the rec inserted or state changed after stats collected, just shift it over so return count is accurate.
-                    if (i > upperBound || record.State == RecordState.Fresh)
+                    if (i >= upperBound || record.State == RecordState.Fresh)
                     {
                         int idx = newSet.Count;
+                        record.CacheIndex = idx;
                         newSet.Add(record);
-                        newIndex?.Add(record.Id, idx);
-                        _appliedIndexes?.Refresh
-                        (
-                            stale: (record.Value, i),
-                            fresh: (record.Value, idx)
-                        );
+                        //if the rec inserted or state changed after stats collected, shift over but DO NOT apply to indexes
+                        if (i < upperBound)
+                        {
+                            newIndex?.Add(record.Id, idx);
+                            _appliedIndexes?.Refresh(stale: (record.Value, i), fresh: (record.Value, idx));
+                        }
                     }
                 } 
                 _records = newSet;
