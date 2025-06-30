@@ -47,7 +47,7 @@ namespace HatTrick.InMemDb.TestHarness
         #region large volume
         public void Test_LargeVolume()
         {
-            int iterations = 1_00;
+            int iterations = 250;
             DigitalAsset[] loadAssets = base.ResolveAssetSet();
             int total = iterations * loadAssets.Length;
             Console.WriteLine($"Starting load of {total:n0} records into new database.");
@@ -107,7 +107,7 @@ namespace HatTrick.InMemDb.TestHarness
             _sw.Start();
             Parallel.For(0, iterations, (i) =>
             {
-                assets[i] = db.Find((long)i + 250_000);
+                assets[i] = db.Find((long)i + 125_000);
             });
             _sw.Stop();
             Console.WriteLine($"{_sw.ElapsedMilliseconds}\tCompleted concurrent queries for {iterations:n0} records");
@@ -116,7 +116,7 @@ namespace HatTrick.InMemDb.TestHarness
             for (int i = 0; i < iterations; i++)
             {
                 Assert.IsNotNull(assets[i]);
-                Assert.IsEqual(assets[i].Id, i + 250_000);
+                Assert.IsEqual(assets[i].Id, i + 125_000);
             }
         }
         #endregion
@@ -131,7 +131,7 @@ namespace HatTrick.InMemDb.TestHarness
             _sw.Start();
             Parallel.For(0, iterations, (i) =>
             {
-                assets[i] = db.QueryViaIndex<long>(nameof(DigitalAsset.Id)).IsEqualTo(i + 250_000).ToArray()[0];
+                assets[i] = db.QueryViaIndex<long>(nameof(DigitalAsset.Id)).IsEqualTo(i + 125_000).ToArray()[0];
             });
             _sw.Stop();
             Console.WriteLine($"{_sw.ElapsedMilliseconds}\tCompleted concurrent queries for {iterations:n0} records");
@@ -140,7 +140,7 @@ namespace HatTrick.InMemDb.TestHarness
             for (int i = 0; i < iterations; i++)
             {
                 Assert.IsNotNull(assets[i]);
-                Assert.IsEqual(assets[i].Id, i + 250_000);
+                Assert.IsEqual(assets[i].Id, i + 125_000);
             }
         }
         #endregion
