@@ -143,7 +143,7 @@ namespace HatTrick.InMemDb
                     }
                     else if (i >= upperBound)
                     {
-                        //if the rec went stale or deleted after stats collected,
+                        //if the rec has been marked stale or deleted AFTER ResolveCacheStats (above),
                         //we still need to shift it over so the cache stats returned are accurate...
                         record.CacheIndex = idx;
                         newSet.Add(record);
