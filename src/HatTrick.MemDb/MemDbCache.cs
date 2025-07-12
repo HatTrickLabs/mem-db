@@ -125,11 +125,12 @@ namespace HatTrick.InMemDb
             if (stats.stale == 0 && stats.deleted == 0)
                 return (stale: 0, deleted: 0);
 
+            int capacity = stats.fresh == 0 ? 128 : (int)(stats.fresh * 1.025);
+            var newSet = new List<MemDbRecord<T>>(capacity);
+            var newIndex = _isIndexed ? new Dictionary<long, int>(capacity) : null;
+
             lock (_lock)
             {
-                int capacity = stats.fresh == 0 ? 128 : (int)(stats.fresh * 1.025);
-                var newSet = new List<MemDbRecord<T>>(capacity);
-                var newIndex = _isIndexed ? new Dictionary<long, int>(capacity) : null;
                 for (int i = 0; i < _records.Count; i++)
                 {
                     var record = _records[i];
