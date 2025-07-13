@@ -42,7 +42,7 @@ namespace HatTrick.InMemDb.TestHarness
         public void Test_IndexBuildAndMatch()
         {
             DateTime now = DateTime.Now;
-            System.Threading.Thread.Sleep(10);
+            System.Threading.Thread.Sleep(5);
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
                 this.LoadDb(db);
@@ -197,7 +197,7 @@ namespace HatTrick.InMemDb.TestHarness
 
                 int seconds = 0;
                 DateTime now = DateTime.Now;
-                db.Update(a => a.Imported = now.AddSeconds(++seconds), a => true);
+                db.Update(a => a.Imported = now.AddSeconds(seconds++), a => true);
                 purged = db.PurgeCache();
 
                 DateTime[] distinctImported = db.Query()
@@ -210,8 +210,91 @@ namespace HatTrick.InMemDb.TestHarness
                 seconds = 0;
                 for (int i = 0; i < distinctImported.Length; i++)
                 {
-                    Assert.IsEqual(distinctImported[i], now.AddSeconds(++seconds));
+                    Assert.IsEqual(distinctImported[i], now.AddSeconds(seconds++));
                 }
+
+                distinctImported = db.QueryViaIndex<DateTime>(nameof(DigitalAsset.Imported))
+                    .IsGreaterThanEqualTo(now)
+                    .OrderBy((a, b) => a.Imported.CompareTo(b.Imported))
+                    .SelectDistinct(a => a.Imported)
+                    .ToArray();
+
+                Assert.IsEqual(distinctImported.Length, db.Count());
+
+                distinctImported = db.QueryViaIndex<DateTime>(nameof(DigitalAsset.Imported))
+                    .IsLessThanEqualTo(now.AddSeconds(1_000))
+                    .OrderBy((a, b) => a.Imported.CompareTo(b.Imported))
+                    .SelectDistinct(a => a.Imported)
+                    .ToArray();
+
+                Assert.IsEqual(distinctImported.Length, db.Count());
+
+                distinctImported = db.QueryViaIndex<DateTime>(nameof(DigitalAsset.Imported))
+                    .IsLessThanEqualTo(now.AddSeconds(499))
+                    .OrderBy((a, b) => a.Imported.CompareTo(b.Imported))
+                    .SelectDistinct(a => a.Imported)
+                    .ToArray();
+
+                Assert.IsEqual(distinctImported.Length, 500);
+
+                distinctImported = db.QueryViaIndex<DateTime>(nameof(DigitalAsset.Imported))
+                    .IsGreaterThanEqualTo(now.AddSeconds(500))
+                    .OrderBy((a, b) => a.Imported.CompareTo(b.Imported))
+                    .SelectDistinct(a => a.Imported)
+                    .ToArray();
+
+                Assert.IsEqual(distinctImported.Length, 500);
+
+                distinctImported = db.QueryViaIndex<DateTime>(nameof(DigitalAsset.Imported))
+                    .IsLessThan(now.AddSeconds(500))
+                    .OrderBy((a, b) => a.Imported.CompareTo(b.Imported))
+                    .SelectDistinct(a => a.Imported)
+                    .ToArray();
+
+                Assert.IsEqual(distinctImported.Length, 500);
+            }
+        }
+        #endregion
+
+        #region index based updates
+        public void Test_IndexBasedUpdates()
+        {
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                this.LoadDb(db);
+
+                DateTime now = DateTime.Now;
+
+                string[] names = db.QueryViaIndex<string>(nameof(DigitalAsset.Name))
+                    .IsGreaterThan("!")
+                    .OrderBy((a, b) => a.Name.CompareTo(b.Name))
+                    .SelectDistinct<string>(a => a.Name);
+
+                Assert.IsEqual(names.Length, db.Count());
+
+                int nextId = 0;
+                foreach (string name in names)
+                {
+                    DigitalAsset[] result = db.QueryViaIndex<string>(nameof(DigitalAsset.Name))
+                        .IsEqualTo(name)
+                        .ToArray();
+
+                    Assert.IsEqual(result.Length, 1);
+                    //we ordered them by name asc...the ids should also be in asc order.
+                    Assert.IsEqual(result[0].Id, ++nextId);
+                }
+
+                //delete 0499.txt
+                int count = db.QueryViaIndex<string>(nameof(DigitalAsset.Name)).IsEqualTo("0499.txt").Delete();
+                Assert.IsEqual(count, 1);
+
+                var asset499 = db.QueryViaIndex<string>(nameof(DigitalAsset.Name)).IsEqualTo("0499.txt").ToArray();
+                Assert.IsEqual(asset499.Length, 0);
+                Assert.IsEqual(db.Count(), 999);
+
+
+                Console.WriteLine(db.Count(a => string.Compare(a.Name, "0500.txt", false) > 0));
+                Console.WriteLine(db.QueryViaIndex<string>(nameof(DigitalAsset.Name)).IsGreaterThanEqualTo("0500.txt").Count());
             }
         }
         #endregion
