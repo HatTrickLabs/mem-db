@@ -104,7 +104,6 @@ namespace HatTrick.InMemDb.TestHarness
             MemDb.ConfigureFor<DigitalAsset>(datasetName, Path.Combine(TestBase.DbBasePath, "snapshot", "target"))
                 .CloneWith(() => new DigitalAssetCloner())
                 .SerializeWith(() => new DigitalAssetBinarySerializer())
-                .EncryptWithPassword(() => "This is a super complicated and secret password here!")
                 .Register();
 
             using (var db = MemDb.Open<DigitalAsset>(datasetName))
