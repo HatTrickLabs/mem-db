@@ -12,7 +12,7 @@ MemDb Docs....
   - Runs embeddd in process (no dedicated engine process).
   - Entire data footprint in RAM.
   - File backed (data persisted to disk)
-  - Single compact library (~92KB HatTrick.MemDb.dll)
+  - Single compact library (~95KB HatTrick.MemDb.dll)
 
 - Why (did we build it) =>
   - Need for a super simple yet powerful embedded database engine.
@@ -71,7 +71,7 @@ MemDb Docs....
    - by id set
    - pridicated
  
-Advanced Queries (Query Expression)
+Advanced Queries (MemDb Query Expression)
 ----------------
 - Where
 - Skip
@@ -89,14 +89,6 @@ Advanced Queries (Query Expression)
 - Select
 - SelectDistinct
 
-Query via Index
----------------
-- Natural
- - Find(1)
- - FindAll([1,2,3,4,5])
-- Applied
-  QueryViaIndex<string>("LastName")
- 
 Core Concepts
 -------------
 - Modes (ReadWrite, ReadOnly, AppendOnly)
@@ -106,21 +98,54 @@ Core Concepts
 - Cache<T>
   - where T class (ref type)
   - Log structured cache, new versions of records always appended to the end of the cache and old versions marked stale (see purge)
-- Data Integrity via cloning (see serialization) (see points of 
- - ref pointers never cross boundries
+- Data Integrity via cloning (see serialization)
+ - no ref pointers cross bounderies
 - Log structured files, new versions of records always appended to the end of the data files and old versions marked stale (see defragment)
-- Serialization
+- Default Serialization
   - System.Text.Json.JsonSerializer
 
 Encryption (AES 256 bit)
 -------------------------
-- Configuration Key 
-- Configuratoin Password
-- Record level (intermingled)
+- Configure by Key 
+- Configure by Password
+- Record level encryption (intermingled storage on disk).
+
+
+Indexes
+---------------------
+- Configure identity (id) index: .IndexOnIdentity(bool shouldIndex)
+- Query via identity index (Id) (Hash lookup) O(1)
+ - Find(1)
+ - FindAll([1,2,3,4,5])
+- Configure additional indexes (applied): .ApplyIndex<T>(string indexName, Func<U, T> keyResolver)
+  QueryViaIndex<string>(string indexName)
+  - IsEqualTo => Hash lookup O(1)
+  - IsNotEqualTo => O(log n) * 2
+  - IsGreaterThan => O(log n)
+  - IsLessThan => O(log n)
+  - IsGreaterThanEqualTo => O(log n)
+  - IsLessThanEqualTo => O(log n)
+
+
+Store Data by Interface
+-----------------------
+- Supported via 'JsonDerivedType' attributes when using default serializer.
+- Supported via custom serialization override.
+
+
+Store Data With Polymorphic Type Hierarchy
+------------------------------------------
+- Supported via 'JsonDerivedType' attributes when using the default serializer.
+- Supported via custom serialization override.
+
 
 Snapshots
 ----------
-- Online point in time backups
+- Configure: .SnapshotTo(string path)
+- Point in time backups.
+- Online funciton, can be executed without closing the database.
+- Built from the file system not the Cache (avoid locking on the cache, db still completely operational).
+- 
 
 Defragmentation
 - Offline process of removing the stale and deleted records from the database files.
@@ -132,14 +157,12 @@ Point In Time Restore
 
 Performance Consideration
 --------------------------
+- SSD Drive (spinning disk drives will be super slow).
 - Custom Serializer
-- Custom Clonerip
+- Custom Cloner
 - Indexes
-  - Natural (id)
-  - AppliedIndexes
-
-Store Data by Interface or Covariance
---------------------
+  - Identity (id)
+  - Applied
 
 
    

@@ -358,7 +358,9 @@ namespace HatTrick.InMemDb
                 }
                 else
                 {
-                    var march = _records.FindAll((r) => r.State == RecordState.Fresh && Array.Exists(ids, (id) => r.Id == id));
+                    matches = _records
+                            .FindAll((r) => r.State == RecordState.Fresh && Array.Exists(ids, (id) => r.Id == id))
+                            .ConvertAll(r => r.Value);
                 }
             }
 

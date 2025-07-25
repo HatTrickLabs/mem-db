@@ -82,7 +82,9 @@ namespace HatTrick.InMemDb.TestHarness
             Assert.IsEqual(stats.DeletedSize, (unknownCnt * unknownSize));
 
             //defrag (removes all deleted and stale data from the map and db files)
-            MemDb.Defrag(_dataset);
+            var counts = MemDb.Defrag(_dataset);
+            Assert.IsEqual(counts.stale, stats.StaleCount);
+            Assert.IsEqual(counts.deleted, stats.DeletedCount);
 
             //when we re-open the db, all stale and deleted map pointers and db records should be gone.
             MemDbStatistics stats2 = null;            

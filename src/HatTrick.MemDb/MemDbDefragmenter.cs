@@ -42,7 +42,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region defrag
-        void IMemDbDefragmenter.Defrag()
+        (int stale, int deleted) IMemDbDefragmenter.Defrag()
         {
             //ensure the record map actually exists
             if (!File.Exists(_fullMapPath))
@@ -56,7 +56,7 @@ namespace HatTrick.InMemDb
             this.ReadFragmentedMap();
 
             if ((_originalMap.StaleCount + _originalMap.DeletedCount) == 0)
-                return;//0 fragmentation, nothing can be cleaned up
+                return default;//0 fragmentation, nothing can be cleaned up
 
             //ensure enough drive space exists to perform the defrag operation
             this.EnsureAvailableDriveSpace();
@@ -72,6 +72,8 @@ namespace HatTrick.InMemDb
 
             //rename the temp defragmented files to remove the 'temp' designation
             this.RenameTempDefragmentedFiles();
+
+            return (stale: _staleCount, deleted: _deletedCount);
         }
         #endregion
 

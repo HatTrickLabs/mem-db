@@ -32,7 +32,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region defrag
-        public static void Defrag(string datasetName)
+        public static (int stale, int deleted) Defrag(string datasetName)
         {
             lock (_lock)
             {
@@ -50,7 +50,8 @@ namespace HatTrick.InMemDb
                 archiver.Archive();
             }
             IMemDbDefragmenter defragmenter = new MemDbDefragmenter(config);
-            defragmenter.Defrag();
+            (int stale, int deleted) counts = defragmenter.Defrag();
+            return counts;
         }
         #endregion
 

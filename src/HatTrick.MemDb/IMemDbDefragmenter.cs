@@ -4,6 +4,6 @@ namespace HatTrick.InMemDb
 {
     internal interface IMemDbDefragmenter
     {
-        internal void Defrag();
+        internal (int stale, int deleted) Defrag();
     }
 }
