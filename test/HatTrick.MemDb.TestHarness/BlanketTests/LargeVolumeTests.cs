@@ -47,49 +47,26 @@ namespace HatTrick.InMemDb.TestHarness
         #region large volume
         public void Test_LargeVolume()
         {
-            int iterations = 250;
-            DigitalAsset[] loadAssets = base.ResolveAssetSet();
-            int total = iterations * loadAssets.Length;
+            int iterations = 1_000;
+            DigitalAsset[] assets = base.ResolveAssetSet();
+            int total = iterations * assets.Length;
             Console.WriteLine($"Starting load of {total:n0} records into new database.");
             _sw.Start();
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
                 for (int i = 0; i < iterations; i++)
                 {
-                    Console.WriteLine($"started iteration {i}");
-                    try
-                    {
-                        this.LoadDb(db, loadAssets);
-                        Console.WriteLine($"Inserted 1_000 records @ {_sw.ElapsedMilliseconds}");
-                        int affected = db.QueryViaIndex<string>(nameof(DigitalAsset.Name))
-                            .IsLessThan("0950")
-                            .Update(a => a.Name = "_" + a.Name);
-
-                        Console.WriteLine($"Updaated {affected} records @ {_sw.ElapsedMilliseconds}");
-
-                        var purged = db.PurgeCache();
-
-                        Console.WriteLine($"Purge completed @ {_sw.ElapsedMilliseconds} result {purged}");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex.Message + Environment.NewLine + ex.StackTrace);
-                    }
+                    this.LoadDb(db, assets);
                 }
                 _sw.Stop();
                 Console.WriteLine($"{_sw.ElapsedMilliseconds}\tCompleted db load of {total:n0} records.");
 
                 GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true);
 
-                this.QueryByIdNaturalIndexAssisted(db, 10_000);
                 this.ConcurrentQueriesOnAppliedIdIndexAssisted(db, 10_000);
-                //var noIndex = this.ConcurrentQueriesOnNameWithoutIndex(db, 1_000);//10k would take eternity
-                var withIndex = this.ConcurrentQueriesOnAppliedNameIndexAssisted(db, 1_000);
-
-                //for (int i = 0; i < noIndex.Length; i++)
-                //{
-                //    Assert.IsEqual(noIndex[i].Id, withIndex[i].Id);
-                //}
+                this.QueryByIdNaturalIndexAssisted(db, 10_000);
+                var withIndex = this.ConcurrentQueriesOnAppliedNameIndexAssisted(db, 100);
+                var noIndex = this.ConcurrentQueriesOnNameWithoutIndex(db, 100);
             }
 
             Console.WriteLine("Done...Press [Enter] to exit.");
