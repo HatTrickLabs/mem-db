@@ -27,6 +27,7 @@ namespace HatTrick.InMemDb.TestHarness
             jsonCnt = 0;
             unknownCnt = 0;
             DigitalAsset[] assets = base.ResolveAssetSet();
+            string directory = $"C:{Path.DirectorySeparatorChar}";
             for (int i = 0; i < assets.Length; i++)
             {
                 var asset = assets[i];
@@ -39,6 +40,10 @@ namespace HatTrick.InMemDb.TestHarness
                 if (asset.AssetType == DigitalAssetType.Unknown)
                     unknownCnt += 1;
 
+                //remove the variability in stored record length by overriding the directory path of each
+                //with a spoof 'C:/' so we can accurately calc binary record length reguardless of where the test 
+                //harness data is stored on any individual machine.
+                asset.Directory = directory;
                 db.Insert(asset);
             }
         }
@@ -51,9 +56,9 @@ namespace HatTrick.InMemDb.TestHarness
             MemDbStatistics stats = null;
 
             //we know the constant size of each type of binary serialized asset record.
-            int txtSize = 108;
-            int jsonSize = 109;
-            int unknownSize = 104;
+            int txtSize = 73;
+            int jsonSize = 74;
+            int unknownSize = 69;
 
             int txtCnt;
             int jsonCnt;
