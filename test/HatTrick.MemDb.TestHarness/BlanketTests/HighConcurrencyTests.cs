@@ -94,6 +94,13 @@ namespace HatTrick.InMemDb.TestHarness
                 Array.ForEach(sets,
                     ((string name, int count) itm) => Assert.IsEqual<int>(itm.count, 10)
                 );
+
+                var avgLen = db.Query().GroupBy(a => a.Extension).Select(g => (g.Key, g.Average(x => x.Length))).ToArray();
+
+                //all files have a len of 64, so the avg for each extension should be 64
+                Array.ForEach(avgLen, 
+                    ((string ext, double avgLen) itm) => Assert.IsEqual(itm.avgLen, 64)
+                );
             }
         }
         #endregion

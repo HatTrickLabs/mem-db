@@ -28,6 +28,11 @@ namespace HatTrick.InMemDb.TestHarness
                 .IndexOnIdentity(true)
                 .ApplyIndex<string>(nameof(DigitalAsset.Name), (a) => a.Name)
                 .ApplyIndex<long>(nameof(DigitalAsset.Id), (a) => a.Id)
+                .ApplyIndex<string>(
+                    name: nameof(DigitalAsset.Directory), 
+                    keyResolver: (a) => a.Directory, 
+                    comparer: new HybridComparer<string>(StringComparer.CurrentCultureIgnoreCase, StringComparer.CurrentCultureIgnoreCase)
+                )
                 //.EncryptWithPassword(() => "This is a super fancy and complex password!!!!!")
                 .Register();
         }
@@ -65,8 +70,9 @@ namespace HatTrick.InMemDb.TestHarness
 
                 this.ConcurrentQueriesOnAppliedIdIndexAssisted(db, 10_000);
                 this.QueryByIdNaturalIndexAssisted(db, 10_000);
-                var withIndex = this.ConcurrentQueriesOnAppliedNameIndexAssisted(db, 100);
-                var noIndex = this.ConcurrentQueriesOnNameWithoutIndex(db, 100);
+                //var withIndex = this.ConcurrentQueriesOnAppliedNameIndexAssisted(db, 100);
+                //var noIndex = this.ConcurrentQueriesOnNameWithoutIndex(db, 100);
+                this.ConcurrentQueriesOnAppliedDirectoryIndexAssisted(db, 100);
             }
 
             Console.WriteLine("Done...Press [Enter] to exit.");
@@ -186,6 +192,26 @@ namespace HatTrick.InMemDb.TestHarness
             });
             _sw.Stop();
             Console.WriteLine($"{_sw.ElapsedMilliseconds}\tqueried for all files name >= '0950' Skip(500).Limit(250) WITH index {withIndex.Length:n0}");
+            return withIndex;
+        }
+        #endregion
+
+        #region concurrent queries on applied directory index assisted
+        private DigitalAsset[] ConcurrentQueriesOnAppliedDirectoryIndexAssisted(MemDb<DigitalAsset> db, int iterations)
+        {
+            _sw.Reset();
+
+            Console.WriteLine($"Kicking off {iterations:n0} concurrent queries for Directory (applied index assisted)...");
+            _sw.Start();
+            DigitalAsset[] withIndex = null;
+            Parallel.For(0, iterations, (i) =>
+            {
+                withIndex = db.QueryViaIndex<string>(nameof(DigitalAsset.Directory))
+                .IsGreaterThanEqualTo(@"d:\GIT\HatTrickLabs\mem-db\test\assets\i")
+                .ToArray();
+            });
+            _sw.Stop();
+            Console.WriteLine($"{ _sw.ElapsedMilliseconds}\tqueried for all files Directory WITH index {withIndex.Length:n0}");
             return withIndex;
         }
         #endregion

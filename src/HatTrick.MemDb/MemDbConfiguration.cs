@@ -251,7 +251,9 @@ namespace HatTrick.InMemDb
         IMemDBConfigurationBuilder<T> SetMode(AccessMode mode);
         IMemDBConfigurationBuilder<T> IndexOnIdentity(bool shouldIndex);
         IMemDBConfigurationBuilder<T> ApplyIndex<Y>(string name, Func<T, Y> keyResolver) where Y : IConvertible;
+        IMemDBConfigurationBuilder<T> ApplyIndex<Y>(string name, Func<T, Y> keyResolver, HybridComparer<Y> comparer) where Y : IConvertible;
         //IMemDBConfigurationBuilder<T> ApplyIndex<Y>(string name, Func<T, ICollection<Y>> keySetResolver) where Y : IConvertible;
+        //IMemDBConfigurationBuilder<T> ApplyIndex<Y>(string name, Func<T, ICollection<Y>> keySetResolver, HybridComparer<Y> comparer) where Y : IConvertible;
         IMemDBConfigurationBuilder<T> SetFlushInterval(int interval);
         IMemDBConfigurationBuilder<T> SerializeWith(Func<IMemDbSerializer<T>> serializerProvider);
         IMemDBConfigurationBuilder<T> CloneWith(Func<IMemDbCloner<T>> clonerProvider);
