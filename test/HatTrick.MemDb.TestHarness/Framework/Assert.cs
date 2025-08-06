@@ -13,11 +13,26 @@ namespace HatTrick.InMemDb.TestHarness
                 throw new NotEqualException<T>(a, b);
         }
 
+        public static void IsNotEqual<T>(T a, T b)
+        {
+            EqualityComparer<T> comp = EqualityComparer<T>.Default;
+            bool isEqual = comp.Equals(a, b);
+            if (isEqual)
+                throw new IsEqualException<T>(a, b);
+        }
+
         public static void IsEqual(string a, string b, bool ignoreCase = false)
         {
             bool isEqual = string.Compare(a, b, ignoreCase) == 0;
             if (!isEqual)
                 throw new NotEqualException<string>(a, b);
+        }
+
+        public static void IsNotEqual(string a, string b, bool ignoreCase = false)
+        {
+            bool isEqual = string.Compare(a, b, ignoreCase) == 0;
+            if (isEqual)
+                throw new IsEqualException<string>(a, b);
         }
 
         public static void IsNull(object o)

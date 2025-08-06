@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace HatTrick.InMemDb
 {
-    public class MemDbGroupedIndexExpression<TKey, T, YIndex> : IMemDbGroupedIndexExpression<TKey, T, YIndex> where T : class
+    public class MemDbGroupedIndexExpression<TKey, T, YIndex> : IMemDbGroupedExpression<TKey, T> where T : class
     {
         #region internals
         private Func<T, TKey> _keySelector;
@@ -25,7 +25,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region having
-        public IMemDbGroupedIndexExpression<TKey, T, YIndex> Having(Func<IGrouping<TKey, T>, bool> predicate)
+        public IMemDbGroupedExpression<TKey, T> Having(Func<IGrouping<TKey, T>, bool> predicate)
         {
             _having = predicate ?? throw new ArgumentNullException(nameof(predicate));
             return this;

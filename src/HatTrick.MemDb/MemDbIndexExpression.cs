@@ -56,6 +56,10 @@ namespace HatTrick.InMemDb
         public abstract MemDbIndexExpression<T> OrderBy(Comparison<T> comparison);
         #endregion
 
+        #region group by
+        public abstract IMemDbGroupedExpression<TKey, T> GroupBy<TKey>(Func<T, TKey> keySelector);
+        #endregion
+
         #region skip
         public abstract MemDbIndexExpression<T> Skip(int count);
         #endregion
@@ -245,7 +249,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region group by
-        public IMemDbGroupedIndexExpression<TKey, T, YIndex> GroupBy<TKey>(Func<T, TKey> keySelector)
+        public override IMemDbGroupedExpression<TKey, T> GroupBy<TKey>(Func<T, TKey> keySelector)
         {
             if (keySelector is null)
                 throw new ArgumentNullException(nameof(keySelector));

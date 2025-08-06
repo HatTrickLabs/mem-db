@@ -108,9 +108,9 @@ namespace HatTrick.InMemDb.TestHarness
             //basic group by
             var sets = db.Query().GroupBy(a => a.Extension).Select(g => (g.Key, g.Count())).ToArray();
 
-            Assert.IsNotNull(Array.Find(sets, s => s.Key == ".txt"));
-            Assert.IsNotNull(Array.Find(sets, s => s.Key == ".json"));
-            Assert.IsNotNull(Array.Find(sets, s => s.Key == string.Empty));
+            Assert.IsNotEqual(Array.Find(sets, s => s.Key == ".txt"), default);
+            Assert.IsNotEqual(Array.Find(sets, s => s.Key == ".json"), default);
+            Assert.IsNotEqual(Array.Find(sets, s => s.Key == string.Empty), default);
 
             Assert.IsEqual<int>(Array.Find(sets, s => s.Key == ".txt").Item2, txtCnt);
             Assert.IsEqual<int>(Array.Find(sets, s => s.Key == ".json").Item2, jsonCnt);
@@ -127,8 +127,8 @@ namespace HatTrick.InMemDb.TestHarness
             //group by + having
             var sets2 = db.Query().GroupBy(a => a.Extension).Having(g => g.Count() > 100).Select(g => (g.Key, g.Count())).ToArray();
             Assert.IsEqual(sets2.Length, 2);
-            Assert.IsNotNull(Array.Find(sets2, s => s.Key == ".txt"));
-            Assert.IsNotNull(Array.Find(sets2, s => s.Key == ".json"));
+            Assert.IsNotEqual(Array.Find(sets2, s => s.Key == ".txt"), default);
+            Assert.IsNotEqual(Array.Find(sets2, s => s.Key == ".json"), default);
             Assert.IsEqual(Array.Exists(sets2, s => s.Key == string.Empty), false);//should have eliminated uknowns with having expression
             Assert.IsEqual(Array.Find(sets2, s => s.Key == ".txt").Item2, txtCnt);
             Assert.IsEqual(Array.Find(sets2, s => s.Key == ".json").Item2, jsonCnt);

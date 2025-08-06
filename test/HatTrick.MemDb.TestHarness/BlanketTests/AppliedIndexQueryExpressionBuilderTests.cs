@@ -119,25 +119,25 @@ namespace HatTrick.InMemDb.TestHarness
         #endregion
 
         #region group by
-        //public void Test_GroupBy()
-        //{
-        //    using (var db = MemDb.Open<DigitalAsset>(_dataset))
-        //    {
-        //        this.LoadDb(db);
+        public void Test_GroupBy()
+        {
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                this.LoadDb(db);
 
-        //        //should get 500 the assets in order of id desc
-        //        var set = db.QueryViaIndex<string>(nameof(DigitalAsset.Extension))
-        //            .IsGreaterThan(string.Empty)
-        //            .GroupBy(
-        //            .ToArray();
+                int jsonCnt = db.Count(a => a.Extension == ".json");
+                int txtCnt = db.Count(a => a.Extension == ".txt");
+                
+                var set = db.QueryViaIndex<string>(nameof(DigitalAsset.Extension))
+                    .IsGreaterThan(string.Empty)
+                    .GroupBy(a => a.Extension)
+                    .Having(g => g.Count() > 400)
+                    .Select(g => (g.Key, g.Count())).ToArray();
 
-        //        long max = db.Query().Where(a => string.Compare(a.Name, "0500.json", false) == -1).Max(a => a.Id);
-        //        for (int i = 0; i < set.Length; i++)
-        //        {
-        //            Assert.IsEqual(set[i].Id, max--);
-        //        }
-        //    }
-        //}
+                Assert.IsEqual<int>(Array.Find(set, s => s.Key == ".txt").Item2, txtCnt);
+                Assert.IsEqual<int>(Array.Find(set, s => s.Key == ".json").Item2, default);
+            }
+        }
         #endregion
 
         #region skip / limit
