@@ -19,14 +19,14 @@ namespace HatTrick.InMemDb
     #endregion
 
     #region i mem db index expression root of T, Y [interface]
-    public interface IMemDbIndexExpressionRoot<T, Y> where T : class
+    public interface IMemDbIndexExpressionRoot<T, YIndex> where T : class
     {
-        public MemDbIndexExpression<T> IsEqualTo(Y key);
-        public MemDbIndexExpression<T> IsNotEqualTo(Y key);
-        public MemDbIndexExpression<T> IsGreaterThan(Y key);
-        public MemDbIndexExpression<T> IsLessThan(Y key);
-        public MemDbIndexExpression<T> IsGreaterThanEqualTo(Y key);
-        public MemDbIndexExpression<T> IsLessThanEqualTo(Y key);
+        public MemDbIndexExpression<T> IsEqualTo(YIndex key);
+        public MemDbIndexExpression<T> IsNotEqualTo(YIndex key);
+        public MemDbIndexExpression<T> IsGreaterThan(YIndex key);
+        public MemDbIndexExpression<T> IsLessThan(YIndex key);
+        public MemDbIndexExpression<T> IsGreaterThanEqualTo(YIndex key);
+        public MemDbIndexExpression<T> IsLessThanEqualTo(YIndex key);
     }
     #endregion
 
@@ -119,11 +119,11 @@ namespace HatTrick.InMemDb
     #endregion
 
     #region mem db index expression of T, Y [class]
-    public class MemDbIndexExpression<T, Y> : MemDbIndexExpression<T>, IMemDbIndexExpressionRoot<T, Y> where T : class
+    public class MemDbIndexExpression<T, YIndex> : MemDbIndexExpression<T>, IMemDbIndexExpressionRoot<T, YIndex> where T : class
     {
         #region internals
         private RelationalOperator _relationOp;
-        private Y _key;
+        private YIndex _key;
 
         private Comparison<T> _orderBy;
         private int? _skip;
@@ -137,7 +137,9 @@ namespace HatTrick.InMemDb
         #region interface
         public RelationalOperator RelationalOperator => _relationOp;
 
-        public Y IndexKey => _key;
+        public YIndex IndexKey => _key;
+
+        internal MemDbIndexExpression<T, YIndex>.ExecuteQuery Query => _query;
 
         internal bool HasOrderBy => _orderBy is not null;
 
@@ -153,11 +155,11 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region delegates
-        internal delegate T[] ExecuteQuery(MemDbIndexExpression<T, Y> expression, bool deepCopy);
+        internal delegate T[] ExecuteQuery(MemDbIndexExpression<T, YIndex> expression, bool deepCopy);
 
-        internal delegate int ExecuteUpdate(MemDbIndexExpression<T, Y> expression, Action<T> apply);
+        internal delegate int ExecuteUpdate(MemDbIndexExpression<T, YIndex> expression, Action<T> apply);
 
-        internal delegate int ExecuteDelete(MemDbIndexExpression<T, Y> expression);
+        internal delegate int ExecuteDelete(MemDbIndexExpression<T, YIndex> expression);
         #endregion
 
         #region ctors
@@ -170,7 +172,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region is equal to
-        public MemDbIndexExpression<T> IsEqualTo(Y key)
+        public MemDbIndexExpression<T> IsEqualTo(YIndex key)
         {
             _relationOp = RelationalOperator.EqualTo;
             _key = key;
@@ -179,7 +181,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region is not equal to
-        public MemDbIndexExpression<T> IsNotEqualTo(Y key)
+        public MemDbIndexExpression<T> IsNotEqualTo(YIndex key)
         {
             _relationOp = RelationalOperator.NotEqualTo;
             _key = key;
@@ -188,7 +190,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region is greater than
-        public MemDbIndexExpression<T> IsGreaterThan(Y key)
+        public MemDbIndexExpression<T> IsGreaterThan(YIndex key)
         {
             _relationOp = RelationalOperator.GreaterThan;
             _key = key;
@@ -197,7 +199,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region is less than
-        public MemDbIndexExpression<T> IsLessThan(Y key)
+        public MemDbIndexExpression<T> IsLessThan(YIndex key)
         {
             _relationOp = RelationalOperator.LessThan;
             _key = key;
@@ -206,7 +208,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region is greater than equal to
-        public MemDbIndexExpression<T> IsGreaterThanEqualTo(Y key)
+        public MemDbIndexExpression<T> IsGreaterThanEqualTo(YIndex key)
         {
             _relationOp = RelationalOperator.GreaterThanEqualTo;
             _key = key;
@@ -215,7 +217,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region is less than equal to
-        public MemDbIndexExpression<T> IsLessThanEqualTo(Y key)
+        public MemDbIndexExpression<T> IsLessThanEqualTo(YIndex key)
         {
             _relationOp = RelationalOperator.LessThanEqualTo;
             _key = key;
@@ -239,6 +241,16 @@ namespace HatTrick.InMemDb
 
             _orderBy = comparison;
             return this;
+        }
+        #endregion
+
+        #region group by
+        public IMemDbGroupedIndexExpression<TKey, T, YIndex> GroupBy<TKey>(Func<T, TKey> keySelector)
+        {
+            if (keySelector is null)
+                throw new ArgumentNullException(nameof(keySelector));
+
+            return new MemDbGroupedIndexExpression<TKey, T, YIndex>(keySelector, this);
         }
         #endregion
 
@@ -285,7 +297,7 @@ namespace HatTrick.InMemDb
         #region select distinct
         public override X[] SelectDistinct<X>(Func<T, X> selector)
         {
-            Type t = typeof(Y);
+            Type t = typeof(YIndex);
             bool allowShallowCopy = t == typeof(string) || t.IsValueType;
 
             //we only want to incur the cost of deep copy if necessary...

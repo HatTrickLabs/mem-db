@@ -467,7 +467,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region query via index
-        public IMemDbIndexExpressionRoot<T, Y> QueryViaIndex<Y>(string indexName) where Y : IConvertible
+        public IMemDbIndexExpressionRoot<T, YIndex> QueryViaIndex<YIndex>(string indexName) where YIndex : IConvertible
         {
             this.EnsureReadMode(nameof(QueryViaIndex));
 
@@ -479,14 +479,14 @@ namespace HatTrick.InMemDb
                 throw new ArgumentException($"No custom index exists on MemDb instance '{_datasetName}' with provided name '{indexName}'", nameof(indexName));
 
             //ensure generic type requested is a match to the index type...
-            MemDbIndex<T, Y> typeIndex = index.Of<Y>();
+            MemDbIndex<T, YIndex> typeIndex = index.Of<YIndex>();
 
-            return new MemDbIndexExpression<T, Y>(index.Name, this.ExecuteIndexQueryExpression, this.ExecuteIndexedUpdateExpression, this.ExecuteIndexedDeleteExpression);
+            return new MemDbIndexExpression<T, YIndex>(index.Name, this.ExecuteIndexQueryExpression, this.ExecuteIndexedUpdateExpression, this.ExecuteIndexedDeleteExpression);
         }
         #endregion
 
         #region execute indexed query expression
-        private T[] ExecuteIndexQueryExpression<Y>(MemDbIndexExpression<T, Y> expression, bool deepCopy) where Y : IConvertible
+        private T[] ExecuteIndexQueryExpression<YIndex>(MemDbIndexExpression<T, YIndex> expression, bool deepCopy) where YIndex : IConvertible
         {
             MemDbRecord<T>[] records = this.ExecuteIndexQueryExpression(expression);
 
@@ -495,11 +495,11 @@ namespace HatTrick.InMemDb
                 : Array.ConvertAll(records, r => r.Value);
         }
 
-        private MemDbRecord<T>[] ExecuteIndexQueryExpression<Y>(MemDbIndexExpression<T, Y> expression) where Y : IConvertible
+        private MemDbRecord<T>[] ExecuteIndexQueryExpression<YIndex>(MemDbIndexExpression<T, YIndex> expression) where YIndex : IConvertible
         {
             string idxName = expression.IndexName;
-            MemDbIndex<T, Y> index = _appliedIndexes.Get(idxName).Of<Y>();
-            Y arg = expression.IndexKey;
+            MemDbIndex<T, YIndex> index = _appliedIndexes.Get(idxName).Of<YIndex>();
+            YIndex arg = expression.IndexKey;
             lock (_lock)
             {
                 int[] pointers = null;
@@ -557,7 +557,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region execute indexed update expression
-        private int ExecuteIndexedUpdateExpression<Y>(MemDbIndexExpression<T, Y> expression, Action<T> apply) where Y : IConvertible
+        private int ExecuteIndexedUpdateExpression<YIndex>(MemDbIndexExpression<T, YIndex> expression, Action<T> apply) where YIndex : IConvertible
         {
             lock (_lock)
             {
@@ -576,7 +576,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region execute indexed delete expression
-        private int ExecuteIndexedDeleteExpression<Y>(MemDbIndexExpression<T, Y> expression) where Y : IConvertible
+        private int ExecuteIndexedDeleteExpression<YIndex>(MemDbIndexExpression<T, YIndex> expression) where YIndex : IConvertible
         {
             lock (_lock)
             {

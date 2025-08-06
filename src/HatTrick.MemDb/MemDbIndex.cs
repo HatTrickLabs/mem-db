@@ -5,12 +5,12 @@ using System.Collections.Generic;
 namespace HatTrick.InMemDb
 {
     #region hybrid comparer of T
-    public sealed class HybridComparer<Y> : IComparer<Y>, IEqualityComparer<Y>
+    public sealed class HybridComparer<YIndex> : IComparer<YIndex>, IEqualityComparer<YIndex>
     {
         #region internals
         private bool _isDefault;
-        private IEqualityComparer<Y> _equality;
-        private IComparer<Y> _relational;
+        private IEqualityComparer<YIndex> _equality;
+        private IComparer<YIndex> _relational;
         #endregion
 
         #region interface
@@ -20,12 +20,12 @@ namespace HatTrick.InMemDb
         #region ctors
         public HybridComparer()
         {
-            _equality = EqualityComparer<Y>.Default;
-            _relational = Comparer<Y>.Default;
+            _equality = EqualityComparer<YIndex>.Default;
+            _relational = Comparer<YIndex>.Default;
             _isDefault = true;
         }
 
-        public HybridComparer(IEqualityComparer<Y> equality, IComparer<Y> relational)
+        public HybridComparer(IEqualityComparer<YIndex> equality, IComparer<YIndex> relational)
         {
             _equality = equality ?? throw new ArgumentNullException(nameof(equality));
             _relational = relational ?? throw new ArgumentNullException(nameof(relational));
@@ -34,21 +34,21 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region compare
-        public int Compare(Y x, Y y)
+        public int Compare(YIndex x, YIndex y)
         {
             return _relational.Compare(x, y);
         }
         #endregion
 
         #region equals
-        public bool Equals(Y x, Y y)
+        public bool Equals(YIndex x, YIndex y)
         {
             return _equality.Equals(x, y);
         }
         #endregion
 
         #region get hash code
-        public int GetHashCode(Y obj)
+        public int GetHashCode(YIndex obj)
         {
             return _equality.GetHashCode(obj);
         }
@@ -154,37 +154,37 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region of T
-        internal MemDbIndex<T, Y> Of<Y>() where Y : IConvertible
+        internal MemDbIndex<T, YIndex> Of<YIndex>() where YIndex : IConvertible
         {
-            if (this is MemDbIndex<T, Y> index)
+            if (this is MemDbIndex<T, YIndex> index)
             {
                 return index;
             }
 
-            throw new InvalidCastException($"Invalid index cast...Index '{_name}' cannot be cast to index of {typeof(Y).Name}");
+            throw new InvalidCastException($"Invalid index cast...Index '{_name}' cannot be cast to index of {typeof(YIndex).Name}");
         }
         #endregion
     }
     #endregion
 
     #region mem db index of T,Y [class]
-    internal class MemDbIndex<T, Y> : MemDbIndex<T> where T : class where Y : IConvertible
+    internal class MemDbIndex<T, YIndex> : MemDbIndex<T> where T : class where YIndex : IConvertible
     {
         #region internals
-        private Func<T, Y> _keyResolver;
-        private Dictionary<Y, List<int>> _index;
-        private List<Y> _lookup;
-        private HybridComparer<Y> _comparer;
+        private Func<T, YIndex> _keyResolver;
+        private Dictionary<YIndex, List<int>> _index;
+        private List<YIndex> _lookup;
+        private HybridComparer<YIndex> _comparer;
         #endregion
 
         #region interface
-        protected HybridComparer<Y> Comparer => _comparer;
+        protected HybridComparer<YIndex> Comparer => _comparer;
         #endregion
 
         #region ctors
-        internal MemDbIndex(string name, Func<T, Y> keyResolver, HybridComparer<Y> comparer) : base(name)
+        internal MemDbIndex(string name, Func<T, YIndex> keyResolver, HybridComparer<YIndex> comparer) : base(name)
         {
-            //HMMM....in order for MemDbIndexedSet<T,Y> to use this as it's base class, null must be accepted here...feels janky
+            //HMMM....in order for MemDbIndexedSet<T,YIndex> to use this as it's base class, null must be accepted here...feels janky
             //However, it's all 'internal'
             _keyResolver = keyResolver;// ?? throw new ArgumentNullException(nameof(keyResolver));
             _comparer = comparer ?? throw new ArgumentNullException(nameof(comparer));
@@ -194,19 +194,19 @@ namespace HatTrick.InMemDb
         #region initialize
         internal override void Initialize(int capacity)
         {
-            _index = new Dictionary<Y, List<int>>(capacity, _comparer);
-            _lookup = new List<Y>(capacity);
+            _index = new Dictionary<YIndex, List<int>>(capacity, _comparer);
+            _lookup = new List<YIndex>(capacity);
         }
         #endregion
 
         #region apply
         internal override void Apply(T record, int pointer)
         {
-            Y key = _keyResolver(record);
+            YIndex key = _keyResolver(record);
             this.Apply(key, pointer);
         }
 
-        protected void Apply(Y key, int pointer)
+        protected void Apply(YIndex key, int pointer)
         {
             List<int> pointers = null;
             if (_index.TryGetValue(key, out pointers))
@@ -229,11 +229,11 @@ namespace HatTrick.InMemDb
         #region remove
         internal override void Remove(T record, int pointer)
         {
-            Y key = _keyResolver(record);
+            YIndex key = _keyResolver(record);
             this.Remove(key, pointer);
         }
 
-        protected void Remove(Y key, int pointer)
+        protected void Remove(YIndex key, int pointer)
         {
             List<int> pointers = _index[key];
             bool retain = pointers.Count > 1;
@@ -260,7 +260,7 @@ namespace HatTrick.InMemDb
             );
         }
 
-        protected void Refresh((Y key, int pointer) stale, (Y key, int pointer) fresh)
+        protected void Refresh((YIndex key, int pointer) stale, (YIndex key, int pointer) fresh)
         {
             if (_comparer.Equals(stale.key, fresh.key))
             {
@@ -279,7 +279,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region equal to
-        internal int[] EqualTo(Y key)
+        internal int[] EqualTo(YIndex key)
         {
             if (_index.TryGetValue(key, out List<int> set))
                 return set.ToArray();
@@ -289,7 +289,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region not equal to
-        internal int[] NotEqualTo(Y key)
+        internal int[] NotEqualTo(YIndex key)
         {
             int[] less = this.LessThan(key);
             int[] greater = this.GreaterThan(key);
@@ -308,7 +308,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region greater than
-        internal int[] GreaterThan(Y key)
+        internal int[] GreaterThan(YIndex key)
         {
             //REMINDER: _lookup should always be a direct copy of _index.Keys, there are NO DUPLICATE ENTRIES...
             int index = _lookup.BinarySearch(key, _comparer);
@@ -337,7 +337,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region greater than equal to
-        internal int[] GreaterThanEqualTo(Y key)
+        internal int[] GreaterThanEqualTo(YIndex key)
         {
             //REMINDER: _lookup should always be a direct copy of _index.Keys, there are NO DUPLICATE ENTRIES...
             int index = _lookup.BinarySearch(key, _comparer);
@@ -361,7 +361,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region less than
-        internal int[] LessThan(Y key)
+        internal int[] LessThan(YIndex key)
         {
             //REMINDER: _lookup should always be a direct copy of _index.Keys, there are NO DUPLICATE ENTRIES...
             int index = _lookup.BinarySearch(key, _comparer);
@@ -384,7 +384,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region less than equal to
-        internal int[] LessThanEqualTo(Y key)
+        internal int[] LessThanEqualTo(YIndex key)
         {
             //REMINDER: _lookup should always be a direct copy of _index.Keys, there are NO DUPLICATE ENTRIES...
             int index = _lookup.BinarySearch(key, _comparer);
@@ -408,15 +408,15 @@ namespace HatTrick.InMemDb
     }
     #endregion
 
-    #region mem db indexed set of T,IEnumerable<Y> [class]
-    internal sealed class MemDbIndexedSet<T, Y> : MemDbIndex<T,Y> where T : class where Y : IConvertible
+    #region mem db indexed set of T, IEnumerable<YIndex> [class]
+    internal sealed class MemDbIndexedSet<T, YIndex> : MemDbIndex<T, YIndex> where T : class where YIndex : IConvertible
     {
         #region internals
-        private Func<T, ICollection<Y>> _keyResolver;
+        private Func<T, ICollection<YIndex>> _keyResolver;
         #endregion
 
         #region ctors
-        public MemDbIndexedSet(string name, Func<T, ICollection<Y>> keyResolver, HybridComparer<Y> comparer) : base(name, null, comparer)
+        public MemDbIndexedSet(string name, Func<T, ICollection<YIndex>> keyResolver, HybridComparer<YIndex> comparer) : base(name, null, comparer)
         {
             _keyResolver = keyResolver;
         }
@@ -426,7 +426,7 @@ namespace HatTrick.InMemDb
         internal override void Apply(T record, int pointer)
         {
             var keySet = _keyResolver(record);
-            HashSet<Y> distinct = new HashSet<Y>(keySet.Count);
+            HashSet<YIndex> distinct = new HashSet<YIndex>(keySet.Count);
             foreach (var key in keySet)
             {
                 if (distinct.Add(key))
@@ -439,7 +439,7 @@ namespace HatTrick.InMemDb
         internal override void Remove(T record, int pointer)
         {
             var keySet = _keyResolver(record);
-            HashSet<Y> distinct = new HashSet<Y>(keySet.Count);
+            HashSet<YIndex> distinct = new HashSet<YIndex>(keySet.Count);
             foreach (var key in keySet)
             {
                 if (distinct.Add(key))
@@ -459,7 +459,7 @@ namespace HatTrick.InMemDb
 
             if (freshSet.Length == staleSet.Length)
             {
-                HybridComparer<Y> comparer = base.Comparer;
+                HybridComparer<YIndex> comparer = base.Comparer;
                 for (int i = 0; i < freshSet.Length; i++)
                 {
                     var f = freshSet[i];

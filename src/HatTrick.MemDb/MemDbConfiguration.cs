@@ -250,10 +250,10 @@ namespace HatTrick.InMemDb
     {
         IMemDBConfigurationBuilder<T> SetMode(AccessMode mode);
         IMemDBConfigurationBuilder<T> IndexOnIdentity(bool shouldIndex);
-        IMemDBConfigurationBuilder<T> ApplyIndex<Y>(string name, Func<T, Y> keyResolver) where Y : IConvertible;
-        IMemDBConfigurationBuilder<T> ApplyIndex<Y>(string name, Func<T, Y> keyResolver, HybridComparer<Y> comparer) where Y : IConvertible;
-        //IMemDBConfigurationBuilder<T> ApplyIndex<Y>(string name, Func<T, ICollection<Y>> keySetResolver) where Y : IConvertible;
-        //IMemDBConfigurationBuilder<T> ApplyIndex<Y>(string name, Func<T, ICollection<Y>> keySetResolver, HybridComparer<Y> comparer) where Y : IConvertible;
+        IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, YIndex> keyResolver) where YIndex : IConvertible;
+        IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, YIndex> keyResolver, HybridComparer<YIndex> comparer) where YIndex : IConvertible;
+        //IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, ICollection<YIndex>> keySetResolver) where YIndex : IConvertible;
+        //IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, ICollection<YIndex>> keySetResolver, HybridComparer<YIndex> comparer) where YIndex : IConvertible;
         IMemDBConfigurationBuilder<T> SetFlushInterval(int interval);
         IMemDBConfigurationBuilder<T> SerializeWith(Func<IMemDbSerializer<T>> serializerProvider);
         IMemDBConfigurationBuilder<T> CloneWith(Func<IMemDbCloner<T>> clonerProvider);
@@ -310,14 +310,14 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region apply index
-        public IMemDBConfigurationBuilder<T> ApplyIndex<Y>(string name, Func<T, Y> keyResolver)
-        where Y : IConvertible
+        public IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, YIndex> keyResolver)
+        where YIndex : IConvertible
         {
-            return this.ApplyIndex(name, keyResolver, new HybridComparer<Y>());
+            return this.ApplyIndex(name, keyResolver, new HybridComparer<YIndex>());
         }
 
-        public IMemDBConfigurationBuilder<T> ApplyIndex<Y>(string name, Func<T, Y> keyResolver, HybridComparer<Y> comparer) 
-        where Y : IConvertible
+        public IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, YIndex> keyResolver, HybridComparer<YIndex> comparer) 
+        where YIndex : IConvertible
         {
             if (string.IsNullOrEmpty(name))
                 throw new ArgumentException("Argument must contain a value.", nameof(name));
@@ -328,22 +328,22 @@ namespace HatTrick.InMemDb
             if (_appliedIndexes is null)
                 _appliedIndexes = new List<MemDbIndex<T>>();
 
-            var index = new MemDbIndex<T, Y>(name, keyResolver, comparer);
+            var index = new MemDbIndex<T, YIndex>(name, keyResolver, comparer);
             _appliedIndexes.Add(index);
 
             return this;
         }
 
         //exploratory this ... not yet exposed on IMemDbConfigurationBuilder<T>
-        public IMemDBConfigurationBuilder<T> ApplyIndex<Y>(string name, Func<T, ICollection<Y>> keySetResolver)
-        where Y : IConvertible
+        public IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, ICollection<YIndex>> keySetResolver)
+        where YIndex : IConvertible
         {
-            return this.ApplyIndex<Y>(name, keySetResolver, new HybridComparer<Y>());
+            return this.ApplyIndex<YIndex>(name, keySetResolver, new HybridComparer<YIndex>());
         }
 
         //exploratory this ... not yet exposed on IMemDbConfigurationBuilder<T>
-        public IMemDBConfigurationBuilder<T> ApplyIndex<Y>(string name, Func<T, ICollection<Y>> keySetResolver, HybridComparer<Y> comparer) 
-        where Y : IConvertible
+        public IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, ICollection<YIndex>> keySetResolver, HybridComparer<YIndex> comparer) 
+        where YIndex : IConvertible
         {
             if (string.IsNullOrEmpty(name))
                 throw new ArgumentException("Argument must contain a value.", nameof(name));
@@ -354,7 +354,7 @@ namespace HatTrick.InMemDb
             if (_appliedIndexes is null)
                 _appliedIndexes = new List<MemDbIndex<T>>();
 
-            var index = new MemDbIndexedSet<T, Y>(name, keySetResolver, comparer);
+            var index = new MemDbIndexedSet<T, YIndex>(name, keySetResolver, comparer);
             _appliedIndexes.Add(index);
 
             return this;
