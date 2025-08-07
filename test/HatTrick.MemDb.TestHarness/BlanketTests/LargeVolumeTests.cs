@@ -70,9 +70,9 @@ namespace HatTrick.InMemDb.TestHarness
 
                 this.ConcurrentQueriesOnAppliedIdIndexAssisted(db, 10_000);
                 this.QueryByIdNaturalIndexAssisted(db, 10_000);
-                //var withIndex = this.ConcurrentQueriesOnAppliedNameIndexAssisted(db, 100);
-                //var noIndex = this.ConcurrentQueriesOnNameWithoutIndex(db, 100);
-                this.ConcurrentQueriesOnAppliedDirectoryIndexAssisted(db, 100);
+                var withIndex = this.ConcurrentQueriesOnAppliedNameIndexAssisted(db, 100);
+                var noIndex = this.ConcurrentQueriesOnNameWithoutIndex(db, 100);
+                this.ConcurrentQueriesOnAppliedDirectoryIndexAssisted(db, 10);
             }
 
             Console.WriteLine("Done...Press [Enter] to exit.");
@@ -201,18 +201,20 @@ namespace HatTrick.InMemDb.TestHarness
         {
             _sw.Reset();
 
-            Console.WriteLine($"Kicking off {iterations:n0} concurrent queries for Directory (applied index assisted)...");
+            Console.WriteLine($"Kicking off {iterations:n0} concurrent queries for Directory less than equal (applied index assisted)...");
             _sw.Start();
-            DigitalAsset[] withIndex = null;
+            (string, int)[] withIndex = default;
             Parallel.For(0, iterations, (i) =>
             {
                 withIndex = db.QueryViaIndex<string>(nameof(DigitalAsset.Directory))
-                .IsGreaterThanEqualTo(@"d:\GIT\HatTrickLabs\mem-db\test\assets\i")
-                .ToArray();
+                .IsLessThanEqualTo(@"d:\GIT\HatTrickLabs\mem-db\test\assets\c")
+                .GroupBy(a => a.Directory)
+                .Select(g => (g.Key, g.Count()));
+
             });
             _sw.Stop();
-            Console.WriteLine($"{ _sw.ElapsedMilliseconds}\tqueried for all files Directory WITH index {withIndex.Length:n0}");
-            return withIndex;
+            Console.WriteLine($"{ _sw.ElapsedMilliseconds}\tqueried for Directory less than equal WITH index key {withIndex[0].Item1} {withIndex[0].Item2:n0}");
+            return null;
         }
         #endregion
 

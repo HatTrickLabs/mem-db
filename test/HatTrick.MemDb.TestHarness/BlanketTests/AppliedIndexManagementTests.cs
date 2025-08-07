@@ -291,10 +291,6 @@ namespace HatTrick.InMemDb.TestHarness
                 var asset499 = db.QueryViaIndex<string>(nameof(DigitalAsset.Name)).IsEqualTo("0499.txt").ToArray();
                 Assert.IsEqual(asset499.Length, 0);
                 Assert.IsEqual(db.Count(), 999);
-
-
-                Console.WriteLine(db.Count(a => string.Compare(a.Name, "0500.txt", false) > 0));
-                Console.WriteLine(db.QueryViaIndex<string>(nameof(DigitalAsset.Name)).IsGreaterThanEqualTo("0500.txt").Count());
             }
         }
         #endregion

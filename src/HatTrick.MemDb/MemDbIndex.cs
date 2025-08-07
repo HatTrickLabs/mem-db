@@ -327,7 +327,9 @@ namespace HatTrick.InMemDb
             if (index >= _lookup.Count)
                 return Array.Empty<int>();
 
-            List<int> set = new List<int>(_lookup.Count - index);
+            //estimate of capacity assuming a somewhat equal distribution of pointers per index key
+            int capacity = (_lookup.Count - index) * _index[_lookup[index]].Count;
+            List<int> set = new List<int>();
             for (int i = index; i < _lookup.Count; i++)
             {
                 set.AddRange(_index[_lookup[i]]);
@@ -351,7 +353,9 @@ namespace HatTrick.InMemDb
             if (index >= _lookup.Count)
                 return Array.Empty<int>();
 
-            List<int> set = new List<int>(_lookup.Count - index);
+            //estimate of capacity assuming a somewhat equal distribution of pointers per index key
+            int capacity = (_lookup.Count - index) * _index[_lookup[index]].Count;
+            List<int> set = new List<int>(capacity);
             for (int i = index; i < _lookup.Count; i++)
             {
                 set.AddRange(_index[_lookup[i]]);
@@ -374,7 +378,9 @@ namespace HatTrick.InMemDb
             if (index < 0)
                 return Array.Empty<int>();
 
-            List<int> set = new List<int>(index + 1);
+            //estimate of capacity assuming a somewhat equal distribution of pointers per index key
+            int capacity = (index + 1) * _index[_lookup[index]].Count;
+            List<int> set = new List<int>();
             for (int i = index; i > -1; i--)
             {
                 set.AddRange(_index[_lookup[i]]);
@@ -397,7 +403,9 @@ namespace HatTrick.InMemDb
 
             //if the result is >= 0, we got a direct match and want everything at or below
 
-            List<int> set = new List<int>(index + 1);
+            //estimate of capacity assuming a somewhat equal distribution of pointers per index key
+            int capacity = (index + 1) * _index[_lookup[index]].Count;
+            List<int> set = new List<int>(capacity);
             for (int i = index; i > -1; i--)
             {
                 set.AddRange(_index[_lookup[i]]);
