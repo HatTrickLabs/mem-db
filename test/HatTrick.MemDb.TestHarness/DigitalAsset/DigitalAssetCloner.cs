@@ -28,6 +28,11 @@ namespace HatTrick.InMemDb
             asset.Length = value.Length;
             asset.XXHash = value.XXHash;
             asset.Imported = value.Imported;
+            asset.Tags = new string[value.Tags.Length];
+            for (int i = 0; i < value.Tags.Length; i++)
+            {
+                asset.Tags[i] = value.Tags[i];
+            }
 
             Interlocked.Increment(ref _deepCopyCount);
 

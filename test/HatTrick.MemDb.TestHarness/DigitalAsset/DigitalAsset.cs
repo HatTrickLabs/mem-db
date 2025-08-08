@@ -49,6 +49,8 @@ namespace HatTrick.InMemDb
 
         public DigitalAssetType AssetType => _type;
 
+        public string[] Tags { get; set; }
+
         public string FullPath => Path.Join(this.Directory, this.Name);
         public string Extension => Path.GetExtension(this.Name);
 
