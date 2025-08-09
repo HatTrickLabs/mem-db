@@ -67,7 +67,7 @@ namespace HatTrick.InMemDb
         private void InitializePersisted()
         {
             _persister.ReadMappedRecords(out List<MemDbRecord<T>> records);
-            _records = records as List<MemDbRecord<T>>;
+            _records = records;
             if (_isIndexed || _appliedIndexes is not null)
             {
                 if (_isIndexed)
