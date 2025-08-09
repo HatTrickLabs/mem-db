@@ -499,29 +499,32 @@ namespace HatTrick.InMemDb
         {
             string idxName = expression.IndexName;
             MemDbIndex<T, YIndex> index = _appliedIndexes.Get(idxName).Of<YIndex>();
-            YIndex arg = expression.IndexKey;
+
             lock (_lock)
             {
                 int[] pointers = null;
                 switch (expression.RelationalOperator)
                 {
                     case RelationalOperator.EqualTo:
-                        pointers = index.EqualTo(arg);
+                        pointers = index.EqualTo(expression.IndexKey);
+                        break;
+                    case RelationalOperator.In:
+                        pointers = index.In(expression.IndexKeySet);
                         break;
                     case RelationalOperator.NotEqualTo:
-                        pointers = index.NotEqualTo(arg);
+                        pointers = index.NotEqualTo(expression.IndexKey);
                         break;
                     case RelationalOperator.GreaterThan:
-                        pointers = index.GreaterThan(arg);
+                        pointers = index.GreaterThan(expression.IndexKey);
                         break;
                     case RelationalOperator.LessThan:
-                        pointers = index.LessThan(arg);
+                        pointers = index.LessThan(expression.IndexKey);
                         break;
                     case RelationalOperator.GreaterThanEqualTo:
-                        pointers = index.GreaterThanEqualTo(arg);
+                        pointers = index.GreaterThanEqualTo(expression.IndexKey);
                         break;
                     case RelationalOperator.LessThanEqualTo:
-                        pointers = index.LessThanEqualTo(arg);
+                        pointers = index.LessThanEqualTo(expression.IndexKey);
                         break;
                     default:
                         throw new NotImplementedException($"Index expression for {expression.RelationalOperator} not implemented.");

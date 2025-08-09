@@ -10,6 +10,7 @@ namespace HatTrick.InMemDb
     public enum RelationalOperator
     {
         EqualTo,
+        In,
         NotEqualTo,
         GreaterThan,
         LessThan,
@@ -22,6 +23,7 @@ namespace HatTrick.InMemDb
     public interface IMemDbIndexExpressionRoot<T, YIndex> where T : class
     {
         public MemDbIndexExpression<T> IsEqualTo(YIndex key);
+        public MemDbIndexExpression<T> In(params YIndex[] keySet);
         public MemDbIndexExpression<T> IsNotEqualTo(YIndex key);
         public MemDbIndexExpression<T> IsGreaterThan(YIndex key);
         public MemDbIndexExpression<T> IsLessThan(YIndex key);
@@ -128,6 +130,7 @@ namespace HatTrick.InMemDb
         #region internals
         private RelationalOperator _relationOp;
         private YIndex _key;
+        private YIndex[] _keySet;
 
         private Comparison<T> _orderBy;
         private int? _skip;
@@ -142,6 +145,8 @@ namespace HatTrick.InMemDb
         public RelationalOperator RelationalOperator => _relationOp;
 
         public YIndex IndexKey => _key;
+
+        public YIndex[] IndexKeySet => _keySet;
 
         internal MemDbIndexExpression<T, YIndex>.ExecuteQuery Query => _query;
 
@@ -180,6 +185,18 @@ namespace HatTrick.InMemDb
         {
             _relationOp = RelationalOperator.EqualTo;
             _key = key;
+            return this;
+        }
+        #endregion
+
+        #region in
+        public MemDbIndexExpression<T> In(params YIndex[] keys)
+        {
+            if (keys is null)
+                throw new ArgumentNullException(nameof(keys));
+
+            _relationOp = RelationalOperator.In;
+            _keySet = keys;
             return this;
         }
         #endregion

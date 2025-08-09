@@ -281,10 +281,25 @@ namespace HatTrick.InMemDb
         #region equal to
         internal int[] EqualTo(YIndex key)
         {
-            if (_index.TryGetValue(key, out List<int> set))
-                return set.ToArray();
+            if (_index.TryGetValue(key, out List<int> pointers))
+                return pointers.ToArray();
 
             return Array.Empty<int>();
+        }
+        #endregion
+
+        #region in
+        internal int[] In(YIndex[] keys)
+        {
+            //estimate of capacity assuming a somewhat equal distribution of pointers per index key
+            int capacity = _lookup.Count > 0 ? _index[_lookup[0]].Count * keys.Length : keys.Length * 4;
+            var set = new List<int>();
+            for (int i = 0; i < keys.Length; i++)
+            {
+                if (_index.TryGetValue(keys[i], out List<int> pointers))
+                    set.AddRange(pointers);
+            }
+            return set.ToArray();
         }
         #endregion
 
@@ -401,6 +416,9 @@ namespace HatTrick.InMemDb
                 index -= 1;
             }
 
+            if (index < 0)
+                return Array.Empty<int>();
+            
             //if the result is >= 0, we got a direct match and want everything at or below
 
             //estimate of capacity assuming a somewhat equal distribution of pointers per index key

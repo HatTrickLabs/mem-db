@@ -119,6 +119,9 @@ namespace HatTrick.InMemDb.TestHarness
                 var set6 = db.QueryViaIndex<ulong>(nameof(DigitalAsset.XXHash)).IsNotEqualTo(500).ToArray();
                 Assert.IsEqual(set6.Length, 999);
 
+                var set6plus = db.QueryViaIndex<ulong>(nameof(DigitalAsset.XXHash)).In(500).ToArray();
+                Assert.IsEqual(set6plus.Length, 1);
+
 
 
                 var set7 = db.QueryViaIndex<DateTime>(nameof(DigitalAsset.Imported)).IsGreaterThanEqualTo(dt.AddMilliseconds(100)).ToArray();
@@ -138,6 +141,9 @@ namespace HatTrick.InMemDb.TestHarness
 
                 var set12 = db.QueryViaIndex<DateTime>(nameof(DigitalAsset.Imported)).IsNotEqualTo(dt.AddMilliseconds(100)).ToArray();
                 Assert.IsEqual(set12.Length, 999);
+
+                var set13 = db.QueryViaIndex<DateTime>(nameof(DigitalAsset.Imported)).In(dt.AddMilliseconds(100)).ToArray();
+                Assert.IsEqual(set13.Length, 1);
             }
         }
         #endregion
@@ -182,6 +188,8 @@ namespace HatTrick.InMemDb.TestHarness
                 Assert.IsEqual(set11.Length, 500);
                 var set12 = db.QueryViaIndex<ulong>(nameof(DigitalAsset.XXHash)).IsLessThanEqualTo(0).ToArray();
                 Assert.IsEqual(set12.Length, 500);
+                var set13 = db.QueryViaIndex<ulong>(nameof(DigitalAsset.XXHash)).In(0).ToArray();
+                Assert.IsEqual(set13.Length, 500);
             }
         }
         #endregion

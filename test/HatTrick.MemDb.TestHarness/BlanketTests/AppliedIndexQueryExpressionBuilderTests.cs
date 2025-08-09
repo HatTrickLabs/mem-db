@@ -51,6 +51,7 @@ namespace HatTrick.InMemDb.TestHarness
                 this.LoadDb(db);
 
                 int json = db.Count(a => a.Extension == ".json");
+                int txt = db.Count(a => a.Extension == ".txt");
                 int all = db.Count();
 
                 var set = db.QueryViaIndex<string>(nameof(DigitalAsset.Extension)).IsEqualTo(".json").ToArray();
@@ -70,6 +71,18 @@ namespace HatTrick.InMemDb.TestHarness
 
                 var set3 = db.QueryViaIndex<DateTime>(nameof(DigitalAsset.Imported)).IsEqualTo(imported[0]).ToArray();
                 Assert.IsEqual(set3.Length, all);
+
+                var set4 = db.QueryViaIndex<string>(nameof(DigitalAsset.Extension)).In(".json", ".txt").ToArray();
+                Assert.IsEqual(set4.Length, (txt + json));
+
+                var set5 = db.QueryViaIndex<string>(nameof(DigitalAsset.Extension)).In(".json").ToArray();
+                Assert.IsEqual(set5.Length, json);
+
+                var set6 = db.QueryViaIndex<string>(nameof(DigitalAsset.Extension)).In(".json", ".txt", ".docx", ".xlxs", ".jpg", ".jpeg", ".mp4").ToArray();
+                Assert.IsEqual(set6.Length, (json + txt));
+
+                var set7 = db.QueryViaIndex<string>(nameof(DigitalAsset.Extension)).In(".docx", ".xlxs", ".jpg", ".jpeg", ".mp4").ToArray();
+                Assert.IsEqual(set7.Length, 0);
             }
         }
         #endregion
@@ -92,6 +105,15 @@ namespace HatTrick.InMemDb.TestHarness
 
                 int greaterThanZero500 = db.QueryViaIndex<string>(nameof(DigitalAsset.Name)).IsGreaterThan("0500.json").Count();
                 Assert.IsEqual(greaterThanZero500, 499);
+
+                int lessThanEqualToZero500 = db.QueryViaIndex<string>(nameof(DigitalAsset.Name)).IsLessThanEqualTo("0500.json").Count();
+                Assert.IsEqual(lessThanEqualToZero500, 501);
+
+                int greaterThanEqualZero500 = db.QueryViaIndex<string>(nameof(DigitalAsset.Name)).IsGreaterThanEqualTo("0500.json").Count();
+                Assert.IsEqual(greaterThanEqualZero500, 500);
+
+                int inZero500 = db.QueryViaIndex<string>(nameof(DigitalAsset.Name)).In("0500.json").Count();
+                Assert.IsEqual(inZero500, 1);
             }
         }
         #endregion
@@ -503,6 +525,22 @@ namespace HatTrick.InMemDb.TestHarness
             Assert.IsEqual(deleted, unknownCnt);
             Assert.IsEqual(db.Count(), txtCnt + jsonCnt);
             Assert.IsEqual(db.FindAll(a => true).All(a => a.AssetType != DigitalAssetType.Unknown), true);
+        }
+        #endregion
+
+        #region test
+        public void Test_EmptyDb()
+        {
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                var set1 = db.QueryViaIndex<string>(nameof(DigitalAsset.Name)).IsEqualTo("x").ToArray();
+                var set2 = db.QueryViaIndex<string>(nameof(DigitalAsset.Name)).In("x").ToArray();
+                var set3 = db.QueryViaIndex<string>(nameof(DigitalAsset.Name)).IsNotEqualTo("x").ToArray();
+                var set4 = db.QueryViaIndex<string>(nameof(DigitalAsset.Name)).IsLessThan("x").ToArray();
+                var set5 = db.QueryViaIndex<string>(nameof(DigitalAsset.Name)).IsLessThanEqualTo("x").ToArray();
+                var set6 = db.QueryViaIndex<string>(nameof(DigitalAsset.Name)).IsGreaterThan("x").ToArray();
+                var set7 = db.QueryViaIndex<string>(nameof(DigitalAsset.Name)).IsGreaterThanEqualTo("x").ToArray();
+            }
         }
         #endregion
     }
