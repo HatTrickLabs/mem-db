@@ -66,10 +66,6 @@ namespace HatTrick.InMemDb.TestHarness
             Stats resolve = Stats.FreshCount | Stats.StaleCount | Stats.DeletedCount | Stats.FreshSize | Stats.StaleSize | Stats.DeletedSize;
             MemDbStatistics stats = null;
 
-            //int txtSize = 104;
-            //int jsonSize = 105;
-            //int unknownSize = 100;
-
             int txtCnt;
             int jsonCnt;
             int unknownCnt;

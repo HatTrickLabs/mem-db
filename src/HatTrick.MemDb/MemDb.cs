@@ -43,15 +43,29 @@ namespace HatTrick.InMemDb
             MemDbConfiguration config = MemDb.GetConfiguration(datasetName);
             if (config is null)
                 throw new ArgumentException($"No configuration registered for provided datasetName: {datasetName}");
-            
-            if (config.ShouldArchive)
+
+            FileStream lockFile = null;
+            try
             {
-                IMemDbArchiver archiver = new MemDbArchiver(config);
-                archiver.Archive();
+                //ensure no other process has the db locked...
+                lockFile = config.IsPersisted ? MemDb.InitializeLockFile(config) : null;
+                _openDatasets.Add(datasetName, lockFile);
+
+                if (config.ShouldArchive)
+                {
+                    IMemDbArchiver archiver = new MemDbArchiver(config);
+                    archiver.Archive();
+                }
+                IMemDbDefragmenter defragmenter = new MemDbDefragmenter(config);
+                (int stale, int deleted) counts = defragmenter.Defrag();
+                MemDb.Close(datasetName);
+                return counts;
             }
-            IMemDbDefragmenter defragmenter = new MemDbDefragmenter(config);
-            (int stale, int deleted) counts = defragmenter.Defrag();
-            return counts;
+            catch//if ex is thrown during open attempt, ensure lock file is cleaned up
+            {
+                lockFile?.Dispose();
+                throw;
+            }
         }
         #endregion
 
