@@ -100,9 +100,21 @@ namespace HatTrick.InMemDb
             if (!config.ShouldArchive)
                 throw new InvalidOperationException($"{nameof(Restore)} cannot be run on a MemDb instance that was not configured for Archive.");
 
-            var restorer = new MemDbRestorer(config, outputDirectory, utcTimestamp, true);
-
-            restorer.Restore();
+            FileStream lockFile = null;
+            try
+            {
+                //ensure no other process has the db locked...
+                lockFile = config.IsPersisted ? MemDb.InitializeLockFile(config) : null;
+                _openDatasets.Add(datasetName, lockFile);
+                var restorer = new MemDbRestorer(config, outputDirectory, utcTimestamp, true);
+                restorer.Restore();
+                MemDb.Close(datasetName);
+            }
+            catch//if ex is thrown during open attempt, ensure lock file is cleaned up
+            {
+                lockFile?.Dispose();
+                throw;
+            }
         }
         #endregion
 

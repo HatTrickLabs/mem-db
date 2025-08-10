@@ -99,8 +99,24 @@ namespace HatTrick.InMemDb
         internal void Restore()
         {
             //TODO: Ensure available space...
+
+            this.RestoreFromZipArchives();
+
+            MemDbMap map = this.ExtractDbMap();
+            this.RollPointers(map, _fullDbPath);
+
+            this.BuildRestoredFiles();
+        }
+        #endregion
+
+        #region restore from zip archives
+        private void RestoreFromZipArchives()
+        {
+            if (!File.Exists(_fullZipArchiveFilePath))
+                return;//no archives exist, no defrag has ever been run.
+
             using ZipArchive zip = ZipFile.Open(_fullZipArchiveFilePath, ZipArchiveMode.Read);
-            ZipArchiveEntry[]  zipEntries = this.ResolveArchiveFileSets(zip);
+            ZipArchiveEntry[] zipEntries = this.ResolveArchiveFileSets(zip);
 
             for (int i = 0; i < zipEntries.Length; i++)
             {
@@ -126,11 +142,6 @@ namespace HatTrick.InMemDb
                     this.RollPointers(map, dbPath);
                 }
             }
-
-            map = this.ExtractDbMap();
-            this.RollPointers(map, _fullDbPath);
-
-            this.BuildRestoredFiles();
         }
         #endregion
 
