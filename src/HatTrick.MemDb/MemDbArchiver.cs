@@ -125,7 +125,11 @@ namespace HatTrick.InMemDb
             long spaceAvailable = drive.AvailableFreeSpace;
 
             //conservative when assuming standard block size of 4096 bytes.
-            long spaceNeeded = dbSize + mapSize + (4096 * 2);
+            long spaceNeeded = dbSize + mapSize + (4096 * 4);
+
+            //must assume that 2* the space is needed (file to archive will reside an disk and be pushed into the archive)...
+            //if map file will not compress much, and if the db file is binary serialized it wont compress much either...2* to be safe.
+            spaceNeeded = spaceNeeded * 2;
 
             if (spaceAvailable < spaceNeeded)
             {

@@ -100,7 +100,9 @@ namespace HatTrick.InMemDb
             long spaceAvailable = drive.AvailableFreeSpace;
 
             //conservative when assuming standard block size of 4096 bytes.
-            long spaceNeeded = dbSize + mapSize + (4096 * 2);
+            long spaceNeeded = dbSize + mapSize + (4096 * 4);
+
+            //add 5%
 
             if (spaceAvailable < spaceNeeded)
             {

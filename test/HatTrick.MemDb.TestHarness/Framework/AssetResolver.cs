@@ -65,7 +65,7 @@ namespace HatTrick.InMemDb.TestHarness
             string[] files = Directory.GetFiles(absolute, "*", ops);
 
             var assets = new DigitalAsset[files.Length];
-
+            string directoryOverride = $"C:{Path.DirectorySeparatorChar}";
             for (int i = 0; i < files.Length; i++)
             {
                 string file = files[i];
@@ -73,7 +73,10 @@ namespace HatTrick.InMemDb.TestHarness
                 FileInfo fi = new FileInfo(file);
                 DigitalAsset asset = DigitalAsset.CreateNew(fi.Extension);
                 asset.Name = fi.Name;
-                asset.Directory = Path.GetDirectoryName(file);
+                //remove the variability in stored record length by overriding the directory path of each
+                //with a spoof 'C:/' so we can accurately calc binary record length reguardless of where the test 
+                //harness data is stored on any individual test machine.
+                asset.Directory = directoryOverride + Path.GetDirectoryName(file).Split(Path.DirectorySeparatorChar)[^1];
                 asset.Created = fi.CreationTime;
                 asset.LastAccess = fi.LastAccessTime;
                 asset.LastWrite = fi.LastWriteTime;

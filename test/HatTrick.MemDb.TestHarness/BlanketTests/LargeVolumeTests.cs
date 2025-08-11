@@ -71,12 +71,12 @@ namespace HatTrick.InMemDb.TestHarness
                 this.ConcurrentQueriesOnAppliedIdIndexAssisted(db, 10_000);
                 this.QueryByIdNaturalIndexAssisted(db, 10_000);
                 var withIndex = this.ConcurrentQueriesOnAppliedNameIndexAssisted(db, 100);
-                var noIndex = this.ConcurrentQueriesOnNameWithoutIndex(db, 100);
+                var noIndex = this.ConcurrentQueriesOnNameWithoutIndex(db, 10);
                 this.ConcurrentQueriesOnAppliedDirectoryIndexAssisted(db, 10);
             }
 
-            Console.WriteLine("Done...Press [Enter] to exit.");
-            Console.ReadLine();
+            //Console.WriteLine("Done...Press [Enter] to exit.");
+            //Console.ReadLine();
         }
         #endregion
 
