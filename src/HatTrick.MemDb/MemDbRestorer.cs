@@ -98,8 +98,6 @@ namespace HatTrick.InMemDb
         #region restore
         internal void Restore()
         {
-            //TODO: Ensure available space...
-
             this.RestoreFromZipArchives();
 
             MemDbMap map = this.ExtractDbMap();
@@ -118,28 +116,25 @@ namespace HatTrick.InMemDb
             using ZipArchive zip = ZipFile.Open(_fullZipArchiveFilePath, ZipArchiveMode.Read);
             ZipArchiveEntry[] zipEntries = this.ResolveArchiveFileSets(zip);
 
+            //TODO: Ensure available space...
+            long maxBytes = zipEntries.Max(e => e.Length);
+            this.EnsureDiskSpace(maxBytes);
+
             for (int i = 0; i < zipEntries.Length; i++)
             {
                 var entry = zipEntries[i];
+
+                //db will always be odd, map will always be even (db,map,db,map,db,map...etc)
                 if (entry.Comment == "db")
-                    entry.ExtractToFile(Path.Combine(_archivePath, entry.Name));
-            }
-
-            MemDbMap map = null;
-            for (int i = 0; i < zipEntries.Length; i++)
-            {
-                var entry = zipEntries[i];
-                if (entry.Comment == "map")
                 {
-                    map = this.ExtractArchiveMap(entry);
-
-                    //each set has a db and map...they will be naturally side by side, but not sure which is first
-                    //every 2 indexes is guaranteed to be a matching set...if the map is odd index, then the db 
-                    //is previous element, if map is even index, then the db is the next element.
-                    int dbIdx = (i % 2) == 1 ? (i - 1) : (i + 1);
-
-                    string dbPath = Path.Combine(_archivePath, zipEntries[dbIdx].Name);
+                    entry.ExtractToFile(Path.Combine(_archivePath, entry.Name));
+                }
+                else if (entry.Comment == "map")
+                {
+                    MemDbMap map = this.ExtractArchiveMap(entry);
+                    string dbPath = Path.Combine(_archivePath, zipEntries[i - 1].Name);
                     this.RollPointers(map, dbPath);
+                    File.Delete(dbPath);
                 }
             }
         }
@@ -161,8 +156,8 @@ namespace HatTrick.InMemDb
             for (int i = 0; i < sets.Length; i++)
             {
                 var set = sets[i];
-                entries[at++] = set.entries[0];
-                entries[at++] = set.entries[1];
+                entries[at++] = set.entries.First(e => e.Comment == "db");
+                entries[at++] = set.entries.First(e => e.Comment == "map");
             }
 
             return entries;
@@ -200,6 +195,25 @@ namespace HatTrick.InMemDb
                 }
             }
             return map;
+        }
+        #endregion
+
+        #region ensure disk space
+        private void EnsureDiskSpace(long maxBytesNeeded)
+        {
+            //get available drive space 
+            var directory = new DirectoryInfo(_archivePath);
+            var drive = new DriveInfo(directory.Root.Name);
+            long spaceAvailable = drive.AvailableFreeSpace;
+
+            long spaceNeeded = (maxBytesNeeded + 4096 * 2);
+            if (spaceAvailable < spaceNeeded)
+            {
+                string ex = "Restore cannot be completed..." + Environment.NewLine
+                          + $"Insufficient disk space available on {drive.Name} ...{Environment.NewLine}"
+                          + $"space needed: {spaceNeeded} space available: {spaceAvailable}";
+                throw new InvalidOperationException(ex);
+            }
         }
         #endregion
 
@@ -251,18 +265,28 @@ namespace HatTrick.InMemDb
         #region write restored db
         private void BuildRestoredFiles ()
         {
-            MemDbMap map = new MemDbMap(_fullRestoreMapPath, true, _encryptionInfo);
-            using var db = new FileStream(_fullRestoreDbPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None);
-
             long[] ids = _records.Keys.ToArray();
+
+            long mapSize = MemDbMap.BinaryLengthOf(ids.Length);
+            long dbSize = 0;
             for (int i = 0; i < ids.Length; i++)
             {
-                RestoreRecord record = _records[ids[i]];
+                dbSize += _records[ids[i]].RawData.Length;
+            }
 
-                MemDbPointer oPtr = record.Pointer;
-                var nPtr = new MemDbPointer(oPtr.Id, RecordState.Fresh, oPtr.StateSetAt, oPtr.CreatedAt, oPtr.IsEncrypted, db.Position, oPtr.Length);
-                map.Add(nPtr);
-                db.Write(record.RawData);
+            this.EnsureDiskSpace(mapSize + dbSize);
+
+            MemDbMap map = new MemDbMap(_fullRestoreMapPath, true, _encryptionInfo);
+            using (var db = new FileStream(_fullRestoreDbPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
+            {
+                for (int i = 0; i < ids.Length; i++)
+                {
+                    RestoreRecord record = _records[ids[i]];
+                    MemDbPointer oPtr = record.Pointer;
+                    var nPtr = new MemDbPointer(oPtr.Id, RecordState.Fresh, oPtr.StateSetAt, oPtr.CreatedAt, oPtr.IsEncrypted, db.Position, oPtr.Length);
+                    map.Add(nPtr);
+                    db.Write(record.RawData);
+                }
             }
             map.Flush();
         }

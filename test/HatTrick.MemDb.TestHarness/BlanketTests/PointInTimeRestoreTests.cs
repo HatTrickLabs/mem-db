@@ -108,8 +108,8 @@ namespace HatTrick.InMemDb.TestHarness
         }
         #endregion
 
-        #region multi defrag archive restore to timestamp
-        public void Test_MultiDefragArchiveRestoreToTimestamp()
+        #region defrag archive restore to timestamp
+        public void Test_DefragArchiveRestoreToTimestamp()
         {
             int txtCnt;
             int jsonCnt;
@@ -155,8 +155,8 @@ namespace HatTrick.InMemDb.TestHarness
         }
         #endregion
 
-        #region multi defrag archive restore to timestamp 2
-        public void Test_MultiDefragArchiveRestoreToTimestamp2()
+        #region multi defrag archive restore to timestamp 1
+        public void Test_MultiDefragArchiveRestoreToTimestamp1()
         {
             int txtCnt;
             int jsonCnt;
@@ -210,8 +210,8 @@ namespace HatTrick.InMemDb.TestHarness
         }
         #endregion
 
-        #region multi defrag archive restore to timestamp 3
-        public void Test_MultiDefragArchiveRestoreToTimestamp3()
+        #region multi defrag archive restore to timestamp 2
+        public void Test_MultiDefragArchiveRestoreToTimestamp2()
         {
             int txtCnt;
             int jsonCnt;
