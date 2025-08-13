@@ -8,6 +8,6 @@ namespace HatTrick.InMemDb
 {
     internal interface IMemDbSnapshotter
     {
-        internal void WriteSnapshot(DateTime timestamp);
+        internal DateTime WriteSnapshot();
     }
 }

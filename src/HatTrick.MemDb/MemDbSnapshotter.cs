@@ -20,17 +20,18 @@ namespace HatTrick.InMemDb
             if (config is null)
                 throw new ArgumentNullException(nameof(config));
 
-            _mapPath = config.GetFullMapFilePath();
-            _dbPath = config.GetFullDbFilePath();
+            _mapPath = config.GetMapFilePath();
+            _dbPath = config.GetDbFilePath();
             _encryptionInfo = config.GetEncryptionInfo();
-            _snapshotMapPath =(timestamp) => config.GetFullSnapshotMapFilePath(timestamp);
-            _snapshotDbPath = (timestamp) => config.GetFullSnapshotDbFilePath(timestamp);
+            _snapshotMapPath =(timestamp) => config.GetSnapshotMapFilePath(timestamp);
+            _snapshotDbPath = (timestamp) => config.GetSnapshotDbFilePath(timestamp);
         }
         #endregion
 
         #region write snapshot
-        void IMemDbSnapshotter.WriteSnapshot(DateTime timestamp)
+        DateTime IMemDbSnapshotter.WriteSnapshot()
         {
+            DateTime timestamp = DateTime.UtcNow;
             this.EnsureSnapshotDirectoryPath(timestamp);
 
             using var fsDb = new FileStream(_dbPath, FileMode.Open, FileAccess.Read, FileShare.None);
@@ -64,6 +65,8 @@ namespace HatTrick.InMemDb
 
             snapshotMap.OverrideLastId(map.LastId);
             snapshotMap.Flush();
+
+            return timestamp;
         }
         #endregion
 

@@ -44,7 +44,7 @@ namespace HatTrick.InMemDb
 
             _encryptor = config.GetEncryptor();
 
-            _fullZipArchivePath = config.GetZipArchiveFullFilePath();
+            _fullZipArchivePath = config.GetZipArchiveFilePath();
 
             if (!File.Exists(_fullZipArchivePath))
                 throw new InvalidOperationException($"Expected archive file does not exist '{_fullZipArchivePath}'");
@@ -57,7 +57,6 @@ namespace HatTrick.InMemDb
             using ZipArchive zip = ZipFile.Open(_fullZipArchivePath, ZipArchiveMode.Read);
 
             (string key, ZipArchiveEntry[] entries)[] sets = this.ResolveZipArchiveFileSets(zip);
-
             foreach (var set in sets)
             {
                 var mapEntry = set.entries.First(e => e.Comment == "map");
@@ -74,16 +73,16 @@ namespace HatTrick.InMemDb
                 }
 
                 var dbEntry = set.entries.First(e => e.Comment == "db");
-                string tmpArchFilePath = Path.Combine(_archivePath, dbEntry.Name);
-                dbEntry.ExtractToFile(tmpArchFilePath, true);
+                string tmpBackupFilePath = Path.Combine(_archivePath, dbEntry.Name);
+                dbEntry.ExtractToFile(tmpBackupFilePath, true);
 
-                var enumerator = this.EmitArchiveRecords(tmpArchFilePath, map);
+                var enumerator = this.EmitArchiveRecords(tmpBackupFilePath, map);
                 foreach (var rec in enumerator)
                 {
                     yield return rec;
                 }
 
-                File.Delete(tmpArchFilePath);
+                File.Delete(tmpBackupFilePath);
             }
         }
         #endregion
@@ -91,18 +90,19 @@ namespace HatTrick.InMemDb
         #region resolve zip archive file sets
         private (string key, ZipArchiveEntry[] enries)[] ResolveZipArchiveFileSets(ZipArchive zip)
         {
+            int prefixLength = "htl.".Length + MemDbConfiguration.ArchiveTimestampFormat.Length;
+
             (string key, ZipArchiveEntry[] entries)[] sets = zip.Entries
-                //first 21 is timestamp formated as: yyyyMMdd_HHmm_ss_ffff
-                .GroupBy(e => e.Name.Substring(0, MemDbConfiguration.ArchiveTimestampFormat.Length))
+                .GroupBy(e => e.Name.Substring(0, prefixLength))
                 .Select(g => (g.Key, g.ToArray()))
                 .ToArray();
 
             Array.Sort(sets, (a, b) => a.key.CompareTo(b.key));
 
             //should result in
-            //{yyyyMMdd_HHmm_ss_ffff, [ yyyyMMdd_HHmm_ss_ffff.htl.datasetName.db.arch, yyyyMMdd_HHmm_ss_ffff.htl.datasetName.map.arch ] }
-            //{yyyyMMdd_HHmm_ss_ffff, [ yyyyMMdd_HHmm_ss_ffff.htl.datasetName.db.arch, yyyyMMdd_HHmm_ss_ffff.htl.datasetName.map.arch ] }
-            //{yyyyMMdd_HHmm_ss_ffff, [ yyyyMMdd_HHmm_ss_ffff.htl.datasetName.db.arch, yyyyMMdd_HHmm_ss_ffff.htl.datasetName.map.arch ] }
+            //{yyyyMMdd_HHmm_ss_ffff, [ htl.yyyyMMdd.HHmm.ss.fff.datasetName.db.bak, htl.yyyyMMdd.HHmm.ss.fff.datasetName.map.bak ] }
+            //{yyyyMMdd_HHmm_ss_ffff, [ htl.yyyyMMdd.HHmm.ss.fff.datasetName.db.bak, htl.yyyyMMdd.HHmm.ss.fff.datasetName.map.bak ] }
+            //{yyyyMMdd_HHmm_ss_ffff, [ htl.yyyyMMdd.HHmm.ss.fff.datasetName.db.bak, htl.yyyyMMdd.HHmm.ss.fff.datasetName.map.bak ] }
 
             return sets;
         }

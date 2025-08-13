@@ -42,10 +42,11 @@ x Change identity / id generated and stored from uint to long...4 billion may no
 x Change Record.Position from int to long...Need to allow for db files larger than 2GB.
 x Refactor calls to MemDbAESEncryptor.CalculateCryptoByteLength to ref only an interface .... add CalculateCryptoByteLength to IMemDbEncryptorInfo interface.
 xxx (Failed! Cannot find any) Time to identify perf improvements via inter function concurrency.
-- Implement the Directory path normalization to C:\ for all assets to ensure common directory path len reguardless of test env.
+x Implement the Directory path normalization to C:\ for all assets to ensure common directory path len reguardless of test env.
 x Implement lock file cross process check on MemDb.Restore.
 x Implement lock file cross process check on MemDb.Defrag.
 x Refactor MemDb.Restore to allow restore when no Defrag ever ran (restore from actual MemDb Db file and Map without any data from archives).
+x Revisit all file name formats...normalize snapshot and archive entry timestamp formats.
 - From defrag archives (this may be an external tool)
   - Find and restore a specific record by id.
   - Find and restore a specific set of records by predicate.

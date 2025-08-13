@@ -49,7 +49,7 @@ namespace HatTrick.InMemDb.TestHarness
                 if (asset.AssetType == DigitalAssetType.Unknown)
                     unknownCnt += 1;
 
-                db.Insert(asset, (id) => asset.Id = id);
+                db.Insert(asset, (id) => asset.Id = id, true);
             }
         }
         #endregion

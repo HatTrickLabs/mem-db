@@ -224,12 +224,12 @@ namespace HatTrick.InMemDb
         #region initialize lock file
         private static FileStream InitializeLockFile(MemDbConfiguration config)
         {
-            if (!Directory.Exists(config.Path))
-                Directory.CreateDirectory(config.Path);
+            if (!Directory.Exists(config.DbPath))
+                Directory.CreateDirectory(config.DbPath);
 
             //if any other process has this MemDb file set open, init of this filestream
             //will throw an exception prior to this process opening the file set.
-            var lockFile = new FileStream(config.GetFullLockFilePath(), new FileStreamOptions()
+            var lockFile = new FileStream(config.GetLockFilePath(), new FileStreamOptions()
             {
                 Access = FileAccess.Write,
                 Mode = FileMode.CreateNew,//should create new, NOT overwrite

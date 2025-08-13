@@ -34,14 +34,14 @@ namespace HatTrick.InMemDb
                 throw new ArgumentException("The 'restore to' utc timestamp must be in the past.", nameof(utcTimestamp));
 
             _overwrite = overwrite;
-            _fullDbPath = config.GetFullDbFilePath();
-            _fullMapPath = config.GetFullMapFilePath();
+            _fullDbPath = config.GetDbFilePath();
+            _fullMapPath = config.GetMapFilePath();
             _outputPath = outputPath;
             _utcTimestamp = utcTimestamp;
             _encryptionInfo = config.GetEncryptionInfo();
 
             _archivePath = config.ArchivePath;
-            _fullZipArchiveFilePath = config.GetZipArchiveFullFilePath();
+            _fullZipArchiveFilePath = config.GetZipArchiveFilePath();
             _fullRestoreMapPath = Path.Combine(outputPath, $"htl.{config.DatasetName}.map");
             _fullRestoreDbPath = Path.Combine(outputPath, $"htl.{config.DatasetName}.db");
             this.EnsureRestoreDirectory(outputPath);
@@ -143,9 +143,10 @@ namespace HatTrick.InMemDb
         #region resolve archive file sets
         private ZipArchiveEntry[] ResolveArchiveFileSets(ZipArchive zip)
         {
+            int prefixLength = "htl.".Length + MemDbConfiguration.ArchiveTimestampFormat.Length;
+
             (string key, ZipArchiveEntry[] entries)[] sets = zip.Entries
-                //first 21 is timestamp formated as: yyyyMMdd_HHmm_ss_ffff
-                .GroupBy(e => e.Name.Substring(0, MemDbConfiguration.ArchiveTimestampFormat.Length))
+                .GroupBy(e => e.Name.Substring(0, prefixLength))
                 .Select(g => (g.Key, g.ToArray()))
                 .OrderBy(g => g.Key)
                 .ToArray();

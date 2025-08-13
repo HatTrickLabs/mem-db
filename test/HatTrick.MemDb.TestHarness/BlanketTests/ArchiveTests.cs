@@ -158,6 +158,12 @@ namespace HatTrick.InMemDb.TestHarness
         }
         #endregion
 
+        #region archive reader
+        public void Test_ArchiveReader()
+        {
+        }
+        #endregion
+
         #region cleanup [override]
         public override void Cleanup()
         {

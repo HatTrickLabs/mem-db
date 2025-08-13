@@ -37,7 +37,7 @@ namespace HatTrick.InMemDb
             _cloner = config.GetCloner();
             _lock = new();
 
-            if (config.Path is not null)
+            if (config.DbPath is not null)
                 _persister = config.GetPersister();
             else
                 _idLock = new();

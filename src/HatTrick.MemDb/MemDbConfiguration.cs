@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using System.IO;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
@@ -12,13 +13,13 @@ namespace HatTrick.InMemDb
         public const int MinPasswordLength = 10;
         public const int DefaultFlushIntervalSeconds = 5;
         public const int MaxFlushIntervalSeconds = 60;
-        public const string ArchiveTimestampFormat = "yyyyMMdd_HHmm_ss_ffff";
-        public const string SnapshotTimestampFormat = "yyyyMMddHHmmssfff";
+        public const string ArchiveTimestampFormat  = "yyyyMMdd.HHmm.ss.fff";
+        public const string SnapshotTimestampFormat = "yyyyMMdd.HHmm.ss.fff";
         #endregion
 
         #region internals
         private string _datasetName;
-        private string _path;
+        private string _dbPath;
         private AccessMode _mode;
         private bool _indexed;
         private int _flushInterval;
@@ -29,14 +30,14 @@ namespace HatTrick.InMemDb
 
         #region interface
         public string DatasetName => _datasetName;
-        public string Path => _path;
+        public string DbPath => _dbPath;
         public bool IsIndexedOnIdentity => _indexed;
-        public bool IsPersisted => _path is not null;
+        public bool IsPersisted => _dbPath is not null;
         internal bool ShouldArchive => _archivePath is not null;
         internal string ArchivePath => _archivePath;
         public bool IsSnapshotReady => _snapshotPath is not null;
         internal AccessMode Mode => _mode;
-        internal int FlushInterval => _path is null ? 0 : _flushInterval;
+        internal int FlushInterval => _dbPath is null ? 0 : _flushInterval;
         public bool IsEncryptionReady => _encryptionKeyProvider is not null;
         #endregion
 
@@ -44,7 +45,7 @@ namespace HatTrick.InMemDb
         protected MemDbConfiguration(string datasetName, string path = null)
         {
             _datasetName = datasetName ?? throw new ArgumentNullException(nameof(datasetName));
-            _path = path;
+            _dbPath = path;
             _mode = AccessMode.ReadWrite;
             //if path is null, we will never flush to disk (non persistant).
             _flushInterval = path is null ? 0 : MemDbConfiguration.DefaultFlushIntervalSeconds * 1000;
@@ -54,13 +55,13 @@ namespace HatTrick.InMemDb
         #region set mode
         protected void SetMode(AccessMode mode)
         {
-            if (mode == AccessMode.AppendOnly && _path is null)
+            if (mode == AccessMode.AppendOnly && _dbPath is null)
                 throw new InvalidOperationException($"{nameof(AccessMode)}.{AccessMode.AppendOnly} is not applicable with a unpersisted database (no path provided).");
 
             if (mode == AccessMode.ReadOnly && _snapshotPath is not null)
                 throw new InvalidOperationException($"{nameof(AccessMode)}.{AccessMode.ReadOnly} is not applicable with database snapshot functionality...Cannot run in {nameof(AccessMode)}.{AccessMode.ReadOnly} mode when a snapshot path has been configured.");
 
-            if (mode == AccessMode.ReadOnly && _path is null)
+            if (mode == AccessMode.ReadOnly && _dbPath is null)
                 throw new InvalidOperationException($"{nameof(AccessMode)}.{AccessMode.ReadOnly} is not applicable with a unpersisted database (no path provided).");
 
             //assuming _flushInterval was never overridden if it is still equal to the default.
@@ -81,7 +82,7 @@ namespace HatTrick.InMemDb
         #region set flush interval
         protected void SetFlushInterval(int seconds)
         {
-            if (_path is null)
+            if (_dbPath is null)
                 throw new InvalidOperationException($"Flush interval is not applicable when database is not persisted (no path provided).");
 
             if (_mode == AccessMode.ReadOnly)
@@ -100,7 +101,7 @@ namespace HatTrick.InMemDb
             if (_encryptionKeyProvider is not null)
                 throw new InvalidOperationException("Encryption key provider already configured.");
 
-            if (_path is null)
+            if (_dbPath is null)
                 throw new NotImplementedException("Encryption key is not applicable when database is not persisted (no path provided).");
 
             _encryptionKeyProvider = encryptionKeyProvider;
@@ -113,7 +114,7 @@ namespace HatTrick.InMemDb
             if (_archivePath is not null)
                 throw new InvalidOperationException("Archive path already provided.");
 
-            if (_path is null)
+            if (_dbPath is null)
                 throw new NotImplementedException("Archive path is not applicable when database is not persisted (no path provided).");
 
             _archivePath = archivePath;
@@ -126,7 +127,7 @@ namespace HatTrick.InMemDb
             if (_snapshotPath is not null)
                 throw new InvalidOperationException("Snapshot path already provided.");
 
-            if (_path is null)
+            if (_dbPath is null)
                 throw new InvalidOperationException($"Snapshot path is not applicable with a unpersisted database (no path provided).");
 
             if (_mode == AccessMode.ReadOnly)
@@ -155,66 +156,74 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
-        #region get full lock file path
-        internal string GetFullLockFilePath()
+        #region get lock file path
+        internal string GetLockFilePath()
         {
             if (!this.IsPersisted)
                 throw new InvalidOperationException("Registered configuration for dataset name {_datasetName} is not persisted...No lock file initialized.");
 
-            return System.IO.Path.Combine(_path, $"~$htl.{_datasetName}.lock");
+            return Path.Combine(_dbPath, $"~$htl.{_datasetName}.lock");
         }
         #endregion
 
-        #region get full map file path
-        internal string GetFullMapFilePath()
+        #region get map file path
+        internal string GetMapFilePath()
         {
-            return System.IO.Path.Combine(_path, $"htl.{_datasetName}.map");
+            return Path.Combine(_dbPath, $"htl.{_datasetName}.map");
         }
         #endregion
 
-        #region get full db file path
-        internal string GetFullDbFilePath()
+        #region get db file path
+        internal string GetDbFilePath()
         {
-            return System.IO.Path.Combine(_path, $"htl.{_datasetName}.db");
+            return Path.Combine(_dbPath, $"htl.{_datasetName}.db");
         }
         #endregion
 
-        #region get full map archive file path
-        internal string GetFullMapArchiveFilePath(DateTime timestamp)
-        {
-            string at = timestamp.ToString(MemDbConfiguration.ArchiveTimestampFormat);
-            return System.IO.Path.Combine(_archivePath, $"{at}.htl.{_datasetName}.map.arch");
-        }
-        #endregion
-
-        #region get full db archive file path
-        internal string GetFullDbArchiveFilePath(DateTime timestamp)
+        #region get map backup file path
+        internal string GetMapBackupFilePath(DateTime timestamp)
         {
             string at = timestamp.ToString(MemDbConfiguration.ArchiveTimestampFormat);
-            return System.IO.Path.Combine(_archivePath, $"{at}.htl.{_datasetName}.db.arch");
+            return Path.Combine(_archivePath, $"htl.{at}.{_datasetName}.map.bak");
         }
         #endregion
 
-        #region get zip archive full file path
-        internal string GetZipArchiveFullFilePath()
+        #region get db backup file path
+        internal string GetDbBackupFilePath(DateTime timestamp)
         {
-            return System.IO.Path.Combine(_archivePath, $"htl.{_datasetName}.zip");
+            string at = timestamp.ToString(MemDbConfiguration.ArchiveTimestampFormat);
+            return Path.Combine(_archivePath, $"htl.{at}.{_datasetName}.db.bak");
         }
         #endregion
 
-        #region get full snapshot map file path
-        public string GetFullSnapshotMapFilePath(DateTime timestamp)
+        #region get zip archive file path
+        internal string GetZipArchiveFilePath()
+        {
+            return Path.Combine(_archivePath, $"htl.{_datasetName}.zip");
+        }
+        #endregion
+
+        #region get snapshot dataset name
+        public string GetSnapshotDatasetName(DateTime timestamp)
+        {
+            string snapshotDataset = $"{timestamp.ToString(MemDbConfiguration.SnapshotTimestampFormat)}.{_datasetName}";
+            return snapshotDataset;
+        }
+        #endregion
+
+        #region get snapshot map file path
+        public string GetSnapshotMapFilePath(DateTime timestamp)
         {
             string at = timestamp.ToString(MemDbConfiguration.SnapshotTimestampFormat);
-            return System.IO.Path.Combine(_snapshotPath, $"htl.{_datasetName}.{at}.map");
+            return Path.Combine(_snapshotPath, $"htl.{at}.{_datasetName}.map");
         }
         #endregion
 
-        #region get full snapshot db file path
-        public string GetFullSnapshotDbFilePath(DateTime timestamp)
+        #region get snapshot db file path
+        public string GetSnapshotDbFilePath(DateTime timestamp)
         {
             string at = timestamp.ToString(MemDbConfiguration.SnapshotTimestampFormat);
-            return System.IO.Path.Combine(_snapshotPath, $"htl.{_datasetName}.{at}.db");
+            return Path.Combine(_snapshotPath, $"htl.{at}.{_datasetName}.db");
         }
         #endregion
 

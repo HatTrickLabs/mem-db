@@ -27,14 +27,14 @@ namespace HatTrick.InMemDb
         #region constructors
         internal MemDbDefragmenter(MemDbConfiguration config)
         {
-            if (!Directory.Exists(config.Path))
-                throw new ArgumentException($"No directory exists at {nameof(config)}.{nameof(config.Path)}");
+            if (!Directory.Exists(config.DbPath))
+                throw new ArgumentException($"No directory exists at {nameof(config)}.{nameof(config.DbPath)}");
 
-            _path = config.Path;
+            _path = config.DbPath;
             _datasetName = config.DatasetName;
             _encryptionInfo = config.GetEncryptionInfo();
-            _fullDbPath = config.GetFullDbFilePath();
-            _fullMapPath = config.GetFullMapFilePath();
+            _fullDbPath = config.GetDbFilePath();
+            _fullMapPath = config.GetMapFilePath();
 
             _fullTempMapPath = _fullMapPath + ".temp";
             _fullTempDbPath = _fullDbPath + ".temp";

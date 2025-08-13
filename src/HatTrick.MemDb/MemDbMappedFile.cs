@@ -55,7 +55,7 @@ namespace HatTrick.InMemDb
             if (config is null)
                 throw new ArgumentNullException(nameof(config));
 
-            _path = config.Path;
+            _path = config.DbPath;
             _datasetName = config.DatasetName;
             _mode = config.Mode;
             _flushInterval = config.FlushInterval;
@@ -67,8 +67,8 @@ namespace HatTrick.InMemDb
             _encryptor = config.GetEncryptor();
             _snapshotter = config.GetSnapshotter();
 
-            _fullDbPath = config.GetFullDbFilePath();
-            _fullMapPath = config.GetFullMapFilePath();
+            _fullDbPath = config.GetDbFilePath();
+            _fullMapPath = config.GetMapFilePath();
 
             _flushLock = new();
 
@@ -486,9 +486,8 @@ namespace HatTrick.InMemDb
 
             lock (_flushLock)
             {
-                var now = DateTime.Now;
-                _snapshotter.WriteSnapshot(now);
-                return now;
+                DateTime utcNow = _snapshotter.WriteSnapshot();
+                return utcNow;
             }
         }
         #endregion

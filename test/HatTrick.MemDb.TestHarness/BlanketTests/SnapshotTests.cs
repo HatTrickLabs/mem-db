@@ -100,8 +100,8 @@ namespace HatTrick.InMemDb.TestHarness
             }
 
             //configure and open the snapshot...
-            string datasetName = $"{_dataset}.{snapshotTimestamp.ToString(MemDbConfiguration.SnapshotTimestampFormat)}";
-            MemDb.ConfigureFor<DigitalAsset>(datasetName, Path.Combine(TestBase.DbBasePath, "snapshot", "target"))
+            string datasetName = MemDb.GetConfiguration("assets").GetSnapshotDatasetName(snapshotTimestamp);
+            MemDb.ConfigureFor<DigitalAsset>(datasetName, Path.Combine(_dbPath, "target"))
                 .CloneWith(() => new DigitalAssetCloner())
                 .SerializeWith(() => new DigitalAssetBinarySerializer())
                 .Register();
@@ -128,7 +128,7 @@ namespace HatTrick.InMemDb.TestHarness
             }
 
             //configure and open the snapshot...
-            string datasetName = $"{_dataset}.{snapshotTimestamp.ToString(MemDbConfiguration.SnapshotTimestampFormat)}";
+            string datasetName = MemDb.GetConfiguration("assets").GetSnapshotDatasetName(snapshotTimestamp);
             MemDb.ConfigureFor<DigitalAsset>(datasetName, Path.Combine(TestBase.DbBasePath, "snapshot", "target"))
                 .CloneWith(() => new DigitalAssetCloner())
                 .SerializeWith(() => new DigitalAssetBinarySerializer())
@@ -161,7 +161,7 @@ namespace HatTrick.InMemDb.TestHarness
             }
 
             //configure and open the snapshot...
-            string datasetName = $"{_dataset}.{snapshotTimestamp.ToString(MemDbConfiguration.SnapshotTimestampFormat)}";
+            string datasetName = MemDb.GetConfiguration("assets").GetSnapshotDatasetName(snapshotTimestamp);
             MemDb.ConfigureFor<DigitalAsset>(datasetName, Path.Combine(TestBase.DbBasePath, "snapshot", "target"))
                 .CloneWith(() => new DigitalAssetCloner())
                 .SerializeWith(() => new DigitalAssetBinarySerializer())
@@ -222,7 +222,7 @@ namespace HatTrick.InMemDb.TestHarness
             Assert.IsEqual(t2Count, txtCnt + jsonCnt + unknownCnt);
 
             //configure and open the snapshot...
-            string datasetName = $"{_dataset}.{snapshotTimestamp.ToString(MemDbConfiguration.SnapshotTimestampFormat)}";
+            string datasetName = MemDb.GetConfiguration("assets").GetSnapshotDatasetName(snapshotTimestamp);
             MemDb.ConfigureFor<DigitalAsset>(datasetName, Path.Combine(TestBase.DbBasePath, "snapshot", "target"))
                 .CloneWith(() => new DigitalAssetCloner())
                 .SerializeWith(() => new DigitalAssetBinarySerializer())
