@@ -22,6 +22,7 @@ namespace HatTrick.InMemDb.TestHarness
                 .ApplyIndex<string>(nameof(DigitalAsset.Name), (a) => a.Name)
                 .ApplyIndex<DateTime>(nameof(DigitalAsset.Imported), (a) => a.Imported)
                 .ApplyIndex<ulong>(nameof(DigitalAsset.XXHash), (a) => a.XXHash)
+                .ApplyIndex<string>(nameof(DigitalAsset.Tags), a => a.Tags)
                 .Register();
         }
         #endregion
@@ -69,6 +70,8 @@ namespace HatTrick.InMemDb.TestHarness
 
                 var none = db.QueryViaIndex<DateTime>(nameof(DigitalAsset.Imported)).IsNotEqualTo(importedAt).ToArray();
                 Assert.IsEqual(none.Length, 0);
+
+                var tags = db.QueryViaIndex<string>(nameof(DigitalAsset.Tags)).IsNotEqualTo("jerrod").ToArray();
             }
         }
         #endregion

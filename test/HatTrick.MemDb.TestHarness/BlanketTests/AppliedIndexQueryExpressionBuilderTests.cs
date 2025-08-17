@@ -1,7 +1,8 @@
-﻿using System;
+﻿
+using System;
 using System.IO;
 using System.Linq;
-using HatTrick.InMemDb;
+using System.Collections.Generic;
 
 namespace HatTrick.InMemDb.TestHarness
 {
@@ -27,6 +28,7 @@ namespace HatTrick.InMemDb.TestHarness
                 .ApplyIndex<ulong>(nameof(DigitalAsset.XXHash), (a) => a.XXHash)
                 .ApplyIndex<DigitalAssetType>(nameof(DigitalAsset.AssetType), a => a.AssetType)
                 .ApplyIndex<long>(nameof(DigitalAsset.Id), a => a.Id)
+                .ApplyIndex<string>(nameof(DigitalAsset.Tags), a => a.Tags)
                 .Register();
         }
         #endregion

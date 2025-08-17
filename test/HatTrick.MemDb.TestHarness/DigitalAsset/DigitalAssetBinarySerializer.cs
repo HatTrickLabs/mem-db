@@ -38,6 +38,11 @@ namespace HatTrick.InMemDb
             to.Write(record.Length);
             to.Write(record.Imported.ToBinary());
             to.Write(record.XXHash);
+            to.Write(record.Tags.Length);
+            for (int i = 0; i < record.Tags.Length; i++)
+            {
+                to.Write(record.Tags[i]);
+            }
 
             Interlocked.Increment(ref _serializerCount);
         }
@@ -74,6 +79,12 @@ namespace HatTrick.InMemDb
             record.Length = from.ReadInt64();
             record.Imported = DateTime.FromBinary(from.ReadInt64());
             record.XXHash = from.ReadUInt64();
+            int tagsLen = from.ReadInt32();
+            record.Tags = new string[tagsLen];
+            for (int i = 0; i < tagsLen; i++)
+            {
+                record.Tags[i] = from.ReadString();
+            }
 
             Interlocked.Increment(ref _deserializeCount);
 
