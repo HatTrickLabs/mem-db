@@ -344,30 +344,30 @@ namespace HatTrick.InMemDb
         }
 
         //exploratory... not yet exposed on IMemDbConfigurationBuilder<T>
-        //public IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, ICollection<YIndex>> keySetResolver)
-        //where YIndex : IConvertible
-        //{
-        //    return this.ApplyIndex<YIndex>(name, keySetResolver, new HybridComparer<YIndex>());
-        //}
+        public IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, ICollection<YIndex>> keySetResolver)
+        where YIndex : IConvertible
+        {
+            return this.ApplyIndex<YIndex>(name, keySetResolver, new HybridComparer<YIndex>());
+        }
 
-        //exploratory... not yet exposed on IMemDbConfigurationBuilder<T>
-        //public IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, ICollection<YIndex>> keySetResolver, HybridComparer<YIndex> comparer) 
-        //where YIndex : IConvertible
-        //{
-        //    if (string.IsNullOrEmpty(name))
-        //        throw new ArgumentException("Argument must contain a value.", nameof(name));
+        //exploratory...not yet exposed on IMemDbConfigurationBuilder<T>
+        public IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, ICollection<YIndex>> keySetResolver, HybridComparer<YIndex> comparer)
+        where YIndex : IConvertible
+        {
+            if (string.IsNullOrEmpty(name))
+                throw new ArgumentException("Argument must contain a value.", nameof(name));
 
-        //    if (keySetResolver is null)
-        //        throw new ArgumentNullException(nameof(keySetResolver));
+            if (keySetResolver is null)
+                throw new ArgumentNullException(nameof(keySetResolver));
 
-        //    if (_appliedIndexes is null)
-        //        _appliedIndexes = new List<MemDbIndex<T>>();
+            if (_appliedIndexes is null)
+                _appliedIndexes = new List<MemDbIndex<T>>();
 
-        //    var index = new MemDbIndexedSet<T, YIndex>(name, keySetResolver, comparer);
-        //    _appliedIndexes.Add(index);
+            var index = new MemDbIndexedSet<T, YIndex>(name, keySetResolver, comparer);
+            _appliedIndexes.Add(index);
 
-        //    return this;
-        //}
+            return this;
+        }
         #endregion
 
         #region set flush interval

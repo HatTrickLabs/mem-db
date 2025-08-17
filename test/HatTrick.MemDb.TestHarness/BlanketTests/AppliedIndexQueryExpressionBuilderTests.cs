@@ -52,6 +52,8 @@ namespace HatTrick.InMemDb.TestHarness
             {
                 this.LoadDb(db);
                 db.Flush();
+
+                //db.QueryViaIndex<string>(nameof(DigitalAsset.Tags)).is
             }
         }
         #endregion

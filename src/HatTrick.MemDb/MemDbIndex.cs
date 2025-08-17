@@ -56,7 +56,7 @@ namespace HatTrick.InMemDb
     }
     #endregion
 
-    #region mem db index collection [class]
+    #region mem db index collection of T[class]
     internal sealed class MemDbIndexCollection<T> where T : class
     {
         #region internals
@@ -167,7 +167,7 @@ namespace HatTrick.InMemDb
     }
     #endregion
 
-    #region mem db index of T,Y [class]
+    #region mem db index of T, YIndex [class]
     internal class MemDbIndex<T, YIndex> : MemDbIndex<T> where T : class where YIndex : IConvertible
     {
         #region internals
@@ -434,21 +434,8 @@ namespace HatTrick.InMemDb
     }
     #endregion
 
-    #region mem db indexed set positional op interface
-    public interface MemDbIndexedSetPositionalOpInterface<T, YIndex> where T : class where YIndex : IConvertible
-    {
-        public int[] EqualTo(YIndex key);
-        public int[] In(YIndex keys);
-        public int[] NotEqualTo(YIndex key);
-        public int[] GreaterThan(YIndex key);
-        public int[] GreaterThanEqualTo(YIndex key);
-        public int[] LessThan(YIndex key);
-        public int[] LessThanEqualTo(YIndex key);
-    }
-    #endregion
-
     #region mem db indexed set of T, IEnumerable<YIndex> [class]
-    internal sealed class MemDbIndexedSet<T, YIndex> : MemDbIndex<T, YIndex> where T : class where YIndex : IConvertible
+    internal class MemDbIndexedSet<T, YIndex> : MemDbIndex<T, YIndex> where T : class where YIndex : IConvertible
     {
         #region internals
         private Func<T, ICollection<YIndex>> _keyResolver;
@@ -538,6 +525,32 @@ namespace HatTrick.InMemDb
                 return Array.Empty<int>();
 
             HashSet<int> pointers = new HashSet<int>(base.EqualTo(keys[0]));
+
+            for (int i = 1; i < keys.Length; i++)
+            {
+                pointers.UnionWith(base.EqualTo(keys[i]));
+            }
+
+            return pointers.ToArray();
+        }
+        #endregion
+
+        #region any not equal
+        internal int[] AnyNotEqual(YIndex key)
+        {
+            //any item in sub array set is not equal key
+            return base.NotEqualTo(key);
+        }
+        #endregion
+
+        #region any not in
+        internal int[] AnyNotIn(params YIndex[] keys)
+        {
+            //any item in sub array set is not equal to any keys
+            if (keys.Length == 0)
+                return Array.Empty<int>();
+
+            HashSet<int> pointers = new HashSet<int>(base.NotEqualTo(keys[0]));
 
             for (int i = 1; i < keys.Length; i++)
             {

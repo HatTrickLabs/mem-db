@@ -505,25 +505,25 @@ namespace HatTrick.InMemDb
                 int[] pointers = null;
                 switch (expression.RelationalOperator)
                 {
-                    case RelationalOperator.EqualTo:
+                    case IndexRelationalOperator.EqualTo:
                         pointers = index.EqualTo(expression.IndexKey);
                         break;
-                    case RelationalOperator.In:
+                    case IndexRelationalOperator.In:
                         pointers = index.In(expression.IndexKeySet);
                         break;
-                    case RelationalOperator.NotEqualTo:
+                    case IndexRelationalOperator.NotEqualTo:
                         pointers = index.NotEqualTo(expression.IndexKey);
                         break;
-                    case RelationalOperator.GreaterThan:
+                    case IndexRelationalOperator.GreaterThan:
                         pointers = index.GreaterThan(expression.IndexKey);
                         break;
-                    case RelationalOperator.LessThan:
+                    case IndexRelationalOperator.LessThan:
                         pointers = index.LessThan(expression.IndexKey);
                         break;
-                    case RelationalOperator.GreaterThanEqualTo:
+                    case IndexRelationalOperator.GreaterThanEqualTo:
                         pointers = index.GreaterThanEqualTo(expression.IndexKey);
                         break;
-                    case RelationalOperator.LessThanEqualTo:
+                    case IndexRelationalOperator.LessThanEqualTo:
                         pointers = index.LessThanEqualTo(expression.IndexKey);
                         break;
                     default:

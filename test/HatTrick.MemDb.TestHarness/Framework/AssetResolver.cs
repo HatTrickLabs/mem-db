@@ -84,11 +84,11 @@ namespace HatTrick.InMemDb.TestHarness
                 asset.Length = fi.Length;
                 //asset.Imported = ???;
                 if (asset.AssetType == DigitalAssetType.Text)
-                    asset.Tags = ["text", "doc", "jerrod"];
+                    asset.Tags = ["aaa", "bbb", "ccc"];
                 else if (asset.AssetType == DigitalAssetType.Json)
-                    asset.Tags = ["json", "data", "calvin"];
+                    asset.Tags = ["xxx", "yyy", "zzz"];
                 else if (asset.AssetType == DigitalAssetType.Unknown)
-                    asset.Tags = ["none", "xxx", "cartman"];
+                    asset.Tags = ["aaa", "bbb", "ccc", "xxx", "yyy", "zzz"];
 
                 assets[i] = asset;
             }
