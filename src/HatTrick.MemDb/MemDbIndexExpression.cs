@@ -9,6 +9,7 @@ namespace HatTrick.InMemDb
     #region relational operator [enum]
     public enum RelationalOperator
     {
+        None,
         EqualTo,
         In,
         NotEqualTo,

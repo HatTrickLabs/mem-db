@@ -434,6 +434,19 @@ namespace HatTrick.InMemDb
     }
     #endregion
 
+    #region mem db indexed set positional op interface
+    public interface MemDbIndexedSetPositionalOpInterface<T, YIndex> where T : class where YIndex : IConvertible
+    {
+        public int[] EqualTo(YIndex key);
+        public int[] In(YIndex keys);
+        public int[] NotEqualTo(YIndex key);
+        public int[] GreaterThan(YIndex key);
+        public int[] GreaterThanEqualTo(YIndex key);
+        public int[] LessThan(YIndex key);
+        public int[] LessThanEqualTo(YIndex key);
+    }
+    #endregion
+
     #region mem db indexed set of T, IEnumerable<YIndex> [class]
     internal sealed class MemDbIndexedSet<T, YIndex> : MemDbIndex<T, YIndex> where T : class where YIndex : IConvertible
     {
@@ -452,7 +465,7 @@ namespace HatTrick.InMemDb
         internal override void Apply(T record, int pointer)
         {
             var keySet = _keyResolver(record);
-            HashSet<YIndex> distinct = new HashSet<YIndex>(keySet.Count);
+            HashSet<YIndex> distinct = new HashSet<YIndex>(keySet.Count, base.Comparer);
             foreach (var key in keySet)
             {
                 if (distinct.Add(key))
@@ -465,7 +478,7 @@ namespace HatTrick.InMemDb
         internal override void Remove(T record, int pointer)
         {
             var keySet = _keyResolver(record);
-            HashSet<YIndex> distinct = new HashSet<YIndex>(keySet.Count);
+            HashSet<YIndex> distinct = new HashSet<YIndex>(keySet.Count, base.Comparer);
             foreach (var key in keySet)
             {
                 if (distinct.Add(key))
@@ -506,6 +519,84 @@ namespace HatTrick.InMemDb
                 this.Remove(stale.record, stale.pointer);
                 this.Apply(fresh.record, fresh.pointer);
             }
+        }
+        #endregion
+
+        #region any is equal (exists)
+        internal int[] AnyIsEqual(YIndex key)
+        {
+            //any item in sub array set is equal to key
+            return base.EqualTo(key);
+        }
+        #endregion
+
+        #region any in
+        internal int[] AnyIn(params YIndex[] keys)
+        {
+            //any item in sub array set is equal to any keys
+            if (keys.Length == 0)
+                return Array.Empty<int>();
+
+            HashSet<int> pointers = new HashSet<int>(base.EqualTo(keys[0]));
+
+            for (int i = 1; i < keys.Length; i++)
+            {
+                pointers.UnionWith(base.EqualTo(keys[i]));
+            }
+
+            return pointers.ToArray();
+        }
+        #endregion
+
+        #region any is greater than
+        internal int[] AnyIsGreaterThan(YIndex key)
+        {
+            //any sub array item is greater than key
+            int[] pointers = base.GreaterThan(key);
+
+            if (pointers.Length == 0 || pointers.Length == 1)
+                return pointers;
+
+            return new HashSet<int>(pointers).ToArray();
+        }
+        #endregion
+
+        #region any is greater than equal to
+        internal int[] AnyIsGreaterThanEqualTo(YIndex key)
+        {
+            //any sub array item is greater or equal to key
+            int[] pointers = base.GreaterThanEqualTo(key);
+
+            if (pointers.Length == 0 || pointers.Length == 1)
+                return pointers;
+
+            return new HashSet<int>(pointers).ToArray();
+        }
+        #endregion
+
+        #region any is less than
+        internal int[] AnyIsLessThan(YIndex key)
+        {
+            //any sub array item is less than key
+            int[] pointers = base.LessThan(key);
+
+            if (pointers.Length == 0 || pointers.Length == 1)
+                return pointers;
+
+            return new HashSet<int>(pointers).ToArray();
+        }
+        #endregion
+
+        #region any is less than equal to
+        internal int[] AnyIsLessThanEqualTo(YIndex key)
+        {
+            //any sub array item is less than equal to key
+            int[] pointers = base.LessThanEqualTo(key);
+
+            if (pointers.Length == 0 || pointers.Length == 1)
+                return pointers;
+
+            return new HashSet<int>(pointers).ToArray();
         }
         #endregion
     }

@@ -43,6 +43,17 @@ namespace HatTrick.InMemDb.TestHarness
         }
         #endregion
 
+        #region x
+        public void Test_X()
+        {
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                this.LoadDb(db);
+                db.Flush();
+            }
+        }
+        #endregion
+
         #region basic query
         public void Test_BasicQuery()
         {
