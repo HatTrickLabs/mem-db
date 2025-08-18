@@ -46,16 +46,16 @@ namespace HatTrick.InMemDb.TestHarness
         #endregion
 
         #region x
-        public void Test_X()
-        {
-            using (var db = MemDb.Open<DigitalAsset>(_dataset))
-            {
-                this.LoadDb(db);
-                db.Flush();
+        //public void Test_X()
+        //{
+        //    using (var db = MemDb.Open<DigitalAsset>(_dataset))
+        //    {
+        //        this.LoadDb(db);
+        //        db.Flush();
 
-                //db.QueryViaIndex<string>(nameof(DigitalAsset.Tags)).is
-            }
-        }
+        //        //db.QueryViaIndex<string>(nameof(DigitalAsset.Tags)).is
+        //    }
+        //}
         #endregion
 
         #region basic query

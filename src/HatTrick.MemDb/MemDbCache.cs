@@ -481,7 +481,7 @@ namespace HatTrick.InMemDb
             //ensure generic type requested is a match to the index type...
             MemDbIndex<T, YIndex> typeIndex = index.Of<YIndex>();
 
-            return new MemDbIndexExpression<T, YIndex>(index.Name, this.ExecuteIndexQueryExpression, this.ExecuteIndexedUpdateExpression, this.ExecuteIndexedDeleteExpression);
+            return new MemDbIndexedExpression<T, YIndex>(index.Name, this.ExecuteIndexQueryExpression, this.ExecuteIndexedUpdateExpression, this.ExecuteIndexedDeleteExpression);
         }
         #endregion
 

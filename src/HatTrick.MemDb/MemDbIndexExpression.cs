@@ -126,20 +126,20 @@ namespace HatTrick.InMemDb
     #endregion
 
     #region mem db index expression of T, Y [class]
-    public class MemDbIndexExpression<T, YIndex> : MemDbIndexExpression<T>, IMemDbIndexExpressionRoot<T, YIndex> where T : class
+    public class MemDbIndexExpression<T, YIndex> : MemDbIndexExpression<T> where T : class
     {
         #region internals
-        private IndexRelationalOperator _relationOp;
-        private YIndex _key;
-        private YIndex[] _keySet;
+        protected IndexRelationalOperator _relationOp;
+        protected YIndex _key;
+        protected YIndex[] _keySet;
 
         private Comparison<T> _orderBy;
         private int? _skip;
         private int? _limit;
 
-        private ExecuteQuery _query;
-        private ExecuteUpdate _update;
-        private ExecuteDelete _delete;
+        internal ExecuteQuery _query;
+        internal ExecuteUpdate _update;
+        internal ExecuteDelete _delete;
         #endregion
 
         #region interface
@@ -149,7 +149,7 @@ namespace HatTrick.InMemDb
 
         public YIndex[] IndexKeySet => _keySet;
 
-        internal MemDbIndexExpression<T, YIndex>.ExecuteQuery Query => _query;
+        internal ExecuteQuery Query => _query;
 
         internal bool HasOrderBy => _orderBy is not null;
 
@@ -181,71 +181,71 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
-        #region is equal to
-        public MemDbIndexExpression<T> IsEqualTo(YIndex key)
-        {
-            _relationOp = IndexRelationalOperator.EqualTo;
-            _key = key;
-            return this;
-        }
-        #endregion
+        //#region is equal to
+        //public MemDbIndexExpression<T> IsEqualTo(YIndex key)
+        //{
+        //    _relationOp = IndexRelationalOperator.EqualTo;
+        //    _key = key;
+        //    return this;
+        //}
+        //#endregion
 
-        #region in
-        public MemDbIndexExpression<T> In(params YIndex[] keys)
-        {
-            if (keys is null)
-                throw new ArgumentNullException(nameof(keys));
+        //#region in
+        //public MemDbIndexExpression<T> In(params YIndex[] keys)
+        //{
+        //    if (keys is null)
+        //        throw new ArgumentNullException(nameof(keys));
 
-            _relationOp = IndexRelationalOperator.In;
-            _keySet = keys;
-            return this;
-        }
-        #endregion
+        //    _relationOp = IndexRelationalOperator.In;
+        //    _keySet = keys;
+        //    return this;
+        //}
+        //#endregion
 
-        #region is not equal to
-        public MemDbIndexExpression<T> IsNotEqualTo(YIndex key)
-        {
-            _relationOp = IndexRelationalOperator.NotEqualTo;
-            _key = key;
-            return this;
-        }
-        #endregion
+        //#region is not equal to
+        //public MemDbIndexExpression<T> IsNotEqualTo(YIndex key)
+        //{
+        //    _relationOp = IndexRelationalOperator.NotEqualTo;
+        //    _key = key;
+        //    return this;
+        //}
+        //#endregion
 
-        #region is greater than
-        public MemDbIndexExpression<T> IsGreaterThan(YIndex key)
-        {
-            _relationOp = IndexRelationalOperator.GreaterThan;
-            _key = key;
-            return this;
-        }
-        #endregion
+        //#region is greater than
+        //public MemDbIndexExpression<T> IsGreaterThan(YIndex key)
+        //{
+        //    _relationOp = IndexRelationalOperator.GreaterThan;
+        //    _key = key;
+        //    return this;
+        //}
+        //#endregion
 
-        #region is less than
-        public MemDbIndexExpression<T> IsLessThan(YIndex key)
-        {
-            _relationOp = IndexRelationalOperator.LessThan;
-            _key = key;
-            return this;
-        }
-        #endregion
+        //#region is less than
+        //public MemDbIndexExpression<T> IsLessThan(YIndex key)
+        //{
+        //    _relationOp = IndexRelationalOperator.LessThan;
+        //    _key = key;
+        //    return this;
+        //}
+        //#endregion
 
-        #region is greater than equal to
-        public MemDbIndexExpression<T> IsGreaterThanEqualTo(YIndex key)
-        {
-            _relationOp = IndexRelationalOperator.GreaterThanEqualTo;
-            _key = key;
-            return this;
-        }
-        #endregion
+        //#region is greater than equal to
+        //public MemDbIndexExpression<T> IsGreaterThanEqualTo(YIndex key)
+        //{
+        //    _relationOp = IndexRelationalOperator.GreaterThanEqualTo;
+        //    _key = key;
+        //    return this;
+        //}
+        //#endregion
 
-        #region is less than equal to
-        public MemDbIndexExpression<T> IsLessThanEqualTo(YIndex key)
-        {
-            _relationOp = IndexRelationalOperator.LessThanEqualTo;
-            _key = key;
-            return this;
-        }
-        #endregion
+        //#region is less than equal to
+        //public MemDbIndexExpression<T> IsLessThanEqualTo(YIndex key)
+        //{
+        //    _relationOp = IndexRelationalOperator.LessThanEqualTo;
+        //    _key = key;
+        //    return this;
+        //}
+        //#endregion
 
         #region count
         public override int Count()
@@ -485,6 +485,85 @@ namespace HatTrick.InMemDb
         public override int Delete()
         {
             return _delete(this);
+        }
+        #endregion
+    }
+    #endregion
+
+    #region mem db indexed expression of T, Y [class]
+    public class MemDbIndexedExpression<T, YIndex> 
+    : MemDbIndexExpression<T, YIndex>, IMemDbIndexExpressionRoot<T, YIndex> where T 
+    : class
+    {
+        #region ctors
+        internal MemDbIndexedExpression(string indexName, ExecuteQuery query, ExecuteUpdate update, ExecuteDelete delete) 
+        : base(indexName, query, update, delete)
+        { }
+        #endregion
+
+        #region is equal to
+        public MemDbIndexExpression<T> IsEqualTo(YIndex key)
+        {
+            _relationOp = IndexRelationalOperator.EqualTo;
+            _key = key;
+            return this;
+        }
+        #endregion
+
+        #region in
+        public MemDbIndexExpression<T> In(params YIndex[] keys)
+        {
+            if (keys is null)
+                throw new ArgumentNullException(nameof(keys));
+
+            _relationOp = IndexRelationalOperator.In;
+            _keySet = keys;
+            return this;
+        }
+        #endregion
+
+        #region is not equal to
+        public MemDbIndexExpression<T> IsNotEqualTo(YIndex key)
+        {
+            _relationOp = IndexRelationalOperator.NotEqualTo;
+            _key = key;
+            return this;
+        }
+        #endregion
+
+        #region is greater than
+        public MemDbIndexExpression<T> IsGreaterThan(YIndex key)
+        {
+            _relationOp = IndexRelationalOperator.GreaterThan;
+            _key = key;
+            return this;
+        }
+        #endregion
+
+        #region is less than
+        public MemDbIndexExpression<T> IsLessThan(YIndex key)
+        {
+            _relationOp = IndexRelationalOperator.LessThan;
+            _key = key;
+            return this;
+        }
+        #endregion
+
+        #region is greater than equal to
+        public MemDbIndexExpression<T> IsGreaterThanEqualTo(YIndex key)
+        {
+            _relationOp = IndexRelationalOperator.GreaterThanEqualTo;
+            _key = key;
+            return this;
+        }
+        #endregion
+
+        #region is less than equal to
+        public MemDbIndexExpression<T> IsLessThanEqualTo(YIndex key)
+        {
+            _relationOp = IndexRelationalOperator.LessThanEqualTo;
+            _key = key;
+            return this;
         }
         #endregion
     }
