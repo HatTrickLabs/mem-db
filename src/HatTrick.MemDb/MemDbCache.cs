@@ -597,6 +597,99 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region query via indexed set
+        public IMemDbIndexedSetExpressionRoot<T, YIndex> QueryViaIndexedSet<YIndex>(string indexName) where YIndex : IConvertible
+        {
+            this.EnsureReadMode(nameof(QueryViaIndexedSet));
+
+            if (_appliedIndexes is null)
+                throw new InvalidOperationException($"No custom indexes applied to MemDb Instance '{_datasetName}'");
+
+            var index = _appliedIndexes.Get(indexName);
+            if (index is null)
+                throw new ArgumentException($"No custom index exists on MemDb instance '{_datasetName}' with provided name '{indexName}'", nameof(indexName));
+
+            //ensure generic type requested is a match to the index type...
+            MemDbIndex<T, YIndex> typeIndex = index.Of<YIndex>();
+
+            return new MemDbIndexedSetExpression<T, YIndex>(index.Name, this.ExecuteIndexedSetQueryExpression, this.ExecuteIndexedUpdateExpression, this.ExecuteIndexedDeleteExpression);
+        }
+        #endregion
+
+        #region execute indexeded set query expression
+        private T[] ExecuteIndexedSetQueryExpression<YIndex>(MemDbIndexExpression<T, YIndex> expression, bool deepCopy) where YIndex : IConvertible
+        {
+            MemDbRecord<T>[] records = this.ExecuteIndexedSetQueryExpression(expression);
+
+            return deepCopy
+                ? Array.ConvertAll(records, r => _cloner.DeepCopy(r.Value))
+                : Array.ConvertAll(records, r => r.Value);
+        }
+
+        private MemDbRecord<T>[] ExecuteIndexedSetQueryExpression<YIndex>(MemDbIndexExpression<T, YIndex> expression) where YIndex : IConvertible
+        {
+            string idxName = expression.IndexName;
+            MemDbIndexedSet<T, YIndex> index = _appliedIndexes.Get(idxName).Of<YIndex>() as MemDbIndexedSet<T, YIndex>;
+
+            lock (_lock)
+            {
+                int[] pointers = null;
+                switch (expression.RelationalOperator)
+                {
+                    case IndexRelationalOperator.EqualTo:
+                        pointers = index.AnyIsEqual(expression.IndexKey);
+                        break;
+                    case IndexRelationalOperator.In:
+                        pointers = index.AnyIn(expression.IndexKeySet);
+                        break;
+                    case IndexRelationalOperator.NotEqualTo:
+                        pointers = index.AnyNotEqual(expression.IndexKey);
+                        break;
+                    case IndexRelationalOperator.GreaterThan:
+                        pointers = index.AnyIsGreaterThan(expression.IndexKey);
+                        break;
+                    case IndexRelationalOperator.LessThan:
+                        pointers = index.AnyIsLessThan(expression.IndexKey);
+                        break;
+                    case IndexRelationalOperator.GreaterThanEqualTo:
+                        pointers = index.AnyIsGreaterThanEqualTo(expression.IndexKey);
+                        break;
+                    case IndexRelationalOperator.LessThanEqualTo:
+                        pointers = index.AnyIsLessThanEqualTo(expression.IndexKey);
+                        break;
+                    default:
+                        throw new NotImplementedException($"Index expression for {expression.RelationalOperator} not implemented.");
+                }
+
+                int length = pointers.Length;
+                var set = new MemDbRecord<T>[length];
+
+                int skip = expression.SkipCount;
+                int limit = expression.LimitCount;
+
+                if (length == 0 || skip >= length)
+                    return Array.Empty<MemDbRecord<T>>();
+
+                for (int i = 0; i < pointers.Length; i++)
+                {
+                    set[i] = _records[pointers[i]];
+                }
+
+                if (expression.HasOrderBy && length > 1)
+                    Array.Sort(set, (a, b) => expression.OrderByComparison(a.Value, b.Value));
+
+                if (expression.HasSkip || expression.HasLimit)
+                {
+                    if (limit > length - skip)
+                        limit = length - skip;
+
+                    set = set[skip..(skip + limit)];
+                }
+                return set;
+            }
+        }
+        #endregion
+
         #region get next id
         private long GetNextId()
         {

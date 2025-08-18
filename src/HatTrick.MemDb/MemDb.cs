@@ -398,6 +398,13 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region query via indexed set
+        public IMemDbIndexedSetExpressionRoot<T, YIndex> QueryViaIndexedSet<YIndex>(string indexName) where YIndex : IConvertible
+        {
+            return _cache.QueryViaIndexedSet<YIndex>(indexName);
+        }
+        #endregion
+
         #region resolve statistics
         public MemDbStatistics ResolveStatistics(Stats statistics)
         {

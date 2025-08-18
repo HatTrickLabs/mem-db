@@ -56,7 +56,7 @@ namespace HatTrick.InMemDb
     }
     #endregion
 
-    #region mem db index collection of T[class]
+    #region mem db index collection of T [class]
     internal sealed class MemDbIndexCollection<T> where T : class
     {
         #region internals
