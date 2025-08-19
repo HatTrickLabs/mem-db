@@ -199,6 +199,18 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region get full pointer set
+        protected HashSet<int> GetFullPointerSet()
+        {
+            var pointers = new HashSet<int>(_index[_lookup[0]].Count * _lookup.Count);
+            for (int i = 0; i < _lookup.Count; i++)
+            {
+                pointers.UnionWith(_index[_lookup[i]]);
+            }
+            return pointers;
+        }
+        #endregion
+
         #region apply
         internal override void Apply(T record, int pointer)
         {
@@ -518,7 +530,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region any in
-        internal int[] AnyIn(params YIndex[] keys)
+        internal int[] AnyIn(params ReadOnlySpan<YIndex> keys)
         {
             //any item in sub array set is equal to any keys
             if (keys.Length == 0)
@@ -539,12 +551,13 @@ namespace HatTrick.InMemDb
         internal int[] AnyNotEqual(YIndex key)
         {
             //any item in sub array set is not equal key
-            return base.NotEqualTo(key);
+            var set = new HashSet<int>(base.NotEqualTo(key));
+            return set.ToArray();
         }
         #endregion
 
         #region any not in
-        internal int[] AnyNotIn(params YIndex[] keys)
+        internal int[] AnyNotIn(YIndex[] keys)
         {
             //any item in sub array set is not equal to any keys
             if (keys.Length == 0)
@@ -560,6 +573,54 @@ namespace HatTrick.InMemDb
             return pointers.ToArray();
         }
         #endregion
+
+        //TODO: how can we accomplish (sub array does not contain key) AllNotEqual(key) or No item in sub array IsEqual(key)
+        //we would need to do a base.IsEqual(key) then
+        //take resolve the master/complete set of existing pointers - the pointers returned by base.IsEqual(key)
+        //how do we store the master set of pointers
+        internal int[] AllNotEqual(YIndex key)
+        {
+            var inverseSet = new HashSet<int>(base.EqualTo(key));
+            HashSet<int> allPointers = base.GetFullPointerSet();
+
+            if (inverseSet.Count == 0)
+                return allPointers.ToArray();
+
+            int[] pointers = new int[allPointers.Count - inverseSet.Count];
+            int at = 0;
+            for (int i = 0; i < allPointers.Count; i++)
+            {
+                if (inverseSet.Add(i))
+                    pointers[at++] = i;
+            }
+
+            return pointers;
+        }
+
+        internal int[] AllNotIn(YIndex[] keys)
+        {
+            var inverseSet = new HashSet<int>(base.EqualTo(keys[0]));
+
+            for (int i = 1; i < keys.Length; i++)
+            {
+                inverseSet.IntersectWith(base.EqualTo(keys[i]));
+            }
+
+            HashSet<int> allPointers = base.GetFullPointerSet();
+
+            if (inverseSet.Count == 0)
+                return allPointers.ToArray();
+
+            int[] pointers = new int[allPointers.Count - inverseSet.Count];
+            int at = 0;
+            for (int i = 0; i < allPointers.Count; i++)
+            {
+                if (inverseSet.Add(i))
+                    pointers[at++] = i;
+            }
+
+            return pointers;
+        }
 
         #region any is greater than
         internal int[] AnyIsGreaterThan(YIndex key)

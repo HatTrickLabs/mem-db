@@ -498,37 +498,11 @@ namespace HatTrick.InMemDb
         private MemDbRecord<T>[] ExecuteIndexQueryExpression<YIndex>(MemDbIndexExpression<T, YIndex> expression) where YIndex : IConvertible
         {
             string idxName = expression.IndexName;
-            MemDbIndex<T, YIndex> index = _appliedIndexes.Get(idxName).Of<YIndex>();
-
+            //MemDbIndex<T, YIndex> index = _appliedIndexes.Get(idxName).Of<YIndex>();
+            MemDbIndex<T> index = _appliedIndexes.Get(idxName);//.Of<YIndex>();
             lock (_lock)
             {
-                int[] pointers = null;
-                switch (expression.RelationalOperator)
-                {
-                    case IndexRelationalOperator.EqualTo:
-                        pointers = index.EqualTo(expression.IndexKey);
-                        break;
-                    case IndexRelationalOperator.In:
-                        pointers = index.In(expression.IndexKeySet);
-                        break;
-                    case IndexRelationalOperator.NotEqualTo:
-                        pointers = index.NotEqualTo(expression.IndexKey);
-                        break;
-                    case IndexRelationalOperator.GreaterThan:
-                        pointers = index.GreaterThan(expression.IndexKey);
-                        break;
-                    case IndexRelationalOperator.LessThan:
-                        pointers = index.LessThan(expression.IndexKey);
-                        break;
-                    case IndexRelationalOperator.GreaterThanEqualTo:
-                        pointers = index.GreaterThanEqualTo(expression.IndexKey);
-                        break;
-                    case IndexRelationalOperator.LessThanEqualTo:
-                        pointers = index.LessThanEqualTo(expression.IndexKey);
-                        break;
-                    default:
-                        throw new NotImplementedException($"Index expression for {expression.RelationalOperator} not implemented.");
-                }
+                int[] pointers = MemDbIndexAccessor<T>.ResolvePointers(index, expression);
 
                 int length = pointers.Length;
                 var set = new MemDbRecord<T>[length];
@@ -612,81 +586,7 @@ namespace HatTrick.InMemDb
             //ensure generic type requested is a match to the index type...
             MemDbIndex<T, YIndex> typeIndex = index.Of<YIndex>();
 
-            return new MemDbIndexedSetExpression<T, YIndex>(index.Name, this.ExecuteIndexedSetQueryExpression, this.ExecuteIndexedUpdateExpression, this.ExecuteIndexedDeleteExpression);
-        }
-        #endregion
-
-        #region execute indexeded set query expression
-        private T[] ExecuteIndexedSetQueryExpression<YIndex>(MemDbIndexExpression<T, YIndex> expression, bool deepCopy) where YIndex : IConvertible
-        {
-            MemDbRecord<T>[] records = this.ExecuteIndexedSetQueryExpression(expression);
-
-            return deepCopy
-                ? Array.ConvertAll(records, r => _cloner.DeepCopy(r.Value))
-                : Array.ConvertAll(records, r => r.Value);
-        }
-
-        private MemDbRecord<T>[] ExecuteIndexedSetQueryExpression<YIndex>(MemDbIndexExpression<T, YIndex> expression) where YIndex : IConvertible
-        {
-            string idxName = expression.IndexName;
-            MemDbIndexedSet<T, YIndex> index = _appliedIndexes.Get(idxName).Of<YIndex>() as MemDbIndexedSet<T, YIndex>;
-
-            lock (_lock)
-            {
-                int[] pointers = null;
-                switch (expression.RelationalOperator)
-                {
-                    case IndexRelationalOperator.EqualTo:
-                        pointers = index.AnyIsEqual(expression.IndexKey);
-                        break;
-                    case IndexRelationalOperator.In:
-                        pointers = index.AnyIn(expression.IndexKeySet);
-                        break;
-                    case IndexRelationalOperator.NotEqualTo:
-                        pointers = index.AnyNotEqual(expression.IndexKey);
-                        break;
-                    case IndexRelationalOperator.GreaterThan:
-                        pointers = index.AnyIsGreaterThan(expression.IndexKey);
-                        break;
-                    case IndexRelationalOperator.LessThan:
-                        pointers = index.AnyIsLessThan(expression.IndexKey);
-                        break;
-                    case IndexRelationalOperator.GreaterThanEqualTo:
-                        pointers = index.AnyIsGreaterThanEqualTo(expression.IndexKey);
-                        break;
-                    case IndexRelationalOperator.LessThanEqualTo:
-                        pointers = index.AnyIsLessThanEqualTo(expression.IndexKey);
-                        break;
-                    default:
-                        throw new NotImplementedException($"Index expression for {expression.RelationalOperator} not implemented.");
-                }
-
-                int length = pointers.Length;
-                var set = new MemDbRecord<T>[length];
-
-                int skip = expression.SkipCount;
-                int limit = expression.LimitCount;
-
-                if (length == 0 || skip >= length)
-                    return Array.Empty<MemDbRecord<T>>();
-
-                for (int i = 0; i < pointers.Length; i++)
-                {
-                    set[i] = _records[pointers[i]];
-                }
-
-                if (expression.HasOrderBy && length > 1)
-                    Array.Sort(set, (a, b) => expression.OrderByComparison(a.Value, b.Value));
-
-                if (expression.HasSkip || expression.HasLimit)
-                {
-                    if (limit > length - skip)
-                        limit = length - skip;
-
-                    set = set[skip..(skip + limit)];
-                }
-                return set;
-            }
+            return new MemDbIndexedSetExpression<T, YIndex>(index.Name, this.ExecuteIndexQueryExpression, this.ExecuteIndexedUpdateExpression, this.ExecuteIndexedDeleteExpression);
         }
         #endregion
 

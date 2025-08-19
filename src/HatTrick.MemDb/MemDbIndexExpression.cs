@@ -6,17 +6,17 @@ using System.Threading.Tasks;
 
 namespace HatTrick.InMemDb
 {
-    #region relational operator [enum]
+    #region index relational operator [enum]
     public enum IndexRelationalOperator
     {
         None,
-        EqualTo,
+        Equal,
         In,
-        NotEqualTo,
+        NotEqual,
         GreaterThan,
         LessThan,
-        GreaterThanEqualTo,
-        LessThanEqualTo
+        GreaterThanEqual,
+        LessThanEqual
     }
     #endregion
 
@@ -129,9 +129,9 @@ namespace HatTrick.InMemDb
     public class MemDbIndexExpression<T, YIndex> : MemDbIndexExpression<T> where T : class
     {
         #region internals
-        protected IndexRelationalOperator _relationOp;
-        protected YIndex _key;
-        protected YIndex[] _keySet;
+        private int _relationOp;
+        private YIndex _key;
+        private YIndex[] _keySet;
 
         private Comparison<T> _orderBy;
         private int? _skip;
@@ -143,11 +143,23 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region interface
-        public IndexRelationalOperator RelationalOperator => _relationOp;
+        public int RelationalOperator
+        {
+            get => _relationOp;
+            protected set => _relationOp = value;
+        }
 
-        public YIndex IndexKey => _key;
+        public YIndex IndexKey
+        { 
+            get => _key;
+            protected set => _key = value;
+        }
 
-        public YIndex[] IndexKeySet => _keySet;
+        public YIndex[] IndexKeySet
+        {
+            get => _keySet;
+            protected set => _keySet = value;
+        }
 
         internal ExecuteQuery Query => _query;
 
@@ -180,72 +192,6 @@ namespace HatTrick.InMemDb
             _delete = delete;
         }
         #endregion
-
-        //#region is equal to
-        //public MemDbIndexExpression<T> IsEqualTo(YIndex key)
-        //{
-        //    _relationOp = IndexRelationalOperator.EqualTo;
-        //    _key = key;
-        //    return this;
-        //}
-        //#endregion
-
-        //#region in
-        //public MemDbIndexExpression<T> In(params YIndex[] keys)
-        //{
-        //    if (keys is null)
-        //        throw new ArgumentNullException(nameof(keys));
-
-        //    _relationOp = IndexRelationalOperator.In;
-        //    _keySet = keys;
-        //    return this;
-        //}
-        //#endregion
-
-        //#region is not equal to
-        //public MemDbIndexExpression<T> IsNotEqualTo(YIndex key)
-        //{
-        //    _relationOp = IndexRelationalOperator.NotEqualTo;
-        //    _key = key;
-        //    return this;
-        //}
-        //#endregion
-
-        //#region is greater than
-        //public MemDbIndexExpression<T> IsGreaterThan(YIndex key)
-        //{
-        //    _relationOp = IndexRelationalOperator.GreaterThan;
-        //    _key = key;
-        //    return this;
-        //}
-        //#endregion
-
-        //#region is less than
-        //public MemDbIndexExpression<T> IsLessThan(YIndex key)
-        //{
-        //    _relationOp = IndexRelationalOperator.LessThan;
-        //    _key = key;
-        //    return this;
-        //}
-        //#endregion
-
-        //#region is greater than equal to
-        //public MemDbIndexExpression<T> IsGreaterThanEqualTo(YIndex key)
-        //{
-        //    _relationOp = IndexRelationalOperator.GreaterThanEqualTo;
-        //    _key = key;
-        //    return this;
-        //}
-        //#endregion
-
-        //#region is less than equal to
-        //public MemDbIndexExpression<T> IsLessThanEqualTo(YIndex key)
-        //{
-        //    _relationOp = IndexRelationalOperator.LessThanEqualTo;
-        //    _key = key;
-        //    return this;
-        //}
-        //#endregion
 
         #region count
         public override int Count()
@@ -504,8 +450,8 @@ namespace HatTrick.InMemDb
         #region is equal to
         public MemDbIndexExpression<T> IsEqualTo(YIndex key)
         {
-            _relationOp = IndexRelationalOperator.EqualTo;
-            _key = key;
+            base.RelationalOperator = (int)IndexRelationalOperator.Equal;
+            base.IndexKey = key;
             return this;
         }
         #endregion
@@ -516,8 +462,8 @@ namespace HatTrick.InMemDb
             if (keys is null)
                 throw new ArgumentNullException(nameof(keys));
 
-            _relationOp = IndexRelationalOperator.In;
-            _keySet = keys;
+            base.RelationalOperator = (int)IndexRelationalOperator.In;
+            base.IndexKeySet = keys;
             return this;
         }
         #endregion
@@ -525,8 +471,8 @@ namespace HatTrick.InMemDb
         #region is not equal to
         public MemDbIndexExpression<T> IsNotEqualTo(YIndex key)
         {
-            _relationOp = IndexRelationalOperator.NotEqualTo;
-            _key = key;
+            base.RelationalOperator = (int)IndexRelationalOperator.NotEqual;
+            base.IndexKey = key;
             return this;
         }
         #endregion
@@ -534,8 +480,8 @@ namespace HatTrick.InMemDb
         #region is greater than
         public MemDbIndexExpression<T> IsGreaterThan(YIndex key)
         {
-            _relationOp = IndexRelationalOperator.GreaterThan;
-            _key = key;
+            base.RelationalOperator = (int)IndexRelationalOperator.GreaterThan;
+            base.IndexKey = key;
             return this;
         }
         #endregion
@@ -543,8 +489,8 @@ namespace HatTrick.InMemDb
         #region is less than
         public MemDbIndexExpression<T> IsLessThan(YIndex key)
         {
-            _relationOp = IndexRelationalOperator.LessThan;
-            _key = key;
+            base.RelationalOperator = (int)IndexRelationalOperator.LessThan;
+            base.IndexKey = key;
             return this;
         }
         #endregion
@@ -552,8 +498,8 @@ namespace HatTrick.InMemDb
         #region is greater than equal to
         public MemDbIndexExpression<T> IsGreaterThanEqualTo(YIndex key)
         {
-            _relationOp = IndexRelationalOperator.GreaterThanEqualTo;
-            _key = key;
+            base.RelationalOperator = (int)IndexRelationalOperator.GreaterThanEqual;
+            base.IndexKey = key;
             return this;
         }
         #endregion
@@ -561,8 +507,8 @@ namespace HatTrick.InMemDb
         #region is less than equal to
         public MemDbIndexExpression<T> IsLessThanEqualTo(YIndex key)
         {
-            _relationOp = IndexRelationalOperator.LessThanEqualTo;
-            _key = key;
+            base.RelationalOperator = (int)IndexRelationalOperator.LessThanEqual;
+            base.IndexKey = key;
             return this;
         }
         #endregion

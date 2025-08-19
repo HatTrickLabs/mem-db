@@ -53,7 +53,7 @@ namespace HatTrick.InMemDb.TestHarness
                 this.LoadDb(db);
                 db.Flush();
 
-                db.QueryViaIndexedSet<string>(nameof(DigitalAsset.Tags)).AnyIn("ttt", "jjj", "eee").ToArray();
+                var set = db.QueryViaIndexedSet<string>(nameof(DigitalAsset.Tags)).AllNotEqual("xxx").ToArray();
             }
         }
         #endregion

@@ -1,21 +1,35 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace HatTrick.InMemDb
 {
+    #region index relational operator [enum]
+    public enum IndexedSetRelationalOperator
+    {
+        None,
+        AnyIsEqual,
+        AnyIn,
+        AnyNotEqual,
+        AllNotEqual,
+        AllNotIn,
+        AnyGreaterThan,
+        AnyLessThan,
+        AnyGreaterThanEqual,
+        AnyLessThanEqual
+    }
+    #endregion
+
     #region i mem db indexed set expression root of T, Y [interface]
     public interface IMemDbIndexedSetExpressionRoot<T, YIndex> where T : class
     {
         public MemDbIndexExpression<T> AnyIsEqual(YIndex key);
         public MemDbIndexExpression<T> AnyIn(params YIndex[] keys);
         public MemDbIndexExpression<T> AnyNotEqual(YIndex key);
+        public MemDbIndexExpression<T> AllNotEqual(YIndex key);
+        public MemDbIndexExpression<T> AllNotIn(params YIndex[] keys);
         public MemDbIndexExpression<T> AnyIsGreaterThan(YIndex key);
         public MemDbIndexExpression<T> AnyIsLessThan(YIndex key);
-        public MemDbIndexExpression<T> AnyIsGreaterThanEqualTo(YIndex key);
-        public MemDbIndexExpression<T> AnyIsLessThanEqualTo(YIndex key);
+        public MemDbIndexExpression<T> AnyIsGreaterThanEqual(YIndex key);
+        public MemDbIndexExpression<T> AnyIsLessThanEqual(YIndex key);
     }
     #endregion
 
@@ -33,8 +47,8 @@ namespace HatTrick.InMemDb
         #region any is equal
         public MemDbIndexExpression<T> AnyIsEqual(YIndex key)
         {
-            _relationOp = IndexRelationalOperator.EqualTo;
-            _key = key;
+            base.RelationalOperator = (int)IndexedSetRelationalOperator.AnyIsEqual;
+            base.IndexKey = key;
             return this;
         }
         #endregion
@@ -45,8 +59,8 @@ namespace HatTrick.InMemDb
             if (keys is null)
                 throw new ArgumentNullException(nameof(keys));
 
-            _relationOp = IndexRelationalOperator.In;
-            _keySet = keys;
+            base.RelationalOperator = (int)IndexedSetRelationalOperator.AnyIn;
+            base.IndexKeySet = keys;
             return this;
         }
         #endregion
@@ -54,8 +68,26 @@ namespace HatTrick.InMemDb
         #region any not equal
         public MemDbIndexExpression<T> AnyNotEqual(YIndex key)
         {
-            _relationOp = IndexRelationalOperator.NotEqualTo;
-            _key = key;
+            base.RelationalOperator = (int)IndexedSetRelationalOperator.AnyNotEqual;
+            base.IndexKey = key;
+            return this;
+        }
+        #endregion
+
+        #region all not equal
+        public MemDbIndexExpression<T> AllNotEqual(YIndex key)
+        {
+            base.RelationalOperator = (int)IndexedSetRelationalOperator.AllNotEqual;
+            base.IndexKey = key;
+            return this;
+        }
+        #endregion
+
+        #region all not in
+        public MemDbIndexExpression<T> AllNotIn(params YIndex[] keys)
+        {
+            base.RelationalOperator = (int)IndexedSetRelationalOperator.AllNotIn;
+            base.IndexKeySet = keys;
             return this;
         }
         #endregion
@@ -63,8 +95,8 @@ namespace HatTrick.InMemDb
         #region any is greater than
         public MemDbIndexExpression<T> AnyIsGreaterThan(YIndex key)
         {
-            _relationOp = IndexRelationalOperator.GreaterThan;
-            _key = key;
+            base.RelationalOperator = (int)IndexedSetRelationalOperator.AnyGreaterThan;
+            base.IndexKey = key;
             return this;
         }
         #endregion
@@ -72,26 +104,26 @@ namespace HatTrick.InMemDb
         #region any is less than
         public MemDbIndexExpression<T> AnyIsLessThan(YIndex key)
         {
-            _relationOp = IndexRelationalOperator.LessThan;
-            _key = key;
+            base.RelationalOperator = (int)IndexedSetRelationalOperator.AnyLessThan;
+            base.IndexKey = key;
             return this;
         }
         #endregion
 
         #region any is greater than equal to
-        public MemDbIndexExpression<T> AnyIsGreaterThanEqualTo(YIndex key)
+        public MemDbIndexExpression<T> AnyIsGreaterThanEqual(YIndex key)
         {
-            _relationOp = IndexRelationalOperator.GreaterThanEqualTo;
-            _key = key;
+            base.RelationalOperator = (int)IndexedSetRelationalOperator.AnyGreaterThanEqual;
+            base.IndexKey = key;
             return this;
         }
         #endregion
 
         #region any is less than equal
-        public MemDbIndexExpression<T> AnyIsLessThanEqualTo(YIndex key)
+        public MemDbIndexExpression<T> AnyIsLessThanEqual(YIndex key)
         {
-            _relationOp = IndexRelationalOperator.LessThanEqualTo;
-            _key = key;
+            base.RelationalOperator = (int)IndexedSetRelationalOperator.AnyLessThanEqual;
+            base.IndexKey = key;
             return this;
         }
         #endregion
