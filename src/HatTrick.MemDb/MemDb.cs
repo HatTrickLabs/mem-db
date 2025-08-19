@@ -257,7 +257,7 @@ namespace HatTrick.InMemDb
     #endregion
 
     #region [class] mem db<T>
-    public class MemDb<T> : MemDb, IDisposable, IMemDbAcceessor<T> where T : class
+    public class MemDb<T> : MemDb, /*IMemDbAcceessor<T>, IIndexedQueryAccessor<T>, */IDisposable where T : class
     {
         #region internals
         private string _datasetName;
@@ -387,21 +387,30 @@ namespace HatTrick.InMemDb
         #region query
         public MemDbExpression<T> Query()
         {
-            return _cache.Query();
+            if (!(_cache is IQueryAccessor<T> queryAccess))
+                throw new InvalidOperationException($"{_cache.GetType().FullName} does not implement {nameof(IQueryAccessor<T>)}");
+
+            return queryAccess.Query();
         }
         #endregion
 
         #region query via index
         public IMemDbIndexExpressionRoot<T, YIndex> QueryViaIndex<YIndex>(string indexName) where YIndex : IConvertible
         {
-            return _cache.QueryViaIndex<YIndex>(indexName);
+            if (!(_cache is IIndexedQueryAccessor<T> idxAccess))
+                throw new InvalidOperationException($"{_cache.GetType().FullName} does not implement {nameof(IIndexedQueryAccessor<T>)}");
+
+            return idxAccess.QueryViaIndex<YIndex>(indexName);
         }
         #endregion
 
         #region query via indexed set
         public IMemDbIndexedSetExpressionRoot<T, YIndex> QueryViaIndexedSet<YIndex>(string indexName) where YIndex : IConvertible
         {
-            return _cache.QueryViaIndexedSet<YIndex>(indexName);
+            if (!(_cache is IIndexedQueryAccessor<T> idxAccess))
+                throw new InvalidOperationException($"{_cache.GetType().FullName} does not implement {nameof(IIndexedQueryAccessor<T>)}");
+
+            return idxAccess.QueryViaIndexedSet<YIndex>(indexName);
         }
         #endregion
 

@@ -574,10 +574,7 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
-        //TODO: how can we accomplish (sub array does not contain key) AllNotEqual(key) or No item in sub array IsEqual(key)
-        //we would need to do a base.IsEqual(key) then
-        //take resolve the master/complete set of existing pointers - the pointers returned by base.IsEqual(key)
-        //how do we store the master set of pointers
+        #region all not equal
         internal int[] AllNotEqual(YIndex key)
         {
             var inverseSet = new HashSet<int>(base.EqualTo(key));
@@ -596,7 +593,9 @@ namespace HatTrick.InMemDb
 
             return pointers;
         }
+        #endregion
 
+        #region all not in
         internal int[] AllNotIn(YIndex[] keys)
         {
             var inverseSet = new HashSet<int>(base.EqualTo(keys[0]));
@@ -621,6 +620,7 @@ namespace HatTrick.InMemDb
 
             return pointers;
         }
+        #endregion
 
         #region any is greater than
         internal int[] AnyIsGreaterThan(YIndex key)

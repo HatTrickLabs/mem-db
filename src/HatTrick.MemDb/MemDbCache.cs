@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace HatTrick.InMemDb
 {
-    internal sealed class MemDbCache<T> : IMemDbCache<T>, IDisposable where T : class
+    internal sealed class MemDbCache<T> : IMemDbCache<T>, IIndexedQueryAccessor<T>, IQueryAccessor<T>, IDisposable where T : class
     {
         #region internals
         private const int _initialCacheCapacity = 128;
