@@ -294,7 +294,11 @@ namespace HatTrick.InMemDb
         internal int[] EqualTo(YIndex key)
         {
             if (_index.TryGetValue(key, out HashSet<int> pointers))
-                return pointers.ToArray();
+            {
+                var output = new int[pointers.Count];
+                pointers.CopyTo(output);
+                return output;
+            }
 
             return Array.Empty<int>();
         }
@@ -305,7 +309,7 @@ namespace HatTrick.InMemDb
         {
             //estimate of capacity assuming a somewhat equal distribution of pointers per index key
             int capacity = _lookup.Count > 0 ? _index[_lookup[0]].Count * keys.Length : keys.Length * 4;
-            var set = new List<int>();
+            var set = new List<int>(capacity);
             for (int i = 0; i < keys.Length; i++)
             {
                 if (_index.TryGetValue(keys[i], out HashSet<int> pointers))
@@ -356,7 +360,7 @@ namespace HatTrick.InMemDb
 
             //estimate of capacity assuming a somewhat equal distribution of pointers per index key
             int capacity = (_lookup.Count - index) * _index[_lookup[index]].Count;
-            List<int> set = new List<int>();
+            List<int> set = new List<int>(capacity);
             for (int i = index; i < _lookup.Count; i++)
             {
                 set.AddRange(_index[_lookup[i]]);
@@ -407,7 +411,7 @@ namespace HatTrick.InMemDb
 
             //estimate of capacity assuming a somewhat equal distribution of pointers per index key
             int capacity = (index + 1) * _index[_lookup[index]].Count;
-            List<int> set = new List<int>();
+            List<int> set = new List<int>(capacity);
             for (int i = index; i > -1; i--)
             {
                 set.AddRange(_index[_lookup[i]]);
@@ -543,7 +547,9 @@ namespace HatTrick.InMemDb
                 pointers.UnionWith(base.EqualTo(keys[i]));
             }
 
-            return pointers.ToArray();
+            var output = new int[pointers.Count];
+            pointers.CopyTo(output);
+            return output;
         }
         #endregion
 
@@ -551,8 +557,10 @@ namespace HatTrick.InMemDb
         internal int[] AnyNotEqual(YIndex key)
         {
             //any item in sub array set is not equal key
-            var set = new HashSet<int>(base.NotEqualTo(key));
-            return set.ToArray();
+            var pointers = new HashSet<int>(base.NotEqualTo(key));
+            var output = new int[pointers.Count];
+            pointers.CopyTo(output);
+            return output;
         }
         #endregion
 
@@ -570,7 +578,9 @@ namespace HatTrick.InMemDb
                 pointers.UnionWith(base.EqualTo(keys[i]));
             }
 
-            return pointers.ToArray();
+            var output = new int[pointers.Count];
+            pointers.CopyTo(output);
+            return output;
         }
         #endregion
 
@@ -631,7 +641,11 @@ namespace HatTrick.InMemDb
             if (pointers.Length == 0 || pointers.Length == 1)
                 return pointers;
 
-            return new HashSet<int>(pointers).ToArray();
+
+            var set = new HashSet<int>(pointers);
+            var output = new int[set.Count];
+            set.CopyTo(output);
+            return output;
         }
         #endregion
 
@@ -644,7 +658,10 @@ namespace HatTrick.InMemDb
             if (pointers.Length == 0 || pointers.Length == 1)
                 return pointers;
 
-            return new HashSet<int>(pointers).ToArray();
+            var set = new HashSet<int>(pointers);
+            var output = new int[set.Count];
+            set.CopyTo(output);
+            return output;
         }
         #endregion
 
@@ -657,7 +674,10 @@ namespace HatTrick.InMemDb
             if (pointers.Length == 0 || pointers.Length == 1)
                 return pointers;
 
-            return new HashSet<int>(pointers).ToArray();
+            var set = new HashSet<int>(pointers);
+            var output = new int[set.Count];
+            set.CopyTo(output);
+            return output;
         }
         #endregion
 
@@ -670,7 +690,10 @@ namespace HatTrick.InMemDb
             if (pointers.Length == 0 || pointers.Length == 1)
                 return pointers;
 
-            return new HashSet<int>(pointers).ToArray();
+            var set = new HashSet<int>(pointers);
+            var output = new int[set.Count];
+            set.CopyTo(output);
+            return output;
         }
         #endregion
     }
