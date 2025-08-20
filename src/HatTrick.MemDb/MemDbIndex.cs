@@ -172,7 +172,7 @@ namespace HatTrick.InMemDb
     {
         #region internals
         private Func<T, YIndex> _keyResolver;
-        private Dictionary<YIndex, List<int>> _index;
+        private Dictionary<YIndex, HashSet<int>> _index;
         private List<YIndex> _lookup;
         private HybridComparer<YIndex> _comparer;
         #endregion
@@ -194,7 +194,7 @@ namespace HatTrick.InMemDb
         #region initialize
         internal override void Initialize(int capacity)
         {
-            _index = new Dictionary<YIndex, List<int>>(capacity, _comparer);
+            _index = new Dictionary<YIndex, HashSet<int>>(capacity, _comparer);
             _lookup = new List<YIndex>(capacity);
         }
         #endregion
@@ -220,14 +220,14 @@ namespace HatTrick.InMemDb
 
         protected void Apply(YIndex key, int pointer)
         {
-            List<int> pointers = null;
+            HashSet<int> pointers = null;
             if (_index.TryGetValue(key, out pointers))
             {
                 pointers.Add(pointer);
             }
             else
             {
-                pointers = new List<int>() { pointer };
+                pointers = new HashSet<int>() { pointer };
                 _index.Add(key, pointers);
 
                 //should always be less than 0 here...NO DUPLICATES
@@ -247,7 +247,7 @@ namespace HatTrick.InMemDb
 
         protected void Remove(YIndex key, int pointer)
         {
-            List<int> pointers = _index[key];
+            HashSet<int> pointers = _index[key];
             bool retain = pointers.Count > 1;
 
             if (retain)
@@ -293,7 +293,7 @@ namespace HatTrick.InMemDb
         #region equal to
         internal int[] EqualTo(YIndex key)
         {
-            if (_index.TryGetValue(key, out List<int> pointers))
+            if (_index.TryGetValue(key, out HashSet<int> pointers))
                 return pointers.ToArray();
 
             return Array.Empty<int>();
@@ -308,7 +308,7 @@ namespace HatTrick.InMemDb
             var set = new List<int>();
             for (int i = 0; i < keys.Length; i++)
             {
-                if (_index.TryGetValue(keys[i], out List<int> pointers))
+                if (_index.TryGetValue(keys[i], out HashSet<int> pointers))
                     set.AddRange(pointers);
             }
             return set.ToArray();

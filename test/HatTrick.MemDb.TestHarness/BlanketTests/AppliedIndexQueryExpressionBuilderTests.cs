@@ -151,9 +151,9 @@ namespace HatTrick.InMemDb.TestHarness
 
                 sw.Reset();
                 sw.Start();
-                //int cnt = db.Update(a => a.Tags = ["aaa", "aaa", "aaa", "aaa", "aaa", "aaa"], a => a.AssetType == DigitalAssetType.Text);
-                int cnt = db.QueryViaIndex<DigitalAssetType>(nameof(DigitalAsset.AssetType))
-                    .IsEqualTo(DigitalAssetType.Text).Update(a => a.Tags = ["aaa", "aaa", "aaa", "aaa", "aaa", "aaa"]);
+                int cnt = db.Update(a => a.Tags = ["aaa", "aaa", "aaa", "aaa", "aaa", "aaa"], a => a.AssetType == DigitalAssetType.Text);
+                //int cnt = db.QueryViaIndex<DigitalAssetType>(nameof(DigitalAsset.AssetType))
+                //    .IsEqualTo(DigitalAssetType.Text).Update(a => a.Tags = ["aaa", "aaa", "aaa", "aaa", "aaa", "aaa"]);
                 sw.Stop();
                 Console.WriteLine("update " + cnt + "\t" + sw.ElapsedMilliseconds);
             }
