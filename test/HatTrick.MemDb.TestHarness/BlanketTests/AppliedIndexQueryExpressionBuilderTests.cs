@@ -28,7 +28,7 @@ namespace HatTrick.InMemDb.TestHarness
                 .ApplyIndex<ulong>(nameof(DigitalAsset.XXHash), (a) => a.XXHash)
                 .ApplyIndex<DigitalAssetType>(nameof(DigitalAsset.AssetType), a => a.AssetType)
                 .ApplyIndex<long>(nameof(DigitalAsset.Id), a => a.Id)
-                //.ApplyIndex<string>(nameof(DigitalAsset.Tags), a => a.Tags)
+                .ApplyIndex<string>(nameof(DigitalAsset.Tags), a => a.Tags)
                 .Register();
         }
         #endregion
@@ -52,12 +52,12 @@ namespace HatTrick.InMemDb.TestHarness
             {
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
-                for (int i = 0; i < 500; i++)
+                for (int i = 0; i < 200; i++)
                 {
                     this.LoadDb(db);
                 }
                 sw.Stop();
-                Console.WriteLine(sw.ElapsedMilliseconds);
+                Console.WriteLine("load\t\t" + sw.ElapsedMilliseconds);
                 db.Flush();
 
                 int txtCnt = db.Count(a => a.Extension == ".txt");
@@ -69,43 +69,93 @@ namespace HatTrick.InMemDb.TestHarness
                 var setx = db.FindAll(a => a.Tags.Contains("aaa"));
                 sw.Stop();
                 Assert.IsEqual(setx.Length, txtCnt + jsonCnt);
-                Console.WriteLine(sw.ElapsedMilliseconds);
+                Console.WriteLine("Scan\t\t" + sw.ElapsedMilliseconds);
 
-                //sw.Reset();
-                //sw.Start();
-                //var set1 = db.QueryViaIndexedSet<string>(nameof(DigitalAsset.Tags)).AnyIsEqual("aaa").ToArray();
-                //sw.Stop();
-                //Assert.IsEqual(set1.Length, txtCnt + jsonCnt);
-                //Console.WriteLine(sw.ElapsedMilliseconds);
+                sw.Reset();
+                sw.Start();
+                var set1 = db.QueryViaIndexedSet<string>(nameof(DigitalAsset.Tags)).AnyIsEqual("aaa").ToArray();
+                sw.Stop();
+                Assert.IsEqual(set1.Length, txtCnt + jsonCnt);
+                Console.WriteLine("index\t\t" + sw.ElapsedMilliseconds);
 
-                //var set2 = db.QueryViaIndexedSet<string>(nameof(DigitalAsset.Tags)).AnyIn("", "json").ToArray();
-                //Assert.IsEqual(set2.Length, jsonCnt + unknownCnt);
+                var set2 = db.QueryViaIndexedSet<string>(nameof(DigitalAsset.Tags)).AnyIn("", "json").ToArray();
+                Assert.IsEqual(set2.Length, jsonCnt + unknownCnt);
 
-                //var set3 = db.QueryViaIndexedSet<string>(nameof(DigitalAsset.Tags)).AnyNotEqual("aaa").ToArray();
-                //Assert.IsEqual(set3.Length, txtCnt + jsonCnt + unknownCnt);
+                var set3 = db.QueryViaIndexedSet<string>(nameof(DigitalAsset.Tags)).AnyNotEqual("aaa").ToArray();
+                Assert.IsEqual(set3.Length, txtCnt + jsonCnt + unknownCnt);
 
-                //var set4 = db.QueryViaIndexedSet<string>(nameof(DigitalAsset.Tags)).AllNotEqual("aaa").ToArray();
-                //Assert.IsEqual(set4.Length, unknownCnt);
+                var set4 = db.QueryViaIndexedSet<string>(nameof(DigitalAsset.Tags)).AllNotEqual("aaa").ToArray();
+                Assert.IsEqual(set4.Length, unknownCnt);
 
-                //var set5 = db.QueryViaIndexedSet<string>(nameof(DigitalAsset.Tags)).AllNotIn("aaa", "bbb", "ccc").ToArray();
-                //Assert.IsEqual(set5.Length, unknownCnt);
+                var set5 = db.QueryViaIndexedSet<string>(nameof(DigitalAsset.Tags)).AllNotIn("aaa", "bbb", "ccc").ToArray();
+                Assert.IsEqual(set5.Length, unknownCnt);
 
-                //var set6 = db.QueryViaIndexedSet<string>(nameof(DigitalAsset.Tags)).AnyIsGreaterThan("x").ToArray();
-                //Assert.IsEqual(set6.Length, unknownCnt);
+                var set6 = db.QueryViaIndexedSet<string>(nameof(DigitalAsset.Tags)).AnyIsGreaterThan("x").ToArray();
+                Assert.IsEqual(set6.Length, unknownCnt);
 
-                //var set7 = db.QueryViaIndexedSet<string>(nameof(DigitalAsset.Tags)).AnyIsLessThan("a").ToArray();
-                //Assert.IsEqual(set7.Length, unknownCnt);
+                var set7 = db.QueryViaIndexedSet<string>(nameof(DigitalAsset.Tags)).AnyIsLessThan("a").ToArray();
+                Assert.IsEqual(set7.Length, unknownCnt);
 
-                //var set8 = db.QueryViaIndexedSet<string>(nameof(DigitalAsset.Tags)).AnyIsGreaterThanEqual("xxx").ToArray();
-                //Assert.IsEqual(set8.Length, unknownCnt);
+                var set8 = db.QueryViaIndexedSet<string>(nameof(DigitalAsset.Tags)).AnyIsGreaterThanEqual("xxx").ToArray();
+                Assert.IsEqual(set8.Length, unknownCnt);
 
-                //var set9 = db.QueryViaIndexedSet<string>(nameof(DigitalAsset.Tags)).AnyIsLessThanEqual("aaa").ToArray();
-                //Assert.IsEqual(set9.Length, txtCnt + jsonCnt + unknownCnt);
+                var set9 = db.QueryViaIndexedSet<string>(nameof(DigitalAsset.Tags)).AnyIsLessThanEqual("aaa").ToArray();
+                Assert.IsEqual(set9.Length, txtCnt + jsonCnt + unknownCnt);
 
-                db.Update(a => a.Tags = ["aaa", "aaa", "aaa", "aaa", "aaa", "aaa"], a => a.AssetType == DigitalAssetType.Text);
+                sw.Reset();
+                sw.Start();
+                //int cnt = db.Update(a => a.Tags = ["aaa", "aaa", "aaa", "aaa", "aaa", "aaa"], a => a.AssetType == DigitalAssetType.Text);
+                int cnt = db.QueryViaIndex<DigitalAssetType>(nameof(DigitalAsset.AssetType))
+                    .IsEqualTo(DigitalAssetType.Text).Update(a => a.Tags = ["aaa", "aaa", "aaa", "aaa", "aaa", "aaa"]);
+                sw.Stop();
+                Console.WriteLine("update " + cnt + "\t" + sw.ElapsedMilliseconds);
 
-                //var set10 = db.QueryViaIndexedSet<string>(nameof(DigitalAsset.Tags)).AnyNotEqual("aaa").ToArray();
-                //Assert.IsEqual(set10.Length, jsonCnt + unknownCnt);
+                var set10 = db.QueryViaIndexedSet<string>(nameof(DigitalAsset.Tags)).AnyNotEqual("aaa").ToArray();
+                Assert.IsEqual(set10.Length, jsonCnt + unknownCnt);
+            }
+        }
+        #endregion
+
+        #region test y
+        public void Test_Y()
+        {
+            using (var db = MemDb.Open<DigitalAsset>(_dataset))
+            {
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
+                for (int i = 0; i < 200; i++)
+                {
+                    this.LoadDb(db);
+                }
+                sw.Stop();
+                Console.WriteLine("load\t\t" + sw.ElapsedMilliseconds);
+                db.Flush();
+
+                int txtCnt = db.Count(a => a.Extension == ".txt");
+                int jsonCnt = db.Count(a => a.Extension == ".json");
+                int unknownCnt = db.Count(a => a.Extension == string.Empty);
+
+                sw.Reset();
+                sw.Start();
+                var setx = db.FindAll(a => a.Tags.Contains("aaa"));
+                sw.Stop();
+                Assert.IsEqual(setx.Length, txtCnt + jsonCnt);
+                Console.WriteLine("Scan\t\t" + sw.ElapsedMilliseconds);
+
+                sw.Reset();
+                sw.Start();
+                var set1 = db.QueryViaIndexedSet<string>(nameof(DigitalAsset.Tags)).AnyIsEqual("aaa").ToArray();
+                sw.Stop();
+                Assert.IsEqual(set1.Length, txtCnt + jsonCnt);
+                Console.WriteLine("index\t\t" + sw.ElapsedMilliseconds);
+
+                sw.Reset();
+                sw.Start();
+                //int cnt = db.Update(a => a.Tags = ["aaa", "aaa", "aaa", "aaa", "aaa", "aaa"], a => a.AssetType == DigitalAssetType.Text);
+                int cnt = db.QueryViaIndex<DigitalAssetType>(nameof(DigitalAsset.AssetType))
+                    .IsEqualTo(DigitalAssetType.Text).Update(a => a.Tags = ["aaa", "aaa", "aaa", "aaa", "aaa", "aaa"]);
+                sw.Stop();
+                Console.WriteLine("update " + cnt + "\t" + sw.ElapsedMilliseconds);
             }
         }
         #endregion
