@@ -17,7 +17,7 @@ namespace HatTrick.InMemDb.TestHarness
         #region ctors
         public AppliedIndexQueryExpressionBuilderTests(AssetResolver assetResolver) : base(_dataset, _dbPath, assetResolver)
         {
-            MemDb.ConfigureFor<DigitalAsset>(_dataset, _dbPath)
+            MemDb.ConfigureFor<DigitalAsset>(_dataset/*, _dbPath*/)
                 .CloneWith(() => new DigitalAssetCloner())
                 .SerializeWith(() => new DigitalAssetBinarySerializer())
                 .IndexOnIdentity(true)
@@ -52,7 +52,7 @@ namespace HatTrick.InMemDb.TestHarness
             {
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
-                for (int i = 0; i < 200; i++)
+                for (int i = 0; i < 250; i++)
                 {
                     this.LoadDb(db);
                 }
@@ -123,13 +123,14 @@ namespace HatTrick.InMemDb.TestHarness
             {
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
-                for (int i = 0; i < 200; i++)
+                for (int i = 0; i < 2_500; i++)
                 {
                     this.LoadDb(db);
                 }
                 sw.Stop();
                 Console.WriteLine("load\t\t" + sw.ElapsedMilliseconds);
-                db.Flush();
+                //db.Flush();
+                GC.Collect(2, GCCollectionMode.Aggressive);
 
                 int txtCnt = db.Count(a => a.Extension == ".txt");
                 int jsonCnt = db.Count(a => a.Extension == ".json");
@@ -137,17 +138,17 @@ namespace HatTrick.InMemDb.TestHarness
 
                 sw.Reset();
                 sw.Start();
-                var setx = db.FindAll(a => a.Tags.Contains("aaa"));
+                var set1 = db.QueryViaIndexedSet<string>(nameof(DigitalAsset.Tags)).AllIsGreaterThan(" ").ToArray();
                 sw.Stop();
-                Assert.IsEqual(setx.Length, txtCnt + jsonCnt);
-                Console.WriteLine("Scan\t\t" + sw.ElapsedMilliseconds);
+                Assert.IsEqual(set1.Length, txtCnt + jsonCnt + unknownCnt);
+                Console.WriteLine("index\t\t" + sw.ElapsedMilliseconds);
 
                 sw.Reset();
                 sw.Start();
-                var set1 = db.QueryViaIndexedSet<string>(nameof(DigitalAsset.Tags)).AnyIsEqual("aaa").ToArray();
+                var setx = db.FindAll(a => a.Tags.All(a => string.Compare(a, " ", false) > 0));
                 sw.Stop();
-                Assert.IsEqual(set1.Length, txtCnt + jsonCnt);
-                Console.WriteLine("index\t\t" + sw.ElapsedMilliseconds);
+                Assert.IsEqual(setx.Length, txtCnt + jsonCnt + unknownCnt);
+                Console.WriteLine("Scan\t\t" + sw.ElapsedMilliseconds);
 
                 sw.Reset();
                 sw.Start();
@@ -155,7 +156,9 @@ namespace HatTrick.InMemDb.TestHarness
                 //int cnt = db.QueryViaIndex<DigitalAssetType>(nameof(DigitalAsset.AssetType))
                 //    .IsEqualTo(DigitalAssetType.Text).Update(a => a.Tags = ["aaa", "aaa", "aaa", "aaa", "aaa", "aaa"]);
                 sw.Stop();
+                Assert.IsEqual(cnt, txtCnt);
                 Console.WriteLine("update " + cnt + "\t" + sw.ElapsedMilliseconds);
+                Console.ReadLine();
             }
         }
         #endregion

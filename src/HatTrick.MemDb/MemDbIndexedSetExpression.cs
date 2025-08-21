@@ -12,9 +12,13 @@ namespace HatTrick.InMemDb
         AllNotEqual,
         AllNotIn,
         AnyGreaterThan,
+        AllGreaterThan,
         AnyLessThan,
+        AllLessThan,
         AnyGreaterThanEqual,
-        AnyLessThanEqual
+        AllGreaterThanEqual,
+        AnyLessThanEqual,
+        AllLessThanEqual
     }
     #endregion
 
@@ -27,9 +31,13 @@ namespace HatTrick.InMemDb
         public MemDbIndexExpression<T> AllNotEqual(YIndex key);
         public MemDbIndexExpression<T> AllNotIn(params YIndex[] keys);
         public MemDbIndexExpression<T> AnyIsGreaterThan(YIndex key);
+        public MemDbIndexExpression<T> AllIsGreaterThan(YIndex key);
         public MemDbIndexExpression<T> AnyIsLessThan(YIndex key);
+        public MemDbIndexExpression<T> AllIsLessThan(YIndex key);
         public MemDbIndexExpression<T> AnyIsGreaterThanEqual(YIndex key);
+        public MemDbIndexExpression<T> AllIsGreaterThanEqual(YIndex key);
         public MemDbIndexExpression<T> AnyIsLessThanEqual(YIndex key);
+        public MemDbIndexExpression<T> AllIsLessThanEqual(YIndex key);
     }
     #endregion
 
@@ -101,10 +109,28 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region all is greater than
+        public MemDbIndexExpression<T> AllIsGreaterThan(YIndex key)
+        {
+            base.RelationalOperator = (int)IndexedSetRelationalOperator.AllGreaterThan;
+            base.IndexKey = key;
+            return this;
+        }
+        #endregion
+
         #region any is less than
         public MemDbIndexExpression<T> AnyIsLessThan(YIndex key)
         {
             base.RelationalOperator = (int)IndexedSetRelationalOperator.AnyLessThan;
+            base.IndexKey = key;
+            return this;
+        }
+        #endregion
+
+        #region all is less than
+        public MemDbIndexExpression<T> AllIsLessThan(YIndex key)
+        {
+            base.RelationalOperator = (int)IndexedSetRelationalOperator.AllLessThan;
             base.IndexKey = key;
             return this;
         }
@@ -119,10 +145,28 @@ namespace HatTrick.InMemDb
         }
         #endregion
 
+        #region all is greater than equal to
+        public MemDbIndexExpression<T> AllIsGreaterThanEqual(YIndex key)
+        {
+            base.RelationalOperator = (int)IndexedSetRelationalOperator.AllGreaterThanEqual;
+            base.IndexKey = key;
+            return this;
+        }
+        #endregion
+
         #region any is less than equal
         public MemDbIndexExpression<T> AnyIsLessThanEqual(YIndex key)
         {
             base.RelationalOperator = (int)IndexedSetRelationalOperator.AnyLessThanEqual;
+            base.IndexKey = key;
+            return this;
+        }
+        #endregion
+
+        #region all is less than equal
+        public MemDbIndexExpression<T> AllIsLessThanEqual(YIndex key)
+        {
+            base.RelationalOperator = (int)IndexedSetRelationalOperator.AllLessThanEqual;
             base.IndexKey = key;
             return this;
         }

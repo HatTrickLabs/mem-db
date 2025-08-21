@@ -88,7 +88,7 @@ namespace HatTrick.InMemDb.TestHarness
                 else if (asset.AssetType == DigitalAssetType.Json)
                     asset.Tags = ["aaa","bbb","ccc","json"];
                 else if (asset.AssetType == DigitalAssetType.Unknown)
-                    asset.Tags = ["xxx","yyy","zzz",""];
+                    asset.Tags = ["xxx","yyy","zzz"];
 
                 assets[i] = asset;
             }

@@ -70,14 +70,26 @@ namespace HatTrick.InMemDb
                 case IndexedSetRelationalOperator.AnyGreaterThan:
                     pointers = index.AnyIsGreaterThan(expression.IndexKey);
                     break;
+                case IndexedSetRelationalOperator.AllGreaterThan:
+                    pointers = index.AllIsGreaterThan(expression.IndexKey);
+                    break;
                 case IndexedSetRelationalOperator.AnyLessThan:
                     pointers = index.AnyIsLessThan(expression.IndexKey);
+                    break;
+                case IndexedSetRelationalOperator.AllLessThan:
+                    pointers = index.AllIsLessThan(expression.IndexKey);
                     break;
                 case IndexedSetRelationalOperator.AnyGreaterThanEqual:
                     pointers = index.AnyIsGreaterThanEqualTo(expression.IndexKey);
                     break;
+                case IndexedSetRelationalOperator.AllGreaterThanEqual:
+                    pointers = index.AllIsGreaterThanEqualTo(expression.IndexKey);
+                    break;
                 case IndexedSetRelationalOperator.AnyLessThanEqual:
                     pointers = index.AnyIsLessThanEqualTo(expression.IndexKey);
+                    break;
+                case IndexedSetRelationalOperator.AllLessThanEqual:
+                    pointers = index.AllIsLessThanEqualTo(expression.IndexKey);
                     break;
                 default:
                     throw new NotImplementedException($"Index expression for {op} not implemented.");

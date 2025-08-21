@@ -595,10 +595,10 @@ namespace HatTrick.InMemDb
 
             int[] pointers = new int[allPointers.Count - inverseSet.Count];
             int at = 0;
-            for (int i = 0; i < allPointers.Count; i++)
+            foreach (int p in pointers)
             {
-                if (inverseSet.Add(i))
-                    pointers[at++] = i;
+                if (inverseSet.Add(p))
+                    pointers[at++] = p;
             }
 
             return pointers;
@@ -612,7 +612,7 @@ namespace HatTrick.InMemDb
 
             for (int i = 1; i < keys.Length; i++)
             {
-                inverseSet.IntersectWith(base.EqualTo(keys[i]));
+                inverseSet.UnionWith(base.EqualTo(keys[i]));
             }
 
             HashSet<int> allPointers = base.GetFullPointerSet();
@@ -622,10 +622,10 @@ namespace HatTrick.InMemDb
 
             int[] pointers = new int[allPointers.Count - inverseSet.Count];
             int at = 0;
-            for (int i = 0; i < allPointers.Count; i++)
+            foreach (int p in pointers)
             {
-                if (inverseSet.Add(i))
-                    pointers[at++] = i;
+                if (inverseSet.Add(p))
+                    pointers[at++] = p;
             }
 
             return pointers;
@@ -640,7 +640,6 @@ namespace HatTrick.InMemDb
 
             if (pointers.Length == 0 || pointers.Length == 1)
                 return pointers;
-
 
             var set = new HashSet<int>(pointers);
             var output = new int[set.Count];
@@ -694,6 +693,90 @@ namespace HatTrick.InMemDb
             var output = new int[set.Count];
             set.CopyTo(output);
             return output;
+        }
+        #endregion
+
+        #region all is greater than
+        internal int[] AllIsGreaterThan(YIndex key)
+        {
+            var inverseSet = new HashSet<int>(this.AnyIsLessThanEqualTo(key));
+            HashSet<int> allPointers = base.GetFullPointerSet();
+
+            if (inverseSet.Count == 0)
+                return allPointers.ToArray();
+
+            int[] pointers = new int[allPointers.Count - inverseSet.Count];
+            int at = 0;
+            foreach (int p in allPointers)
+            {
+                if (inverseSet.Add(p))
+                    pointers[at++] = p;
+            }
+
+            return pointers;
+        }
+        #endregion
+
+        #region all is greater than equal to
+        internal int[] AllIsGreaterThanEqualTo(YIndex key)
+        {
+            var inverseSet = new HashSet<int>(this.AnyIsLessThan(key));
+            HashSet<int> allPointers = base.GetFullPointerSet();
+
+            if (inverseSet.Count == 0)
+                return allPointers.ToArray();
+
+            int[] pointers = new int[allPointers.Count - inverseSet.Count];
+            int at = 0;
+            foreach (int p in allPointers)
+            {
+                if (inverseSet.Add(p))
+                    pointers[at++] = p;
+            }
+
+            return pointers;
+        }
+        #endregion
+
+        #region all is less than
+        internal int[] AllIsLessThan(YIndex key)
+        {
+            var inverseSet = new HashSet<int>(this.AnyIsGreaterThanEqualTo(key));
+            HashSet<int> allPointers = base.GetFullPointerSet();
+
+            if (inverseSet.Count == 0)
+                return allPointers.ToArray();
+
+            int[] pointers = new int[allPointers.Count - inverseSet.Count];
+            int at = 0;
+            foreach (int p in allPointers)
+            {
+                if (inverseSet.Add(p))
+                    pointers[at++] = p;
+            }
+
+            return pointers;
+        }
+        #endregion
+
+        #region all is less than equal to
+        internal int[] AllIsLessThanEqualTo(YIndex key)
+        {
+            var inverseSet = new HashSet<int>(this.AnyIsGreaterThan(key));
+            HashSet<int> allPointers = base.GetFullPointerSet();
+
+            if (inverseSet.Count == 0)
+                return allPointers.ToArray();
+
+            int[] pointers = new int[allPointers.Count - inverseSet.Count];
+            int at = 0;
+            foreach (int p in allPointers)
+            {
+                if (inverseSet.Add(p))
+                    pointers[at++] = p;
+            }
+
+            return pointers;
         }
         #endregion
     }
