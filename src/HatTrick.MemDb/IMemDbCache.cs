@@ -6,7 +6,6 @@ namespace HatTrick.InMemDb
     {
         internal MemDbStatistics ResolveStatistics(Stats statistics);
         internal void Flush();
-        internal DateTime Snapshot();
         internal (int stale, int deleted) Purge();
     }
 }

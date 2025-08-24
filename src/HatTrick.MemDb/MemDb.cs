@@ -257,7 +257,7 @@ namespace HatTrick.InMemDb
     #endregion
 
     #region [class] mem db<T>
-    public class MemDb<T> : MemDb, /*IMemDbAcceessor<T>, IIndexedQueryAccessor<T>, */IDisposable where T : class
+    public class MemDb<T> : MemDb, IMemDbAcceessor<T>/*, IIndexedQueryAccessor<T>*/,IDisposable where T : class
     {
         #region internals
         private string _datasetName;
@@ -265,13 +265,20 @@ namespace HatTrick.InMemDb
         private bool _isEncryptionReady;
         private bool _isSnapshotReady;
         private bool _isClosed;
+        private Guid _g;
         #endregion
+
+        public Guid G => _g;
 
         #region ctors
         internal MemDb(MemDbConfiguration<T> config)
         {
             if (config is null)
                 throw new ArgumentNullException(nameof(config));
+
+            _g = Guid.NewGuid();
+            Console.WriteLine("C..." + _g);
+
 
             _datasetName = config.DatasetName;
             _isEncryptionReady = config.IsEncryptionReady;
@@ -448,6 +455,7 @@ namespace HatTrick.InMemDb
         {
             if (!_isClosed)
             {
+                Console.WriteLine("D..." + _g);
                 this.Close();
                 GC.SuppressFinalize(this);
             }
@@ -457,6 +465,7 @@ namespace HatTrick.InMemDb
         #region finalizer
         ~MemDb()
         {
+            Console.WriteLine("F..." + _g);
             if (!_isClosed)
             {
                 this.Close(); //emergency catch all to save un-synced records if process dies...

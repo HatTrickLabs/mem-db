@@ -43,7 +43,6 @@ namespace HatTrick.InMemDb.TestHarness
                 clone.LastWrite = original.LastWrite;
                 clone.Length = original.Length;
                 clone.Imported = now;
-                clone.Tags = original.Tags;
 
                 output[i] = clone;
             }
@@ -83,12 +82,6 @@ namespace HatTrick.InMemDb.TestHarness
                 asset.LastWrite = fi.LastWriteTime;
                 asset.Length = fi.Length;
                 //asset.Imported = ???;
-                if (asset.AssetType == DigitalAssetType.Text)
-                    asset.Tags = ["aaa","bbb","ccc","txt"];
-                else if (asset.AssetType == DigitalAssetType.Json)
-                    asset.Tags = ["aaa","bbb","ccc","json"];
-                else if (asset.AssetType == DigitalAssetType.Unknown)
-                    asset.Tags = ["xxx","yyy","zzz"];
 
                 assets[i] = asset;
             }

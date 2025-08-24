@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace HatTrick.InMemDb
 {
-    internal sealed class MemDbCache<T> : IMemDbCache<T>, IIndexedQueryAccessor<T>, IQueryAccessor<T>, IDisposable where T : class
+    internal sealed class MemDbCache<T> : IMemDbCache<T>, IIndexedQueryAccessor<T>, IQueryAccessor<T> where T : class
     {
         #region internals
         private const int _initialCacheCapacity = 128;
@@ -99,7 +99,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region snapshot
-        DateTime IMemDbCache<T>.Snapshot()
+        DateTime IMemDbAcceessor<T>.Snapshot()
         {
             if (_persister is null)
                 throw new InvalidOperationException($"{nameof(IMemDbCache<T>.Snapshot)} is not available with a unpersisted database (no path provided).");
@@ -497,12 +497,15 @@ namespace HatTrick.InMemDb
 
         private MemDbRecord<T>[] ExecuteIndexQueryExpression<YIndex>(MemDbIndexExpression<T, YIndex> expression) where YIndex : IConvertible
         {
-            string idxName = expression.IndexName;
-            //MemDbIndex<T, YIndex> index = _appliedIndexes.Get(idxName).Of<YIndex>();
-            MemDbIndex<T> index = _appliedIndexes.Get(idxName);//.Of<YIndex>();
+            var idx = _appliedIndexes.Get(expression.IndexName).Of<YIndex>();
             lock (_lock)
             {
-                int[] pointers = MemDbIndexAccessor<T>.ResolvePointers(index, expression);
+                int[] pointers = null;
+                if (idx is MemDbIndexedSet<T, YIndex> idxSet)
+                    pointers = MemDbIndexAccessor<T>.ResolvePointers(idxSet, expression);
+
+                else
+                    pointers = MemDbIndexAccessor<T>.ResolvePointers(idx, expression);
 
                 int length = pointers.Length;
                 var set = new MemDbRecord<T>[length];
