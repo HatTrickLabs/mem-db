@@ -571,7 +571,7 @@ namespace HatTrick.InMemDb
         {
             _isClosed = true;
             _fileSyncTimer?.Dispose();
-            (this as IMemDbPersister<T>).Flush(true);
+            (this as IMemDbPersister<T>)?.Flush(true);
             if (!isFinalizer)
                 GC.SuppressFinalize(this);
         }
