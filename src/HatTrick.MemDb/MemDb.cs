@@ -405,13 +405,13 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region query via indexed set
-        public IMemDbIndexedSetExpressionRoot<T, YIndex> QueryViaIndexedSet<YIndex>(string indexName) where YIndex : IConvertible
-        {
-            if (!(_cache is IIndexedQueryAccessor<T> idxAccess))
-                throw new InvalidOperationException($"{_cache.GetType().FullName} does not implement {nameof(IIndexedQueryAccessor<T>)}");
+        //public IMemDbIndexedSetExpressionRoot<T, YIndex> QueryViaIndexedSet<YIndex>(string indexName) where YIndex : IConvertible
+        //{
+        //    if (!(_cache is IIndexedQueryAccessor<T> idxAccess))
+        //        throw new InvalidOperationException($"{_cache.GetType().FullName} does not implement {nameof(IIndexedQueryAccessor<T>)}");
 
-            return idxAccess.QueryViaIndexedSet<YIndex>(indexName);
-        }
+        //    return idxAccess.QueryViaIndexedSet<YIndex>(indexName);
+        //}
         #endregion
 
         #region resolve statistics

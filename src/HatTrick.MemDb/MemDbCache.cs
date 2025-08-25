@@ -575,22 +575,22 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region query via indexed set
-        public IMemDbIndexedSetExpressionRoot<T, YIndex> QueryViaIndexedSet<YIndex>(string indexName) where YIndex : IConvertible
-        {
-            this.EnsureReadMode(nameof(QueryViaIndexedSet));
+        //public IMemDbIndexedSetExpressionRoot<T, YIndex> QueryViaIndexedSet<YIndex>(string indexName) where YIndex : IConvertible
+        //{
+        //    this.EnsureReadMode(nameof(QueryViaIndexedSet));
 
-            if (_appliedIndexes is null)
-                throw new InvalidOperationException($"No custom indexes applied to MemDb Instance '{_datasetName}'");
+        //    if (_appliedIndexes is null)
+        //        throw new InvalidOperationException($"No custom indexes applied to MemDb Instance '{_datasetName}'");
 
-            var index = _appliedIndexes.Get(indexName);
-            if (index is null)
-                throw new ArgumentException($"No custom index exists on MemDb instance '{_datasetName}' with provided name '{indexName}'", nameof(indexName));
+        //    var index = _appliedIndexes.Get(indexName);
+        //    if (index is null)
+        //        throw new ArgumentException($"No custom index exists on MemDb instance '{_datasetName}' with provided name '{indexName}'", nameof(indexName));
 
-            //ensure generic type requested is a match to the index type...
-            MemDbIndex<T, YIndex> typeIndex = index.Of<YIndex>();
+        //    //ensure generic type requested is a match to the index type...
+        //    MemDbIndex<T, YIndex> typeIndex = index.Of<YIndex>();
 
-            return new MemDbIndexedSetExpression<T, YIndex>(index.Name, this.ExecuteIndexQueryExpression, this.ExecuteIndexedUpdateExpression, this.ExecuteIndexedDeleteExpression);
-        }
+        //    return new MemDbIndexedSetExpression<T, YIndex>(index.Name, this.ExecuteIndexQueryExpression, this.ExecuteIndexedUpdateExpression, this.ExecuteIndexedDeleteExpression);
+        //}
         #endregion
 
         #region get next id

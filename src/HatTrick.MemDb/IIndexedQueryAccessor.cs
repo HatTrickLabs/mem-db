@@ -10,6 +10,6 @@ namespace HatTrick.InMemDb
     {
         public IMemDbIndexExpressionRoot<T, YIndex> QueryViaIndex<YIndex>(string indexName) where YIndex : IConvertible;
 
-        public IMemDbIndexedSetExpressionRoot<T, YIndex> QueryViaIndexedSet<YIndex>(string indexName) where YIndex : IConvertible;
+        //public IMemDbIndexedSetExpressionRoot<T, YIndex> QueryViaIndexedSet<YIndex>(string indexName) where YIndex : IConvertible;
     }
 }
