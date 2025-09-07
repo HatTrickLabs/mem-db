@@ -1,5 +1,7 @@
 https://themes.gohugo.io/themes/hextra/
 
+https://gist.github.com/janert/4e22671044ffb06ee970b04709dd7d81
+
 
 MemDb Docs....
 ------------------------
@@ -9,19 +11,19 @@ MemDb Docs....
 - What (is MemDb) =>
   - A lightweight database / data cache engine.
   - Self contained, zero external dependencies outside core .net
-  - Runs embeddd in process (no dedicated engine process).
+  - Runs embeded in process (no dedicated engine process).
   - Entire data footprint in RAM.
   - File backed (data persisted to disk)
-  - Single compact library (~95KB HatTrick.MemDb.dll)
+  - Single compact library (~104KB HatTrick.MemDb.dll)
 
 - Why (did we build it) =>
-  - Need for a super simple yet powerful embedded database engine.
+  - Need for a super simple yet powerful embedded data storage.
   - File backed data structure (persisted to disk).
   - Entire data set stored in RAM for fast reads (can be used as a file backed cache).
   - Powerful query capabilities using native code (no sql language parsing).
   - Always safe concurrency.
   - Cached data integrity (never return ref pointers to internal objects).
-  - Record level encryption (AES 256 bit)
+  - Baked in record level data encryption (AES 256 bit)
   - Online snapshots.
   - Archive and restore (ability to restore a database back to a histrical point in time).
   - Super simple implementation given default settings.
@@ -31,7 +33,7 @@ MemDb Docs....
 - Where (where can it be found)
   - github.com
   - nuget.org
-  - Hat Trick Tech Articles
+  - ** Hat Trick Tech Articles
   
   
 - Getting Started
@@ -56,19 +58,19 @@ MemDb Docs....
   - capture natural key (id) =>
   - encrypted
  - Update
-   - by id
+   - by id (see Indexes)
    - predicated
  - Delete
-   - by id
+   - by id (see Indexes)
    - predicated
  - Count
   - simple
   - predicated
  - Find
-  - by id
+  - by id (see Indexes)
   - predicated
  - FindAll
-   - by id set
+   - by id set (see Indexes)
    - pridicated
  
 Advanced Queries (MemDb Query Expression)
@@ -97,10 +99,10 @@ Core Concepts
 - Flush (timed and manual)
 - Cache<T>
   - where T class (ref type)
-  - Log structured cache, new versions of records always appended to the end of the cache and old versions marked stale (see purge)
-- Data Integrity via cloning (see serialization)
+  - Log structured cache, new versions of records always appended to the end of the cache and old versions marked stale (see Purge)
+- Data Integrity via deep cloning (see Serialization)
  - no ref pointers cross bounderies
-- Log structured files, new versions of records always appended to the end of the data files and old versions marked stale (see defragment)
+- Log structured files, new versions of records always appended to the end of the data files and old versions marked stale (see Defragment)
 - Default Serialization
   - System.Text.Json.JsonSerializer
 
@@ -125,18 +127,11 @@ Indexes
   - IsLessThan => O(log n)
   - IsGreaterThanEqualTo => O(log n)
   - IsLessThanEqualTo => O(log n)
-
-
-Store Data by Interface
------------------------
-- Supported via 'JsonDerivedType' attributes when using default serializer.
-- Supported via custom serialization override.
-
-
-Store Data With Polymorphic Type Hierarchy
-------------------------------------------
-- Supported via 'JsonDerivedType' attributes when using the default serializer.
-- Supported via custom serialization override.
+  
+  Online Cache Maintenance
+  ------------------------
+  - Log strutured cache does not automatically cleanup stale or deleted data.
+    - Use MemDb.Purge(); to remove stale and deleted records from the in memory cache.
 
 
 Snapshots
@@ -155,6 +150,18 @@ Point In Time Restore
 ----------------------
 - Restore archived database back to a specific point in time.
 
+
+Store Data by Interface
+-----------------------
+- Supported via 'JsonDerivedType' attributes when using default serializer.
+- Supported via custom serialization override.
+
+
+Store Data With Polymorphic Type Hierarchy
+------------------------------------------
+- Supported via 'JsonDerivedType' attributes when using the default serializer.
+- Supported via custom serialization override.
+
 Performance Consideration
 --------------------------
 - SSD Drive (spinning disk drives will be super slow).
@@ -164,5 +171,3 @@ Performance Consideration
   - Identity (id)
   - Applied
 
-
-   
