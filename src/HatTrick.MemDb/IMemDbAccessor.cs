@@ -2,7 +2,7 @@
 
 namespace HatTrick.InMemDb
 {
-    public interface IMemDbAcceessor<T> where T : class
+    public interface IMemDbQueryAccessor<T> where T : class
     {
         public bool Exists(Func<T, bool> where);
 
@@ -31,7 +31,5 @@ namespace HatTrick.InMemDb
         public int Delete(Func<T, bool> where);
 
         public bool Delete(long id);
-
-        internal DateTime Snapshot();
     }
 }

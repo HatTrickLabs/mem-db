@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace HatTrick.InMemDb
 {
-    internal interface IMemDbSnapshotter
+    public interface IMemDbSnapshotter
     {
-        internal DateTime WriteSnapshot();
+        internal DateTime Snapshot();
     }
 }

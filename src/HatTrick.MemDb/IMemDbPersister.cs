@@ -14,7 +14,6 @@ namespace HatTrick.InMemDb
         internal void MarkStale(MemDbRecord<T> record);
         internal void MarkDeleted(MemDbRecord<T> record);
         internal void Flush(object state);
-        internal DateTime Snapshot();
         internal MemDbStatistics ResolveStatistics(Stats statistics);
         internal void OnHalted(Action onHalted);
         internal MemDbException GetHaltException();

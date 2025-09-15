@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace HatTrick.InMemDb
 {
-    internal sealed class MemDbMappedFile<T> : IMemDbPersister<T>, IDisposable where T : class
+    internal sealed class MemDbMappedFile<T> : IMemDbPersister<T>, IMemDbSnapshotter, IDisposable where T : class
     {
         #region internals
         private const int _initialQueueCapacity = 128;
@@ -478,15 +478,15 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region snapshot
-        DateTime IMemDbPersister<T>.Snapshot()
+        DateTime IMemDbSnapshotter.Snapshot()
         {
-            this.EnsureMode(AccessMode.ReadWrite, nameof(IMemDbPersister<T>.Snapshot));
+            this.EnsureMode(AccessMode.ReadWrite, nameof(IMemDbSnapshotter.Snapshot));
 
             (this as IMemDbPersister<T>).Flush(false);
 
             lock (_flushLock)
             {
-                DateTime utcNow = _snapshotter.WriteSnapshot();
+                DateTime utcNow = _snapshotter.Snapshot();
                 return utcNow;
             }
         }

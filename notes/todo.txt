@@ -47,7 +47,8 @@ x Implement lock file cross process check on MemDb.Restore.
 x Implement lock file cross process check on MemDb.Defrag.
 x Refactor MemDb.Restore to allow restore when no Defrag ever ran (restore from actual MemDb Db file and Map without any data from archives).
 x Revisit all file name formats...normalize snapshot and archive entry timestamp formats.
-- The HashSet(s) used within MemDbIndexedSet.Apply|Remove must be initialized with the IEqualityComparer from the possibly custom HybridComparer<T>
+x The HashSet(s) used within MemDbIndexedSet.Apply|Remove must be initialized with the IEqualityComparer from the possibly custom HybridComparer<T>
+- Implement snapshot that takes a 'FromTimestamp' or maybe a 'FromIdentity' to enable parital snapshots that can be assembled offstream.
 - From defrag archives (this may be an external tool)
   - Find and restore a specific record by id.
   - Find and restore a specific set of records by predicate.

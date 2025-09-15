@@ -29,7 +29,7 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region write snapshot
-        DateTime IMemDbSnapshotter.WriteSnapshot()
+        DateTime IMemDbSnapshotter.Snapshot()
         {
             DateTime timestamp = DateTime.UtcNow;
             this.EnsureSnapshotDirectoryPath(timestamp);

@@ -2,7 +2,7 @@
 
 namespace HatTrick.InMemDb
 {
-    public interface IMemDbCache<T> : IMemDbAcceessor<T>, IDisposable where T : class
+    public interface IMemDbCache<T> : IMemDbQueryAccessor<T>, IDisposable where T : class
     {
         internal MemDbStatistics ResolveStatistics(Stats statistics);
         internal void Flush();

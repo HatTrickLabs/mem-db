@@ -257,7 +257,7 @@ namespace HatTrick.InMemDb
     #endregion
 
     #region [class] mem db<T>
-    public class MemDb<T> : MemDb, IMemDbAcceessor<T>/*, IIndexedQueryAccessor<T>*/,IDisposable where T : class
+    public class MemDb<T> : MemDb, IMemDbQueryAccessor<T>, IIndexedQueryAccessor<T>, IDisposable where T : class
     {
         #region internals
         private string _datasetName;
@@ -430,7 +430,7 @@ namespace HatTrick.InMemDb
             if (!_isSnapshotReady)
                 throw new InvalidOperationException($"{nameof(MemDbConfiguration)} for '{_datasetName}' does not contain a {nameof(MemDbConfiguration<T>.SnapshotTo)} directory path.");
 
-            return _cache.Snapshot();
+            return (_cache as IMemDbSnapshotter).Snapshot();
         }
         #endregion
 

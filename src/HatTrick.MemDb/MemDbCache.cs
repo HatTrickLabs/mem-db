@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace HatTrick.InMemDb
 {
-    internal sealed class MemDbCache<T> : IMemDbCache<T>, IIndexedQueryAccessor<T>, IQueryAccessor<T> where T : class
+    internal sealed class MemDbCache<T> : IMemDbCache<T>, IQueryAccessor<T>, IIndexedQueryAccessor<T>, IMemDbSnapshotter where T : class
     {
         #region internals
         private const int _initialCacheCapacity = 128;
@@ -99,14 +99,14 @@ namespace HatTrick.InMemDb
         #endregion
 
         #region snapshot
-        DateTime IMemDbAcceessor<T>.Snapshot()
+        DateTime IMemDbSnapshotter.Snapshot()
         {
             if (_persister is null)
-                throw new InvalidOperationException($"{nameof(IMemDbCache<T>.Snapshot)} is not available with a unpersisted database (no path provided).");
+                throw new InvalidOperationException($"{nameof(IMemDbSnapshotter.Snapshot)} is not available with a unpersisted database (no path provided).");
 
             lock (_lock)
             {
-                return (_persister as IMemDbPersister<T>).Snapshot();
+                return (_persister as IMemDbSnapshotter).Snapshot();
             }
         }
         #endregion
