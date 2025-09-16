@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace HatTrick.InMemDb
+namespace HatTrick.Data
 {
     #region [enum] access mode
     [Flags]

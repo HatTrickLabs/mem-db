@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace HatTrick.InMemDb.TestHarness
+namespace HatTrick.Data.TestHarness
 {
     public class AESKeyFromPasswordEncryptedTests : AESEncryptionTests
     {

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace HatTrick.InMemDb
+namespace HatTrick.Data
 {
     internal class MemDbSerializationCloner<T> : IMemDbCloner<T> where T : class
     {

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace HatTrick.InMemDb
+namespace HatTrick.Data
 {
     [Flags]
     public enum Stats : int

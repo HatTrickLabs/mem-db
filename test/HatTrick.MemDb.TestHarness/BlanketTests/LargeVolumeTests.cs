@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace HatTrick.InMemDb.TestHarness
+namespace HatTrick.Data.TestHarness
 {
     //TDDO: what do we really want to test here ???
     public class LargeVolumeTests : TestBase

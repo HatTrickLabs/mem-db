@@ -5,7 +5,7 @@ using System.Linq;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-namespace HatTrick.InMemDb.TestHarness
+namespace HatTrick.Data.TestHarness
 {
     //TODO...
     public class AppliedIndexQueryExpressionBuilderTests : TestBase

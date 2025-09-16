@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace HatTrick.InMemDb
+namespace HatTrick.Data
 {
     public interface IMemDbCache<T> : IMemDbQueryAccessor<T>, IDisposable where T : class
     {

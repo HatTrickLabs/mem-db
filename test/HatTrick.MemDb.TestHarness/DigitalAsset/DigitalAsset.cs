@@ -2,7 +2,7 @@
 using System.IO;
 using System.Text.Json.Serialization;
 
-namespace HatTrick.InMemDb
+namespace HatTrick.Data
 {
     #region i digital asset
     [JsonDerivedType(typeof(TextAsset), typeDiscriminator: (int)DigitalAssetType.Text)]

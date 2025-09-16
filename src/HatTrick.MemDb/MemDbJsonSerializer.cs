@@ -4,7 +4,7 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace HatTrick.InMemDb
+namespace HatTrick.Data
 {
     #region [class] mem db json serializer
     public abstract class MemDbJsonSerializer

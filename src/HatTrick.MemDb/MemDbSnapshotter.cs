@@ -2,7 +2,7 @@
 using System.IO;
 using System.Text;
 
-namespace HatTrick.InMemDb
+namespace HatTrick.Data
 {
     internal sealed class MemDbSnapshotter : IMemDbSnapshotter
     {

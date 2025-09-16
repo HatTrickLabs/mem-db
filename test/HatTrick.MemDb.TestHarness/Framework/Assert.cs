@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace HatTrick.InMemDb.TestHarness
+namespace HatTrick.Data.TestHarness
 {
     public class Assert
     {

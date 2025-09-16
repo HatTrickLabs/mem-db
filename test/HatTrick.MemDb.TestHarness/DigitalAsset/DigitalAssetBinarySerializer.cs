@@ -3,7 +3,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 
-namespace HatTrick.InMemDb
+namespace HatTrick.Data
 {
     public class DigitalAssetBinarySerializer : IBinaryReadMemDbSerializer<DigitalAsset>
     {

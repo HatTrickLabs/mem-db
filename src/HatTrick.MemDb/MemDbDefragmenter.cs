@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace HatTrick.InMemDb
+namespace HatTrick.Data
 {
     internal class MemDbDefragmenter : IMemDbDefragmenter
     {

@@ -2,7 +2,7 @@
 using System.IO;
 using System.Security.Cryptography;
 
-namespace HatTrick.InMemDb
+namespace HatTrick.Data
 {
     //NOTE: this class is NOT thread safe due to the re-use of Aes internal...
     public class MemDbAESEncryptor : MemDbAESEncryptionInfo, IMemDbEncryptor

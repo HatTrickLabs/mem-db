@@ -4,7 +4,7 @@ using System.IO;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
-namespace HatTrick.InMemDb
+namespace HatTrick.Data
 {
     #region [class] mem db configuration
     public abstract class MemDbConfiguration

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HatTrick.InMemDb
+namespace HatTrick.Data
 {
     public class MemDbStatistics
     {

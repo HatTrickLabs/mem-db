@@ -2,7 +2,7 @@
 using System.IO;
 using System.Linq;
 
-namespace HatTrick.InMemDb.TestHarness
+namespace HatTrick.Data.TestHarness
 {
     public abstract class AESEncryptionTests : TestBase
     {

@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Collections.Generic;
 
-namespace HatTrick.InMemDb
+namespace HatTrick.Data
 {
     public class DigitalAssetCloner : IMemDbCloner<DigitalAsset>
     {

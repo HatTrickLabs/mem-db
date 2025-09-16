@@ -1,9 +1,9 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using HatTrick.InMemDb;
+using HatTrick.Data;
 
-namespace HatTrick.InMemDb.TestHarness
+namespace HatTrick.Data.TestHarness
 {
     internal class AppliedIndexManagementTests : TestBase
     {

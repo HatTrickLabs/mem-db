@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Collections.Generic;
 
-namespace HatTrick.InMemDb
+namespace HatTrick.Data
 {
     #region hybrid comparer of T
     public sealed class HybridComparer<YIndex> : IComparer<YIndex>, IEqualityComparer<YIndex>

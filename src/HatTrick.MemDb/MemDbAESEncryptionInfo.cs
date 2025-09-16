@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Security.Cryptography;
 
-namespace HatTrick.InMemDb
+namespace HatTrick.Data
 {
     public class MemDbAESEncryptionInfo : IMemDbEncryptionInfo
     {

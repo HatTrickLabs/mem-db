@@ -3,7 +3,7 @@ using System.Threading;
 using System.Linq;
 using System.Collections.Generic;
 
-namespace HatTrick.InMemDb
+namespace HatTrick.Data
 {
     internal sealed class MemDbCache<T> : IMemDbCache<T>, IQueryAccessor<T>, IIndexedQueryAccessor<T>, IMemDbSnapshotter where T : class
     {

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 
-namespace HatTrick.InMemDb
+namespace HatTrick.Data
 {
     public class MemDbGroupedIndexExpression<TKey, T, YIndex> : IMemDbGroupedExpression<TKey, T> where T : class
     {

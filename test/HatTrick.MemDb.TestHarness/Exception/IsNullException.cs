@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace HatTrick.InMemDb.TestHarness
+namespace HatTrick.Data.TestHarness
 {
     public class IsNullException : Exception
     {

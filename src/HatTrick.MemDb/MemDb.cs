@@ -3,7 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Collections.Generic;
 
-namespace HatTrick.InMemDb
+namespace HatTrick.Data
 {
     #region [class] mem db
     public abstract class MemDb

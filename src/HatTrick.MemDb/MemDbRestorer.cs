@@ -5,7 +5,7 @@ using System.IO.Compression;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace HatTrick.InMemDb
+namespace HatTrick.Data
 {
     internal sealed class MemDbRestorer
     {

@@ -2,7 +2,7 @@
 using System.IO;
 using System.Threading;
 
-namespace HatTrick.InMemDb.TestHarness
+namespace HatTrick.Data.TestHarness
 {
     public class AssetResolver
     {

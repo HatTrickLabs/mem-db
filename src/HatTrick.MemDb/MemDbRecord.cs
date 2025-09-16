@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Text.Json.Serialization;
 
-namespace HatTrick.InMemDb
+namespace HatTrick.Data
 {
     #region mem db record
     internal abstract class MemDbRecord

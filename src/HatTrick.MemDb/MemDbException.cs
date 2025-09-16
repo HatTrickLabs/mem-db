@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace HatTrick.InMemDb
+namespace HatTrick.Data
 {
     #region [class] mem db exception
     public abstract class MemDbException : Exception

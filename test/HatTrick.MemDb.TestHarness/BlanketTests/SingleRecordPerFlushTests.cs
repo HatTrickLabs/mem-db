@@ -2,7 +2,7 @@
 using System.IO;
 using System.Diagnostics;
 
-namespace HatTrick.InMemDb.TestHarness
+namespace HatTrick.Data.TestHarness
 {
     public class SingleRecordPerFlushTests : TestBase
     {

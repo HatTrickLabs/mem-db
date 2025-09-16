@@ -2,7 +2,7 @@
 using System.IO;
 using System.IO.Compression;
 
-namespace HatTrick.InMemDb
+namespace HatTrick.Data
 {
     internal class MemDbArchiver : IMemDbArchiver
     {

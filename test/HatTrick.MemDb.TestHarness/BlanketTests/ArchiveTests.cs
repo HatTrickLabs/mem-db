@@ -4,7 +4,7 @@ using System.Threading;
 using System.Linq;
 using System.Collections.Generic;
 
-namespace HatTrick.InMemDb.TestHarness
+namespace HatTrick.Data.TestHarness
 {
     public class ArchiveTests : TestBase
     {

@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using HatTrick.CommandLine;
 using System.Threading.Tasks;
 
-namespace HatTrick.InMemDb.TestHarness
+namespace HatTrick.Data.TestHarness
 {
     class Program
     {

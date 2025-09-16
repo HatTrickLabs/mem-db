@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Diagnostics;
 
-namespace HatTrick.InMemDb.TestHarness
+namespace HatTrick.Data.TestHarness
 {
     public class NaturalIndexSupportedQueryTests : TestBase
     {

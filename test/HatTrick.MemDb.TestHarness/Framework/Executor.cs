@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using HatTrick.CommandLine;
 
-namespace HatTrick.InMemDb.TestHarness
+namespace HatTrick.Data.TestHarness
 {
     public class Executor
     {
