@@ -7,31 +7,26 @@ namespace HatTrick.Data
     internal abstract class MemDbRecord
     {
         #region read only
-        internal static readonly int Size = sizeof(long)//8:Id
-                                          + sizeof(byte)//1:State enum : byte
-                                          + sizeof(long)//8:StateSetAt
-                                          + sizeof(long)//8:CreatedAt
-                                          + sizeof(bool)//1:IsEncrypted
-                                          + sizeof(int);//4:MapIndex
-                                                        //--------------
-                                                        //30
+        internal static readonly int Size
+        = MemDbPointer.Size //39:Pointer
+        + sizeof(int);      // 4:MapIndex
+        //---------------------------------
+        //                    43
         #endregion
 
         #region internals
-        private long _id;
-        private RecordState _state;
-        private long _stateSetAt;
-        private long _createdAt;
-        private bool _isEncrypted;
+        private MemDbPointer _pointer;
         private int _mapIndex;
         #endregion
 
         #region interface
-        internal long Id => _id;
-        internal RecordState State => _state;
-        internal long StateSetAt => _stateSetAt;
-        internal long CreatedAt => _createdAt;
-        internal bool IsEncrypted => _isEncrypted;
+        internal long Id => _pointer.Id;
+        internal RecordState State => _pointer.State;
+        internal long StateSetAt => _pointer.StateSetAt;
+        internal long CreatedAt => _pointer.CreatedAt;
+        internal bool IsEncrypted => _pointer.IsEncrypted;
+
+        //local (not part of Pointer)
         internal int MapIndex => _mapIndex;
 
         [JsonIgnore]//Never serialized or cloned and NOT included in Size
@@ -39,40 +34,51 @@ namespace HatTrick.Data
         #endregion
 
         #region constructors
-        internal MemDbRecord(long id, long createdAt, bool isEncrypted)
+        internal MemDbRecord(long id, long createdAt, bool isEncrypted) 
         {
-            _id = id;
-            _state = RecordState.Fresh;
-            _stateSetAt = createdAt;
-            _createdAt = createdAt;
-            _isEncrypted = isEncrypted;
+            _pointer = new MemDbPointer(id, RecordState.Fresh, createdAt, createdAt, isEncrypted);
             _mapIndex = -1;
         }
 
-        internal MemDbRecord(long id, RecordState state, long stateSetAt, long createdAt, bool isEncrypted, int mapIndex)
+        internal MemDbRecord(MemDbPointer pointer, int mapIndex)
         {
-            _id = id;
-            _state = state;
-            _stateSetAt = stateSetAt;
-            _createdAt = createdAt;
-            _isEncrypted = isEncrypted;
+            _pointer = pointer;
             _mapIndex = mapIndex;
+        }
+        #endregion
+
+        #region get pointer
+        public MemDbPointer GetPointer()
+        {
+            return _pointer;
         }
         #endregion
 
         #region mark stale
         internal void MarkStale(long utcTimestamp)
         {
-            _state = RecordState.Stale;
-            _stateSetAt = utcTimestamp;
+            _pointer.MarkStale(utcTimestamp);
         }
         #endregion
 
         #region mark deleted
         internal void MarkDeleted(long utcTimestamp)
         {
-            _state = RecordState.Deleted;
-            _stateSetAt = utcTimestamp;
+            _pointer.MarkDeleted(utcTimestamp);
+        }
+        #endregion
+
+        #region set position
+        internal void SetPosition(long position)
+        {
+            _pointer.SetPosition(position);
+        }
+        #endregion
+
+        #region set length
+        public void SetLength(int length)
+        {
+            _pointer.SetLength(length);
         }
         #endregion
 
@@ -110,8 +116,7 @@ namespace HatTrick.Data
             _value = value;
         }
 
-        internal MemDbRecord(long id, T value, RecordState state, long stateSetAt, long createdAt, bool isEncrypted, int mapIndex) 
-            : base(id, state, stateSetAt, createdAt, isEncrypted, mapIndex)
+        internal MemDbRecord(MemDbPointer pointer, T value, int mapIndex) : base(pointer, mapIndex)
         {
             if (value is null)
                 throw new ArgumentNullException(nameof(value));

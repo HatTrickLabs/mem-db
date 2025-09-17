@@ -17,16 +17,18 @@ namespace HatTrick.Data
         #endregion
 
         #region interface
-        internal static readonly int Size = sizeof(byte)//1:version
-                                          + sizeof(long)//8:Id
-                                          + sizeof(byte)//1:State enum : byte
-                                          + sizeof(long)//8:StateSetAt
-                                          + sizeof(long)//8:createdAt
-                                          + sizeof(bool)//1:IsEncrypted
-                                          + sizeof(long)//8:Position
-                                          + sizeof(int);//4:Length
-                                                        //----------------
-                                                        //39
+        internal static readonly int Size 
+        = sizeof(byte)//1:version
+        + sizeof(long)//8:Id
+        + sizeof(byte)//1:State enum : byte
+        + sizeof(long)//8:StateSetAt
+        + sizeof(long)//8:createdAt
+        + sizeof(bool)//1:IsEncrypted
+        + sizeof(long)//8:Position
+        + sizeof(int);//4:Length
+        //--------------------------------------
+        //              39
+
         internal byte Version => _version;
         internal long Id => _id;
         internal RecordState State => _state;
@@ -48,6 +50,15 @@ namespace HatTrick.Data
             _position = startPosition;
             _length = length;
         }
+
+        internal MemDbPointer(long id, RecordState state, long stateSetAt, long createdAt, bool isEncrypted)
+        {
+            _id = id;
+            _state = state;
+            _stateSetAt = stateSetAt;
+            _createdAt = createdAt;
+            _isEncrypted = isEncrypted;
+        }
         #endregion
 
         #region mark stale
@@ -63,6 +74,20 @@ namespace HatTrick.Data
         {
             _state = RecordState.Deleted;
             _stateSetAt = utcTimestamp;
+        }
+        #endregion
+
+        #region set position
+        internal void SetPosition(long position)
+        {
+            _position = position;
+        }
+        #endregion
+
+        #region set length
+        public void SetLength(int length)
+        {
+            _length = length;
         }
         #endregion
 

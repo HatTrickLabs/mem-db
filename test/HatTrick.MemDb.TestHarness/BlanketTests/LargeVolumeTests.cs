@@ -52,7 +52,7 @@ namespace HatTrick.Data.TestHarness
         #region large volume
         public void Test_LargeVolume()
         {
-            int iterations = 1_000;
+            int iterations = 10_000;
             DigitalAsset[] assets = base.ResolveAssetSet();
             int total = iterations * assets.Length;
             Console.WriteLine($"Starting load of {total:n0} records into new database.");
@@ -73,10 +73,10 @@ namespace HatTrick.Data.TestHarness
                 var withIndex = this.ConcurrentQueriesOnAppliedNameIndexAssisted(db, 100);
                 var noIndex = this.ConcurrentQueriesOnNameWithoutIndex(db, 10);
                 this.ConcurrentQueriesOnAppliedDirectoryIndexAssisted(db, 10);
-            }
 
-            //Console.WriteLine("Done...Press [Enter] to exit.");
-            //Console.ReadLine();
+                Console.WriteLine("Done...Press [Enter] to exit.");
+                Console.ReadLine();
+            }
         }
         #endregion
 
