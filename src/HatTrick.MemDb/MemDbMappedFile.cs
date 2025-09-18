@@ -188,9 +188,9 @@ namespace HatTrick.Data
                     {
                         value = this.DeserializeRecord(reader, ptr.Length);
                     }
-                    //record = new(ptr.Id, value, fresh, ptr.StateSetAt, ptr.CreatedAt, ptr.IsEncrypted, i);
+                    
                     record = new(ptr, value, i);
-                    record.CacheIndex = records.Count;
+                    record.SetCacheIndex(records.Count);
                     records.Add(record);
                 }
             }

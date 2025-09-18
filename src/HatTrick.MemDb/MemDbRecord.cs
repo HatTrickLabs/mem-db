@@ -1,22 +1,14 @@
 ﻿using System;
-using System.Text.Json.Serialization;
 
 namespace HatTrick.Data
 {
     #region mem db record
     internal abstract class MemDbRecord
     {
-        #region read only
-        internal static readonly int Size
-        = MemDbPointer.Size //39:Pointer
-        + sizeof(int);      // 4:MapIndex
-        //---------------------------------
-        //                    43
-        #endregion
-
         #region internals
         private MemDbPointer _pointer;
         private int _mapIndex;
+        private int _cacheIndex;
         #endregion
 
         #region interface
@@ -27,10 +19,8 @@ namespace HatTrick.Data
         internal bool IsEncrypted => _pointer.IsEncrypted;
 
         //local (not part of Pointer)
+        internal int CacheIndex => _cacheIndex;
         internal int MapIndex => _mapIndex;
-
-        [JsonIgnore]//Never serialized or cloned and NOT included in Size
-        internal int CacheIndex { get; set; }
         #endregion
 
         #region constructors
@@ -79,6 +69,13 @@ namespace HatTrick.Data
         public void SetLength(int length)
         {
             _pointer.SetLength(length);
+        }
+        #endregion
+
+        #region set cache index
+        internal void SetCacheIndex(int cacheIndex)
+        {
+            _cacheIndex = cacheIndex;
         }
         #endregion
 

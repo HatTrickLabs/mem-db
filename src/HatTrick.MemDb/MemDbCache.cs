@@ -135,9 +135,9 @@ namespace HatTrick.Data
                 {
                     var record = _records[i];
                     int idx = newSet.Count;
+                    record.SetCacheIndex(idx);
                     if (record.State == RecordState.Fresh)
                     {
-                        record.CacheIndex = idx;
                         newSet.Add(record);
                         newIndex?.Add(record.Id, idx);
                         _appliedIndexes?.Refresh(stale: (record.Value, i), fresh: (record.Value, idx));
@@ -146,7 +146,6 @@ namespace HatTrick.Data
                     {
                         //if the rec has been marked stale or deleted AFTER ResolveCacheStats (above),
                         //we still need to shift it over so the cache stats returned are accurate...
-                        record.CacheIndex = idx;
                         newSet.Add(record);
                     }
                 } 
@@ -631,7 +630,7 @@ namespace HatTrick.Data
             {
                 lock (_lock)
                 {
-                    rec.CacheIndex = _records.Count;
+                    rec.SetCacheIndex(_records.Count);
                     _records.Add(rec);
 
                     if (_isIndexed)
@@ -717,7 +716,7 @@ namespace HatTrick.Data
             to.MarkStale(utcTimestamp);
             apply(newRec.Value);
 
-            newRec.CacheIndex = _records.Count;
+            newRec.SetCacheIndex(_records.Count);
             _records.Add(newRec);
 
             if (_isIndexed)
