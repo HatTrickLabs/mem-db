@@ -260,9 +260,9 @@ namespace HatTrick.Data
         IMemDBConfigurationBuilder<T> SetMode(AccessMode mode);
         IMemDBConfigurationBuilder<T> IndexOnIdentity(bool shouldIndex);
         IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, YIndex> keyResolver) where YIndex : IConvertible;
-        IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, YIndex> keyResolver, HybridComparer<YIndex> comparer) where YIndex : IConvertible;
+        IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, YIndex> keyResolver, IMemDbComparer<YIndex> comparer) where YIndex : IConvertible;
         IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, ICollection<YIndex>> keySetResolver) where YIndex : IConvertible;
-        IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, ICollection<YIndex>> keySetResolver, HybridComparer<YIndex> comparer) where YIndex : IConvertible;
+        IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, ICollection<YIndex>> keySetResolver, IMemDbComparer<YIndex> comparer) where YIndex : IConvertible;
         IMemDBConfigurationBuilder<T> SetFlushInterval(int interval);
         IMemDBConfigurationBuilder<T> SerializeWith(Func<IMemDbSerializer<T>> serializerProvider);
         IMemDBConfigurationBuilder<T> CloneWith(Func<IMemDbCloner<T>> clonerProvider);
@@ -322,10 +322,10 @@ namespace HatTrick.Data
         public IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, YIndex> keyResolver)
         where YIndex : IConvertible
         {
-            return this.ApplyIndex(name, keyResolver, new HybridComparer<YIndex>());
+            return this.ApplyIndex(name, keyResolver, new MemDbComparer<YIndex>());
         }
 
-        public IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, YIndex> keyResolver, HybridComparer<YIndex> comparer) 
+        public IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, YIndex> keyResolver, IMemDbComparer<YIndex> comparer) 
         where YIndex : IConvertible
         {
             if (string.IsNullOrEmpty(name))
@@ -347,11 +347,11 @@ namespace HatTrick.Data
         public IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, ICollection<YIndex>> keySetResolver)
         where YIndex : IConvertible
         {
-            return this.ApplyIndex<YIndex>(name, keySetResolver, new HybridComparer<YIndex>());
+            return this.ApplyIndex<YIndex>(name, keySetResolver, new MemDbComparer<YIndex>());
         }
 
         //exploratory...not yet exposed on IMemDbConfigurationBuilder<T>
-        public IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, ICollection<YIndex>> keySetResolver, HybridComparer<YIndex> comparer)
+        public IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, ICollection<YIndex>> keySetResolver, IMemDbComparer<YIndex> comparer)
         where YIndex : IConvertible
         {
             if (string.IsNullOrEmpty(name))

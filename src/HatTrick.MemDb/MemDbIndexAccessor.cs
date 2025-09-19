@@ -35,6 +35,9 @@ namespace HatTrick.Data
                 case IndexRelationalOperator.LessThanEqual:
                     pointers = index.LessThanEqualTo(expression.IndexKey);
                     break;
+                case IndexRelationalOperator.Between:
+                    pointers = index.Between(expression.IndexKeySet[0], expression.IndexKeySet[1]);
+                    break;
                 default:
                     throw new NotImplementedException($"Index expression for {op} not implemented.");
             }

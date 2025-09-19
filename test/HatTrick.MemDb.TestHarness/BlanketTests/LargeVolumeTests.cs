@@ -31,7 +31,7 @@ namespace HatTrick.Data.TestHarness
                 .ApplyIndex<string>(
                     name: nameof(DigitalAsset.Directory), 
                     keyResolver: (a) => a.Directory, 
-                    comparer: new HybridComparer<string>(StringComparer.CurrentCultureIgnoreCase, StringComparer.CurrentCultureIgnoreCase)
+                    comparer: new MemDbComparer<string>(StringComparer.CurrentCultureIgnoreCase, StringComparer.CurrentCultureIgnoreCase)
                 )
                 //.EncryptWithPassword(() => "This is a super fancy and complex password!!!!!")
                 .Register();
@@ -66,13 +66,34 @@ namespace HatTrick.Data.TestHarness
                 _sw.Stop();
                 Console.WriteLine($"{_sw.ElapsedMilliseconds}\tCompleted db load of {total:n0} records.");
 
-                GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true);
+                _sw.Reset();
+                _sw.Start();
+                DigitalAsset[] result = null;
+                Parallel.For(0, 100, (a) =>
+                {
+                    result = db.QueryViaIndex<long>(nameof(DigitalAsset.Id)).IsBetween(180_001, 200_000).ToArray();
+                });
+                _sw.Stop();
+                Console.WriteLine($"{result.Length} records in {_sw.ElapsedMilliseconds} milliseconds...");
 
-                this.ConcurrentQueriesOnAppliedIdIndexAssisted(db, 10_000);
-                this.QueryByIdNaturalIndexAssisted(db, 10_000);
-                var withIndex = this.ConcurrentQueriesOnAppliedNameIndexAssisted(db, 100);
-                var noIndex = this.ConcurrentQueriesOnNameWithoutIndex(db, 10);
-                this.ConcurrentQueriesOnAppliedDirectoryIndexAssisted(db, 10);
+                _sw.Reset();
+                _sw.Start();
+                DigitalAsset[] result2 = null;
+                Parallel.For(0, 100, (a) =>
+                {
+                    //result2 = db.Query().Where(a => a.Id >= 180_001 && a.Id <= 200_000).ToArray();
+                    result2 = db.FindAll(a => a.Id >= 180_001 && a.Id <= 200_000).ToArray();
+                });
+                _sw.Stop();
+                Console.WriteLine($"{result2.Length} records in {_sw.ElapsedMilliseconds} milliseconds...");
+
+                //GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true);
+
+                //this.ConcurrentQueriesOnAppliedIdIndexAssisted(db, 10_000);
+                //this.QueryByIdNaturalIndexAssisted(db, 10_000);
+                //var withIndex = this.ConcurrentQueriesOnAppliedNameIndexAssisted(db, 100);
+                //var noIndex = this.ConcurrentQueriesOnNameWithoutIndex(db, 10);
+                //this.ConcurrentQueriesOnAppliedDirectoryIndexAssisted(db, 10);
 
                 Console.WriteLine("Done...Press [Enter] to exit.");
                 Console.ReadLine();

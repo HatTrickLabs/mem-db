@@ -16,7 +16,8 @@ namespace HatTrick.Data
         GreaterThan,
         LessThan,
         GreaterThanEqual,
-        LessThanEqual
+        LessThanEqual,
+        Between
     }
     #endregion
 
@@ -30,6 +31,7 @@ namespace HatTrick.Data
         public MemDbIndexExpression<T> IsLessThan(YIndex key);
         public MemDbIndexExpression<T> IsGreaterThanEqualTo(YIndex key);
         public MemDbIndexExpression<T> IsLessThanEqualTo(YIndex key);
+        public MemDbIndexExpression<T> IsBetween(YIndex lower, YIndex upper);
     }
     #endregion
 
@@ -509,6 +511,15 @@ namespace HatTrick.Data
         {
             base.RelationalOperator = (int)IndexRelationalOperator.LessThanEqual;
             base.IndexKey = key;
+            return this;
+        }
+        #endregion
+
+        #region between
+        public MemDbIndexExpression<T> IsBetween(YIndex lower, YIndex upper)
+        {
+            base.RelationalOperator = (int)IndexRelationalOperator.Between;
+            base.IndexKeySet = [lower, upper];
             return this;
         }
         #endregion

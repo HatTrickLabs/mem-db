@@ -4,58 +4,6 @@ using System.Collections.Generic;
 
 namespace HatTrick.Data
 {
-    #region hybrid comparer of T
-    public sealed class HybridComparer<YIndex> : IComparer<YIndex>, IEqualityComparer<YIndex>
-    {
-        #region internals
-        private bool _isDefault;
-        private IEqualityComparer<YIndex> _equality;
-        private IComparer<YIndex> _relational;
-        #endregion
-
-        #region interface
-        public bool IsDefault => _isDefault;
-        #endregion
-
-        #region ctors
-        public HybridComparer()
-        {
-            _equality = EqualityComparer<YIndex>.Default;
-            _relational = Comparer<YIndex>.Default;
-            _isDefault = true;
-        }
-
-        public HybridComparer(IEqualityComparer<YIndex> equality, IComparer<YIndex> relational)
-        {
-            _equality = equality ?? throw new ArgumentNullException(nameof(equality));
-            _relational = relational ?? throw new ArgumentNullException(nameof(relational));
-            _isDefault = false;
-        }
-        #endregion
-
-        #region compare
-        public int Compare(YIndex x, YIndex y)
-        {
-            return _relational.Compare(x, y);
-        }
-        #endregion
-
-        #region equals
-        public bool Equals(YIndex x, YIndex y)
-        {
-            return _equality.Equals(x, y);
-        }
-        #endregion
-
-        #region get hash code
-        public int GetHashCode(YIndex obj)
-        {
-            return _equality.GetHashCode(obj);
-        }
-        #endregion
-    }
-    #endregion
-
     #region mem db index collection of T [class]
     internal sealed class MemDbIndexCollection<T> where T : class
     {
@@ -174,15 +122,15 @@ namespace HatTrick.Data
         private Func<T, YIndex> _keyResolver;
         private Dictionary<YIndex, HashSet<int>> _index;
         private List<YIndex> _lookup;
-        private HybridComparer<YIndex> _comparer;
+        private IMemDbComparer<YIndex> _comparer;
         #endregion
 
         #region interface
-        protected HybridComparer<YIndex> Comparer => _comparer;
+        protected IMemDbComparer<YIndex> Comparer => _comparer;
         #endregion
 
         #region ctors
-        internal MemDbIndex(string name, Func<T, YIndex> keyResolver, HybridComparer<YIndex> comparer) : base(name)
+        internal MemDbIndex(string name, Func<T, YIndex> keyResolver, IMemDbComparer<YIndex> comparer) : base(name)
         {
             //HMMM....in order for MemDbIndexedSet<T,YIndex> to use this as it's base class, null must be accepted here...feels janky
             //However, it's all 'internal'
@@ -412,7 +360,7 @@ namespace HatTrick.Data
             //estimate of capacity assuming a somewhat equal distribution of pointers per index key
             int capacity = (index + 1) * _index[_lookup[index]].Count;
             List<int> set = new List<int>(capacity);
-            for (int i = index; i > -1; i--)
+            for (int i = 0; i <= index; i++)
             {
                 set.AddRange(_index[_lookup[i]]);
             }
@@ -427,10 +375,7 @@ namespace HatTrick.Data
             int index = _lookup.BinarySearch(key, _comparer);
 
             if (index < 0)
-            {
-                index = ~index;
-                index -= 1;
-            }
+                index = (~index) - 1;//take compliment then shift back one...index without shift would be at first value GREATER than key...
 
             if (index < 0)
                 return Array.Empty<int>();
@@ -440,10 +385,40 @@ namespace HatTrick.Data
             //estimate of capacity assuming a somewhat equal distribution of pointers per index key
             int capacity = (index + 1) * _index[_lookup[index]].Count;
             List<int> set = new List<int>(capacity);
-            for (int i = index; i > -1; i--)
+            for (int i = 0; i <= index; i++)
             {
                 set.AddRange(_index[_lookup[i]]);
             }
+            return set.ToArray();
+        }
+        #endregion
+
+        #region between
+        internal int[] Between(YIndex lower, YIndex upper)
+        {
+            //TODO: ENSURE lower vs upper ??? should we swap them if needed ???
+                
+            int from = _lookup.BinarySearch(lower, _comparer);
+            //if the result is < 0, the key doesn't exist and anything at or above the bitwise complement is a hit
+            if (from < 0)
+                from = (~from);
+
+            int to = _lookup.BinarySearch(upper, _comparer);
+            if (to < 0)
+                to = (~to) - 1;
+
+            int hits = (to - from + 1);
+            if (hits <= 0)
+                return Array.Empty<int>();
+
+            //estimate of capacity assuming a somewhat equal distribution of pointers per index key
+            int capacity = (hits) * _index[_lookup[from]].Count;
+            List<int> set = new List<int>(capacity);
+            for (int i = from; i <= to; i++)
+            {
+                set.AddRange(_index[_lookup[i]]);
+            }
+
             return set.ToArray();
         }
         #endregion
@@ -458,7 +433,7 @@ namespace HatTrick.Data
         #endregion
 
         #region ctors
-        public MemDbIndexedSet(string name, Func<T, ICollection<YIndex>> keyResolver, HybridComparer<YIndex> comparer) : base(name, null, comparer)
+        public MemDbIndexedSet(string name, Func<T, ICollection<YIndex>> keyResolver, IMemDbComparer<YIndex> comparer) : base(name, null, comparer)
         {
             _keyResolver = keyResolver;
         }
@@ -501,7 +476,7 @@ namespace HatTrick.Data
 
             if (freshSet.Length == staleSet.Length)
             {
-                HybridComparer<YIndex> comparer = base.Comparer;
+                IMemDbComparer<YIndex> comparer = base.Comparer;
                 for (int i = 0; i < freshSet.Length; i++)
                 {
                     var f = freshSet[i];
