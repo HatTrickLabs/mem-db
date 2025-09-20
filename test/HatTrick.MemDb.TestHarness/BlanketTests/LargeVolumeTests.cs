@@ -52,7 +52,7 @@ namespace HatTrick.Data.TestHarness
         #region large volume
         public void Test_LargeVolume()
         {
-            int iterations = 10_000;
+            int iterations = 250;
             DigitalAsset[] assets = base.ResolveAssetSet();
             int total = iterations * assets.Length;
             Console.WriteLine($"Starting load of {total:n0} records into new database.");
@@ -69,24 +69,17 @@ namespace HatTrick.Data.TestHarness
                 _sw.Reset();
                 _sw.Start();
                 DigitalAsset[] result = null;
-                Parallel.For(0, 100, (a) =>
-                {
-                    result = db.QueryViaIndex<long>(nameof(DigitalAsset.Id)).IsBetween(180_001, 200_000).ToArray();
-                });
+                result = db.FindAll(a => !(string.Compare(@"C:\b", a.Directory, true) <= 0 && string.Compare(@"C:\j", a.Directory, true) >= 0));
                 _sw.Stop();
                 Console.WriteLine($"{result.Length} records in {_sw.ElapsedMilliseconds} milliseconds...");
 
                 _sw.Reset();
                 _sw.Start();
                 DigitalAsset[] result2 = null;
-                Parallel.For(0, 100, (a) =>
-                {
-                    //result2 = db.Query().Where(a => a.Id >= 180_001 && a.Id <= 200_000).ToArray();
-                    result2 = db.FindAll(a => a.Id >= 180_001 && a.Id <= 200_000).ToArray();
-                });
+                result2 = db.QueryViaIndex<string>(nameof(DigitalAsset.Directory)).IsNotBetween(@"C:\b", @"C:\j").ToArray();
                 _sw.Stop();
                 Console.WriteLine($"{result2.Length} records in {_sw.ElapsedMilliseconds} milliseconds...");
-
+                
                 //GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true);
 
                 //this.ConcurrentQueriesOnAppliedIdIndexAssisted(db, 10_000);

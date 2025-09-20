@@ -396,8 +396,6 @@ namespace HatTrick.Data
         #region between
         internal int[] Between(YIndex lower, YIndex upper)
         {
-            //TODO: ENSURE lower vs upper ??? should we swap them if needed ???
-                
             int from = _lookup.BinarySearch(lower, _comparer);
             //if the result is < 0, the key doesn't exist and anything at or above the bitwise complement is a hit
             if (from < 0)
@@ -416,6 +414,51 @@ namespace HatTrick.Data
             List<int> set = new List<int>(capacity);
             for (int i = from; i <= to; i++)
             {
+                set.AddRange(_index[_lookup[i]]);
+            }
+
+            return set.ToArray();
+        }
+        #endregion
+
+        #region not between
+        internal int[] NotBetweenxxx(YIndex lower, YIndex upper)
+        {
+            int[] below = this.LessThan(lower);
+            int[] above = this.GreaterThan(upper);
+
+            int count = below.Length + above.Length;
+
+            if (count == 0)
+                return Array.Empty<int>();
+
+            int[] notBetween = new int[count];
+            Buffer.BlockCopy(below, 0, notBetween, 0, (below.Length * sizeof(int)));
+            Buffer.BlockCopy(above, 0, notBetween, (below.Length * sizeof(int)), (above.Length * sizeof(int)));
+
+            return notBetween;
+        }
+
+        internal int[] NotBetween(YIndex lower, YIndex upper)
+        {
+            int from = _lookup.BinarySearch(lower, _comparer);
+            //if the result is < 0, the key doesn't exist and anything at or above the bitwise complement is a hit
+            if (from < 0)
+                from = (~from) - 1;
+
+            int to = _lookup.BinarySearch(upper, _comparer);
+            if (to < 0)
+                to = ~to;
+
+            int hits = _lookup.Count - (to - from);
+
+            int capacity = hits * _index[_lookup[from]].Count;
+            List<int> set = new List<int>(capacity);
+            for (int i = 0; i < _lookup.Count; i++)
+            {
+                if (i >= from && i <= to)
+                    continue;
+
                 set.AddRange(_index[_lookup[i]]);
             }
 
