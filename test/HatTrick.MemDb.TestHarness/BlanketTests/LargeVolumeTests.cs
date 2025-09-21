@@ -52,7 +52,7 @@ namespace HatTrick.Data.TestHarness
         #region large volume
         public void Test_LargeVolume()
         {
-            int iterations = 250;
+            int iterations = 1_000;
             DigitalAsset[] assets = base.ResolveAssetSet();
             int total = iterations * assets.Length;
             Console.WriteLine($"Starting load of {total:n0} records into new database.");
@@ -69,14 +69,24 @@ namespace HatTrick.Data.TestHarness
                 _sw.Reset();
                 _sw.Start();
                 DigitalAsset[] result = null;
-                result = db.FindAll(a => !(string.Compare(@"C:\b", a.Directory, true) <= 0 && string.Compare(@"C:\j", a.Directory, true) >= 0));
+                //result = db.FindAll(a => !(string.Compare(@"C:\.", a.Directory, true) <= 0 && string.Compare(@"C:\i", a.Directory, true) >= 0));
+                //result = db.FindAll(a => !(a.Id >= 100_001 && a.Id <= 9_000_000));
+                result = db.Query().Where(a => !(a.Id >= 100_001 && a.Id <= 9_000_000))
+                //.OrderBy((a, b) => b.Id.CompareTo(a.Id))
+                //.Skip(10_000).Limit(10_000)
+                .ToArray();
                 _sw.Stop();
                 Console.WriteLine($"{result.Length} records in {_sw.ElapsedMilliseconds} milliseconds...");
 
                 _sw.Reset();
                 _sw.Start();
                 DigitalAsset[] result2 = null;
-                result2 = db.QueryViaIndex<string>(nameof(DigitalAsset.Directory)).IsNotBetween(@"C:\b", @"C:\j").ToArray();
+                //result2 = db.QueryViaIndex<string>(nameof(DigitalAsset.Directory)).IsNotBetween(@"C:\.", @"C:\i").ToArray();
+                result2 = db.QueryViaIndex<long>(nameof(DigitalAsset.Id))
+                    .IsNotBetween(100_001, 9_000_000)
+                    //.OrderBy((a, b) => b.Id.CompareTo(a.Id))
+                    //.Skip(10_000).Limit(10_000)
+                    .ToArray();
                 _sw.Stop();
                 Console.WriteLine($"{result2.Length} records in {_sw.ElapsedMilliseconds} milliseconds...");
                 

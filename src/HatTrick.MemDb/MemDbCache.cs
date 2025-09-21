@@ -499,13 +499,7 @@ namespace HatTrick.Data
             var idx = _appliedIndexes.Get(expression.IndexName).Of<YIndex>();
             lock (_lock)
             {
-                int[] pointers = null;
-                if (idx is MemDbIndexedSet<T, YIndex> idxSet)
-                    pointers = MemDbIndexAccessor<T>.ResolvePointers(idxSet, expression);
-
-                else
-                    pointers = MemDbIndexAccessor<T>.ResolvePointers(idx, expression);
-
+                int[] pointers = MemDbIndexAccessor<T>.ResolvePointers(idx, expression);
                 int length = pointers.Length;
                 var set = new MemDbRecord<T>[length];
 

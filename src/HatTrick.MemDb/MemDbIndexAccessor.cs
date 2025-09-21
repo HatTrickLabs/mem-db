@@ -11,6 +11,18 @@ namespace HatTrick.Data
         public static int[] ResolvePointers<YIndex>(MemDbIndex<T, YIndex> index, MemDbIndexExpression<T, YIndex> expression) where YIndex : IConvertible
         {
             int[] pointers = null;
+            if (index is MemDbIndexedSet<T, YIndex> idxSet)
+                pointers = MemDbIndexAccessor<T>.ResolveIndexedSetPointers(idxSet, expression);
+
+            else
+                pointers = MemDbIndexAccessor<T>.ResolveIndexPointers(index, expression);
+
+            return pointers;
+        }
+
+        private static int[] ResolveIndexPointers<YIndex>(MemDbIndex<T, YIndex> index, MemDbIndexExpression<T, YIndex> expression) where YIndex : IConvertible
+        {
+            int[] pointers = null;
             IndexRelationalOperator op = (IndexRelationalOperator)expression.RelationalOperator;
             switch (op)
             {
@@ -48,7 +60,7 @@ namespace HatTrick.Data
             return pointers;
         }
 
-        public static int[] ResolvePointers<YIndex>(MemDbIndexedSet<T, YIndex> index, MemDbIndexExpression<T, YIndex> expression) where YIndex : IConvertible
+        private static int[] ResolveIndexedSetPointers<YIndex>(MemDbIndexedSet<T, YIndex> index, MemDbIndexExpression<T, YIndex> expression) where YIndex : IConvertible
         {
             int[] pointers = null;
             IndexedSetRelationalOperator op = (IndexedSetRelationalOperator)expression.RelationalOperator;

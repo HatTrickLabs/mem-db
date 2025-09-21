@@ -422,7 +422,7 @@ namespace HatTrick.Data
         #endregion
 
         #region not between
-        internal int[] NotBetweenxxx(YIndex lower, YIndex upper)
+        internal int[] NotBetween(YIndex lower, YIndex upper)
         {
             int[] below = this.LessThan(lower);
             int[] above = this.GreaterThan(upper);
@@ -439,12 +439,15 @@ namespace HatTrick.Data
             return notBetween;
         }
 
-        internal int[] NotBetween(YIndex lower, YIndex upper)
-        {
+        internal int[] NotBetweenxxx(YIndex lower, YIndex upper)
+        {//this does not seem to be any more efficient than the 'NotBetween' above using LessThan, GreaterThan and BlockCopy...
+
             int from = _lookup.BinarySearch(lower, _comparer);
             //if the result is < 0, the key doesn't exist and anything at or above the bitwise complement is a hit
             if (from < 0)
-                from = (~from) - 1;
+                from = ~from;
+
+            from -= 1;//get below the potential hit...
 
             int to = _lookup.BinarySearch(upper, _comparer);
             if (to < 0)
@@ -452,11 +455,14 @@ namespace HatTrick.Data
 
             int hits = _lookup.Count - (to - from);
 
-            int capacity = hits * _index[_lookup[from]].Count;
+            if (hits == 0)
+                return Array.Empty<int>();
+
+            int capacity = hits * _index[_lookup[from < 0 ? to : from]].Count;
             List<int> set = new List<int>(capacity);
             for (int i = 0; i < _lookup.Count; i++)
             {
-                if (i >= from && i <= to)
+                if (i > from && i <= to)
                     continue;
 
                 set.AddRange(_index[_lookup[i]]);
