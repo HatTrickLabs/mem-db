@@ -150,8 +150,12 @@ namespace HatTrick.Data
         #region get full pointer set
         protected HashSet<int> GetFullPointerSet()
         {
-            var pointers = new HashSet<int>(_index[_lookup[0]].Count * _lookup.Count);
-            for (int i = 0; i < _lookup.Count; i++)
+            int cnt = _lookup.Count;
+            var pointers = cnt == 0 
+                ? new HashSet<int>() 
+                : new HashSet<int>(_index[_lookup[0]].Count * cnt);
+
+            for (int i = 0; i < cnt; i++)
             {
                 pointers.UnionWith(_index[_lookup[i]]);
             }
