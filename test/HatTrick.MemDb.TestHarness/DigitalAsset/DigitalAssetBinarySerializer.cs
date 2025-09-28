@@ -44,7 +44,7 @@ namespace HatTrick.Data
 
         public byte[] Serialize(DigitalAsset record)
         {
-            int capacity = sizeof(long) + 255 + (sizeof(long) * 5) + sizeof(ulong);//TODO: WTF is the ulong ????
+            int capacity = sizeof(int) + sizeof(long) + 255 + (sizeof(long) * 5) + sizeof(ulong);
 
             byte[] raw = null;
             using (var ms = new MemoryStream(capacity))

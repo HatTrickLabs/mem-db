@@ -259,8 +259,11 @@ namespace HatTrick.Data
         #region in
         internal int[] In(YIndex[] keys)
         {
+            if (_lookup.Count == 0)
+                return Array.Empty<int>();
+
             //estimate of capacity assuming a somewhat equal distribution of pointers per index key
-            int capacity = _lookup.Count > 0 ? _index[_lookup[0]].Count * keys.Length : keys.Length * 4;
+            int capacity = _index[_lookup[0]].Count * keys.Length;
             var set = new List<int>(capacity);
             for (int i = 0; i < keys.Length; i++)
             {

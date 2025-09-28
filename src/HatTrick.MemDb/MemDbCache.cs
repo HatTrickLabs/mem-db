@@ -394,36 +394,37 @@ namespace HatTrick.Data
                 ? (r) => r.State == RecordState.Fresh && expression.Filter(r.Value)
                 : (r) => r.State == RecordState.Fresh;
 
+            List<MemDbRecord<T>> matches = null;
             lock (_lock)
             {
-                var matches = new List<MemDbRecord<T>>();
+                matches = new List<MemDbRecord<T>>();
                 for (int i = 0; i < _records.Count; i++)
                 {
                     MemDbRecord<T> r = _records[i];
                     if (filter(r))
                         matches.Add(r);
                 }
-
-                int count = matches.Count;
-                int skip = expression.SkipCount;
-                int limit = expression.LimitCount;
-
-                if (count == 0 || skip >= count)
-                    return Array.Empty<MemDbRecord<T>>();
-
-                if (expression.HasOrderBy && count > 1)
-                    matches.Sort((a, b) => expression.OrderByComparison(a.Value, b.Value));
-
-                if (expression.HasSkip || expression.HasLimit)
-                {
-                    if (limit > count - skip)
-                        limit = count - skip;
-
-                    matches = matches.Slice(skip, limit);
-                }
-
-                return matches.ToArray();
             }
+
+            int count = matches.Count;
+            int skip = expression.SkipCount;
+            int limit = expression.LimitCount;
+
+            if (count == 0 || skip >= count)
+                return Array.Empty<MemDbRecord<T>>();
+
+            if (expression.HasOrderBy && count > 1)
+                matches.Sort((a, b) => expression.OrderByComparison(a.Value, b.Value));
+
+            if (expression.HasSkip || expression.HasLimit)
+            {
+                if (limit > count - skip)
+                    limit = count - skip;
+
+                matches = matches.Slice(skip, limit);
+            }
+
+            return matches.ToArray();
         }
         #endregion
 
@@ -497,14 +498,16 @@ namespace HatTrick.Data
         private MemDbRecord<T>[] ExecuteIndexQueryExpression<YIndex>(MemDbIndexExpression<T, YIndex> expression) where YIndex : IConvertible
         {
             var idx = _appliedIndexes.Get(expression.IndexName).Of<YIndex>();
+            int skip = expression.SkipCount;
+            int limit = expression.LimitCount;
+            MemDbRecord<T>[] set = null;
+            int length = 0;
+
             lock (_lock)
             {
                 int[] pointers = MemDbIndexAccessor<T>.ResolvePointers(idx, expression);
-                int length = pointers.Length;
-                var set = new MemDbRecord<T>[length];
-
-                int skip = expression.SkipCount;
-                int limit = expression.LimitCount;
+                length = pointers.Length;
+                set = new MemDbRecord<T>[length];
 
                 if (length == 0 || skip >= length)
                     return Array.Empty<MemDbRecord<T>>();
@@ -513,19 +516,19 @@ namespace HatTrick.Data
                 {
                     set[i] = _records[pointers[i]];
                 }
+            }
 
-                if (expression.HasOrderBy && length > 1)
+            if (expression.HasOrderBy && length > 1)
                     Array.Sort(set, (a,b) => expression.OrderByComparison(a.Value, b.Value));
 
-                if (expression.HasSkip || expression.HasLimit)
-                {
-                    if (limit > length - skip)
-                        limit = length - skip;
+            if (expression.HasSkip || expression.HasLimit)
+            {
+                if (limit > length - skip)
+                    limit = length - skip;
 
-                    set = set[skip..(skip + limit)];
-                }
-                return set;
+                set = set[skip..(skip + limit)];
             }
+            return set;
         }
         #endregion
 
