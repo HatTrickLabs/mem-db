@@ -20,19 +20,19 @@ namespace HatTrick.Data.TestHarness
         #region ctor
         public LargeVolumeTests(AssetResolver assetResolver) : base(_dataset, _dbPath, assetResolver)
         {
-            MemDb.ConfigureFor<DigitalAsset>(_dataset, _dbPath)
+            MemDb.ConfigureFor<DigitalAsset>(_dataset/*, _dbPath*/)
                 //.SetMode(AccessMode.AppendOnly)
                 //.SetFlushInterval(0)
                 .CloneWith(() => new DigitalAssetCloner())
                 .SerializeWith(() => new DigitalAssetBinarySerializer())
                 .IndexOnIdentity(true)
-                //.ApplyIndex<string>(nameof(DigitalAsset.Name), (a) => a.Name)
-                //.ApplyIndex<long>(nameof(DigitalAsset.Id), (a) => a.Id)
-                //.ApplyIndex<string>(
-                //    name: nameof(DigitalAsset.Directory),
-                //    keyResolver: (a) => a.Directory,
-                //    comparer: new MemDbComparer<string>(StringComparer.CurrentCultureIgnoreCase, StringComparer.CurrentCultureIgnoreCase)
-                //)
+                .ApplyIndex<string>(nameof(DigitalAsset.Name), (a) => a.Name)
+                .ApplyIndex<long>(nameof(DigitalAsset.Id), (a) => a.Id)
+                .ApplyIndex<string>(
+                    name: nameof(DigitalAsset.Directory),
+                    keyResolver: (a) => a.Directory,
+                    comparer: new MemDbComparer<string>(StringComparer.CurrentCultureIgnoreCase, StringComparer.CurrentCultureIgnoreCase)
+                )
                 //.EncryptWithPassword(() => "This is a super fancy and complex and probably difficult to crack password!!!")
                 .Register();
         }
@@ -44,7 +44,7 @@ namespace HatTrick.Data.TestHarness
             for (int i = 0; i < assets.Length; i++)
             {
                 var asset = assets[i];
-                db.Insert(asset, (id) => asset.Id = id, true);
+                db.Insert(asset, (id) => asset.Id = id);
             }
         }
         #endregion
@@ -68,7 +68,7 @@ namespace HatTrick.Data.TestHarness
 
                 Thread t1 = new Thread(() =>
                 {
-                    for (int i = 0; i < 10_000; i++)
+                    for (int i = 0; i < 1_000; i++)
                     {
                         this.LoadDb(db, assets);
                         if (i % 100 == 0)
@@ -109,6 +109,7 @@ namespace HatTrick.Data.TestHarness
                                   .OrderBy((a,b) => a.Created.CompareTo(b.Created))
                                   .Skip(100).Limit(100)
                                   .Select(a => a.FullPath);
+
                         if (i % 10 == 0)
                         {
                             Console.WriteLine($"Processed T3 {i} queries so far...");

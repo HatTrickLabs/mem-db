@@ -8,6 +8,7 @@ namespace HatTrick.Data
 {
     internal class MemDbIndexAccessor<T> where T : class
     {
+        #region resolve pointers
         public static int[] ResolvePointers<YIndex>(MemDbIndex<T, YIndex> index, MemDbIndexExpression<T, YIndex> expression) where YIndex : IConvertible
         {
             int[] pointers = null;
@@ -19,7 +20,9 @@ namespace HatTrick.Data
 
             return pointers;
         }
+        #endregion
 
+        #region resolve index pointers
         private static int[] ResolveIndexPointers<YIndex>(MemDbIndex<T, YIndex> index, MemDbIndexExpression<T, YIndex> expression) where YIndex : IConvertible
         {
             int[] pointers = null;
@@ -59,7 +62,9 @@ namespace HatTrick.Data
 
             return pointers;
         }
+        #endregion
 
+        #region resolve indexed set pointers
         private static int[] ResolveIndexedSetPointers<YIndex>(MemDbIndexedSet<T, YIndex> index, MemDbIndexExpression<T, YIndex> expression) where YIndex : IConvertible
         {
             int[] pointers = null;
@@ -111,5 +116,6 @@ namespace HatTrick.Data
 
             return pointers;
         }
+        #endregion
     }
 }

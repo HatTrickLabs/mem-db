@@ -507,11 +507,11 @@ namespace HatTrick.Data
             {
                 int[] pointers = MemDbIndexAccessor<T>.ResolvePointers(idx, expression);
                 length = pointers.Length;
-                set = new MemDbRecord<T>[length];
 
                 if (length == 0 || skip >= length)
                     return Array.Empty<MemDbRecord<T>>();
 
+                set = new MemDbRecord<T>[length];
                 for (int i = 0; i < pointers.Length; i++)
                 {
                     set[i] = _records[pointers[i]];
