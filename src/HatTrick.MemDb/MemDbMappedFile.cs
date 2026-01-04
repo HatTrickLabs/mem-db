@@ -314,16 +314,16 @@ namespace HatTrick.Data
         #endregion
 
         #region flush
-        void IMemDbPersister<T>.Flush(object state)
+        void IMemDbPersister<T>.Flush(object context)
         {
-            //state will be:
+            //context will be:
             //null if called from timer
             //false if flush manually called through cache / snapshot
             //true if called from close/dispose
 
             //this is to avoid the timer 'flush' from getting in after
             //the 'close' flush has already entered...
-            if (state == null && _isClosed)
+            if (context == null && _isClosed)
                 return;
 
             try
@@ -334,11 +334,11 @@ namespace HatTrick.Data
             catch
             {
                 //only throw if called from primary thread and NOT being disposed.
-                if (state is false)
+                if (context is false)
                     throw;//this is a manual flush call.
             }
 
-            if (!_isClosed && state is null && _flushInterval > 0)
+            if (!_isClosed && context is null && _flushInterval > 0)
                 _fileSyncTimer.Change(_flushInterval, Timeout.Infinite);
         }
         #endregion
