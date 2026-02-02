@@ -116,9 +116,8 @@ namespace HatTrick.Data
             using ZipArchive zip = ZipFile.Open(_fullZipArchiveFilePath, ZipArchiveMode.Read);
             ZipArchiveEntry[] zipEntries = this.ResolveArchiveFileSets(zip);
 
-            //TODO: Ensure available space...
             long maxBytes = zipEntries.Max(e => e.Length);
-            this.EnsureDiskSpace(maxBytes);
+            this.EnsureDiskSpace(maxBytes + 4096);//add 4096 to ensure we clear the typical file system block size...
 
             for (int i = 0; i < zipEntries.Length; i++)
             {
@@ -139,6 +138,8 @@ namespace HatTrick.Data
             }
         }
         #endregion
+
+        #region resolve max 
 
         #region resolve archive file sets
         private ZipArchiveEntry[] ResolveArchiveFileSets(ZipArchive zip)
@@ -213,6 +214,7 @@ namespace HatTrick.Data
                 string ex = "Restore cannot be completed..." + Environment.NewLine
                           + $"Insufficient disk space available on {drive.Name} ...{Environment.NewLine}"
                           + $"space needed: {spaceNeeded} space available: {spaceAvailable}";
+
                 throw new InvalidOperationException(ex);
             }
         }

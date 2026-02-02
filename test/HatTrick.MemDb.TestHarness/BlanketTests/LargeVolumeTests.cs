@@ -20,7 +20,7 @@ namespace HatTrick.Data.TestHarness
         #region ctor
         public LargeVolumeTests(AssetResolver assetResolver) : base(_dataset, _dbPath, assetResolver)
         {
-            MemDb.ConfigureFor<DigitalAsset>(_dataset/*, _dbPath*/)
+            MemDb.ConfigureFor<DigitalAsset>(_dataset, _dbPath)
                 //.SetMode(AccessMode.AppendOnly)
                 //.SetFlushInterval(0)
                 .CloneWith(() => new DigitalAssetCloner())
@@ -33,7 +33,7 @@ namespace HatTrick.Data.TestHarness
                     keyResolver: (a) => a.Directory,
                     comparer: new MemDbComparer<string>(StringComparer.CurrentCultureIgnoreCase, StringComparer.CurrentCultureIgnoreCase)
                 )
-                //.EncryptWithPassword(() => "This is a super fancy and complex and probably difficult to crack password!!!")
+                .EncryptWithPassword(() => "This is a super fancy and complex and probably difficult to crack password!!!")
                 .Register();
         }
         #endregion
@@ -63,6 +63,7 @@ namespace HatTrick.Data.TestHarness
                 {
                     this.LoadDb(db, assets);
                 }
+                db.Flush();
                 _sw.Stop();
                 Console.WriteLine($"{_sw.ElapsedMilliseconds}\tCompleted db load of {total:n0} records.");
 

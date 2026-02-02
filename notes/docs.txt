@@ -24,7 +24,7 @@ MemDb Docs....
   - Always safe concurrency.
   - Cached data integrity (never return ref pointers to internal objects).
   - Baked in record level data encryption (AES 256 bit)
-  - Online snapshots.
+  - Online/Hot snapshots.
   - Archive and restore (ability to restore a database back to a histrical point in time).
   - Super simple implementation given default settings.
   - Powerful extensability points when performance and efficiency are a necessity.
