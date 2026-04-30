@@ -139,8 +139,6 @@ namespace HatTrick.Data
         }
         #endregion
 
-        #region resolve max 
-
         #region resolve archive file sets
         private ZipArchiveEntry[] ResolveArchiveFileSets(ZipArchive zip)
         {

@@ -22,7 +22,7 @@ MemDb Docs....
   - Entire data set stored in RAM for fast reads (can be used as a file backed cache).
   - Powerful query capabilities using native code (no sql language parsing).
   - Always safe concurrency.
-  - Cached data integrity (never return ref pointers to internal objects).
+  - Cached data integrity (never insert ref pointers and never return ref pointers).
   - Baked in record level data encryption (AES 256 bit)
   - Online/Hot snapshots.
   - Archive and restore (ability to restore a database back to a histrical point in time).
@@ -31,24 +31,31 @@ MemDb Docs....
   - 
   
 - Where (where can it be found)
-  - github.com
-  - nuget.org
-  - ** Hat Trick Tech Articles
+  - github.com: https://github.com/hattricklabs/mem-db
+  - nuget.org: TBD
+  - hattricklabs.com
   
   
 - Getting Started
 -----------------
-- Nuget package
-- Namespace
-- Definition of T (Person)
-- MemDb.Register<T>
-- MemDb.Open<T>
-- Insert(p) Eric Cartman
+- Install nuget package (TBD)
+- Namespace: HatTrick.Data
+- Define T for MemDb<T>. T being the data type persisted (a simple or complex class).
+- MemDb.ConfigureFor<T>(string datasetName, string path).Register<T>()
+- MemDb.Open<T>(string datasetName);
+- Insert(T record) //Eric Cartman
 - Update(
-	apply: (p) => p.MiddleName = "Theodore", 
-	where: (p) => p.LastName == "Cartman"
+	Action<T> apply,
+    Func<T, bool> where
   );
-- Delete((p) => p.LastName == "Cartman");
+- Find(long id);
+ Find(Func<T, bool> where);
+x FindAll(params long[] ids);
+- FindAll(Func<T, bool> where);
+x Count();
+x Count(Func<T, bool> where);
+- Delete(long id);
+x Delete(Func<T, bool> where);
   
  
  The Basics
@@ -115,7 +122,7 @@ Encryption (AES 256 bit)
 
 Indexes
 ---------------------
-- Configure identity (id) index: .IndexOnIdentity(bool shouldIndex)
+- Configure identity (id) index, this is the natural index: .IndexOnIdentity(bool shouldIndex) 
 - Query via identity index (Id) (Hash lookup) O(1)
  - Find(1)
  - FindAll([1,2,3,4,5])

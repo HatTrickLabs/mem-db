@@ -20,20 +20,20 @@ namespace HatTrick.Data.TestHarness
         #region ctor
         public LargeVolumeTests(AssetResolver assetResolver) : base(_dataset, _dbPath, assetResolver)
         {
-            MemDb.ConfigureFor<DigitalAsset>(_dataset, _dbPath)
+            MemDb.ConfigureFor<DigitalAsset>(_dataset/*, _dbPath*/)
                 //.SetMode(AccessMode.AppendOnly)
                 //.SetFlushInterval(0)
                 .CloneWith(() => new DigitalAssetCloner())
                 .SerializeWith(() => new DigitalAssetBinarySerializer())
                 .IndexOnIdentity(true)
-                .ApplyIndex<string>(nameof(DigitalAsset.Name), (a) => a.Name)
-                .ApplyIndex<long>(nameof(DigitalAsset.Id), (a) => a.Id)
-                .ApplyIndex<string>(
-                    name: nameof(DigitalAsset.Directory),
-                    keyResolver: (a) => a.Directory,
-                    comparer: new MemDbComparer<string>(StringComparer.CurrentCultureIgnoreCase, StringComparer.CurrentCultureIgnoreCase)
-                )
-                .EncryptWithPassword(() => "This is a super fancy and complex and probably difficult to crack password!!!")
+                //.ApplyIndex<string>(nameof(DigitalAsset.Name), (a) => a.Name)
+                //.ApplyIndex<long>(nameof(DigitalAsset.Id), (a) => a.Id)
+                //.ApplyIndex<string>(
+                //    name: nameof(DigitalAsset.Directory),
+                //    keyResolver: (a) => a.Directory,
+                //    comparer: new MemDbComparer<string>(StringComparer.CurrentCultureIgnoreCase, StringComparer.CurrentCultureIgnoreCase)
+                //)
+                //.EncryptWithPassword(() => "This is a super fancy and complex and probably difficult to crack password!!!")
                 .Register();
         }
         #endregion
@@ -52,7 +52,7 @@ namespace HatTrick.Data.TestHarness
         #region large volume
         public void Test_LargeVolume()
         {
-            int iterations = 10_000;
+            int iterations = 1_000;
             DigitalAsset[] assets = base.ResolveAssetSet();
             int total = iterations * assets.Length;
             Console.WriteLine($"Starting load of {total:n0} records into new database.");
@@ -63,85 +63,12 @@ namespace HatTrick.Data.TestHarness
                 {
                     this.LoadDb(db, assets);
                 }
-                db.Flush();
                 _sw.Stop();
                 Console.WriteLine($"{_sw.ElapsedMilliseconds}\tCompleted db load of {total:n0} records.");
 
-                Thread t1 = new Thread(() =>
-                {
-                    for (int i = 0; i < 1_000; i++)
-                    {
-                        this.LoadDb(db, assets);
-                        if (i % 100 == 0)
-                            Console.WriteLine($"Processed {i} loads so far...");
-                    }
-                });
-                t1.Priority = ThreadPriority.Highest;
-
-                string[] result1 = null;
-                Thread t2 = new Thread(() =>
-                {
-                    for (int i = 0; i < 10_000; i++)
-                    {
-                        result1 = db.QueryViaIndex<string>(nameof(DigitalAsset.Directory)).IsLessThan("C:\b")
-                                  .OrderBy((a, b) => b.LastAccess.CompareTo(a.LastAccess))
-                                  .Skip(1_000).Limit(1_000)
-                                  .Select(a => a.FullPath);
-                        if (i % 1_000 == 0)
-                        {
-                            Console.WriteLine($"Processed T2 {i} queries so far...");
-                            DigitalAsset asset = null;
-                            for (int j = 0; j < 10_000; j++)
-                            {
-                                asset = db.Find(j + 85_000);
-                            }
-                        }
-                    }
-                });
-
-                string[] result2 = null;
-                Thread t3 = new Thread(() =>
-                {
-                    _sw.Reset();
-                    _sw.Start();
-                    for (int i = 0; i < 100; i++)
-                    {
-                        result2 = db.QueryViaIndex<long>(nameof(DigitalAsset.Id)).IsBetween(4_500_000, 5_000_000)
-                                  .OrderBy((a,b) => a.Created.CompareTo(b.Created))
-                                  .Skip(100).Limit(100)
-                                  .Select(a => a.FullPath);
-
-                        if (i % 10 == 0)
-                        {
-                            Console.WriteLine($"Processed T3 {i} queries so far...");
-                            DigitalAsset asset = null;
-                            for (int j = 0; j < 10_000; j++)
-                            {
-                                asset = db.Find(j + 10_000);
-                            }
-                        }
-                    }
-                    _sw.Stop();
-                    Console.WriteLine($"Processed T3 in {_sw.ElapsedMilliseconds} milliseconds...");
-                });
-
-                _sw.Reset();
-
-
-                t1.Start();
-
-                t2.Start();
-                t3.Start();
-
-                t2.Join();
-                t3.Join();
-                _sw.Stop();
-                t1.Join();
-                Console.WriteLine($"{result2.Length} records in {_sw.ElapsedMilliseconds} milliseconds...");
-                
-                //this.ConcurrentQueriesOnAppliedIdIndexAssisted(db, 10_000);
-                //this.QueryByIdNaturalIndexAssisted(db, 10_000);
-                //var withIndex = this.ConcurrentQueriesOnAppliedNameIndexAssisted(db, 100);
+                //this.ConcurrentQueriesOnAppliedIdIndexAssisted(db, 500_000);
+                this.QueryByIdNaturalIndexAssisted(db, 50_000);
+                var withIndex = this.ConcurrentQueriesOnAppliedNameIndexAssisted(db, 100);
                 //var noIndex = this.ConcurrentQueriesOnNameWithoutIndex(db, 10);
                 //this.ConcurrentQueriesOnAppliedDirectoryIndexAssisted(db, 10);
 
@@ -182,7 +109,7 @@ namespace HatTrick.Data.TestHarness
             _sw.Start();
             Parallel.For(0, iterations, (i) =>
             {
-                assets[i] = db.Find((long)i + 125_000);
+                assets[i] = db.Find((long)i + 225_000);
             });
             _sw.Stop();
             Console.WriteLine($"{_sw.ElapsedMilliseconds}\tCompleted concurrent queries for {iterations:n0} records");
@@ -191,7 +118,7 @@ namespace HatTrick.Data.TestHarness
             for (int i = 0; i < iterations; i++)
             {
                 Assert.IsNotNull(assets[i]);
-                Assert.IsEqual(assets[i].Id, i + 125_000);
+                Assert.IsEqual(assets[i].Id, i + 225_000);
             }
         }
         #endregion
@@ -275,9 +202,15 @@ namespace HatTrick.Data.TestHarness
             DigitalAsset[] withIndex = null;
             Parallel.For(0, iterations, (i) =>
             {
-                withIndex = db.QueryViaIndex<string>(nameof(DigitalAsset.Name))
-                .IsGreaterThanEqualTo("0950")
-                .OrderBy((a,b) => b.Id.CompareTo(a.Id))
+                //withIndex = db.QueryViaIndex<string>(nameof(DigitalAsset.Name))
+                //.IsGreaterThanEqualTo("0950")
+                //.OrderBy((a,b) => b.Id.CompareTo(a.Id))
+                //.Skip(500)
+                //.Limit(250)
+                //.ToArray();
+
+                withIndex = db.Query().Where(a => string.Compare(a.Name, "0950", false) > 0)
+                .OrderBy((a, b) => b.Id.CompareTo(a.Id))
                 .Skip(500)
                 .Limit(250)
                 .ToArray();

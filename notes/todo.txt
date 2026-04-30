@@ -54,3 +54,6 @@ x The HashSet(s) used within MemDbIndexedSet.Apply|Remove must be initialized wi
   - Find and restore a specific set of records by predicate.
   - Build a db and map file set (restore) up to a specific point in time.
   - Build ad db/map file set up to a fail point or point of corruption (until an error is encountered).
+- Implement a safe predicate / func<T,bool> flag for Update and Delete where clauses...Enabling a MemDb management tool
+  would expose the ability for update and delete expressions read and parsed from a user...Must have a safe cloned record to pass through
+  the where func / predicate filter if configurd to do so.
