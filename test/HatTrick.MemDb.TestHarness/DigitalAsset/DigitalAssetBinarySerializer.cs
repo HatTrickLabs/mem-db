@@ -5,7 +5,7 @@ using System.Threading;
 
 namespace HatTrick.Data
 {
-    public class DigitalAssetBinarySerializer : IBinaryReadMemDbSerializer<DigitalAsset>
+    public class DigitalAssetBinarySerializer : IMemDbSerializer<DigitalAsset>
     {
         #region internals
         private int _serializerCount;
@@ -60,7 +60,7 @@ namespace HatTrick.Data
         #endregion
 
         #region deserialize
-        public DigitalAsset Deserialize(BinaryReader from)
+        public DigitalAsset Deserialize(BinaryReader from, int length)
         {
             var type = (DigitalAssetType)from.ReadInt32();
             var record = DigitalAsset.CreateNew(type);
@@ -87,7 +87,7 @@ namespace HatTrick.Data
             {
                 using (var reader = new BinaryReader(ms))
                 {
-                    record = this.Deserialize(reader);
+                    record = this.Deserialize(reader, from.Length);
                 }
             }
             return record;

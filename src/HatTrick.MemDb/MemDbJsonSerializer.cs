@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
@@ -163,7 +164,16 @@ namespace HatTrick.Data
             T val = JsonSerializer.Deserialize<T>(from, _options);
             return val;
         }
-        #endregion        
+
+        public T Deserialize(BinaryReader from, int length)
+        {
+            //Span<byte> raw = length > 2048 ? new byte[length] : stackalloc byte[length];
+            Span<byte> raw = (length > 2048) ? ArrayPool<byte>.Shared.Rent(length) : stackalloc byte[length];
+            from.BaseStream.ReadExactly(raw);
+            T val = JsonSerializer.Deserialize<T>(raw, _options);
+            return val;
+        }
+        #endregion
     }
     #endregion
 }

@@ -161,7 +161,7 @@ namespace HatTrick.Data
         }
         #endregion
 
-        #region contains configuratoin for
+        #region contains configuration for
         public static bool ContainsConfigurationFor(string datasetName)
         {
             lock (_lock)

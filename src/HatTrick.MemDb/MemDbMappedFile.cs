@@ -31,7 +31,6 @@ namespace HatTrick.Data
         private Lock _flushLock;
 
         private IMemDbSerializer<T> _serializer;
-        private IBinaryReadMemDbSerializer<T> _binReadSerializer;//optional impl
         private IMemDbEncryptor _encryptor;
         private IMemDbSnapshotter _snapshotter;
 
@@ -61,8 +60,6 @@ namespace HatTrick.Data
             _flushInterval = config.FlushInterval;
 
             _serializer = config.GetSerializer();
-            if (_serializer is IBinaryReadMemDbSerializer<T> binReadSerializer)
-                _binReadSerializer = binReadSerializer;
 
             _encryptor = config.GetEncryptor();
             _snapshotter = config.GetSnapshotter();
@@ -232,12 +229,7 @@ namespace HatTrick.Data
         #region deserialize record
         private T DeserializeRecord(BinaryReader from, int length)
         {
-            if (_binReadSerializer is not null)
-                return _binReadSerializer.Deserialize(from);
-
-            Span<byte> raw = length > 2048 ? new byte[length] : stackalloc byte[length];
-            from.BaseStream.ReadExactly(raw);
-            return _serializer.Deserialize(raw);
+            return _serializer.Deserialize(from, length);
         }
         #endregion
 

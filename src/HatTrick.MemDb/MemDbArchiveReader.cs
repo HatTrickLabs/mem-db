@@ -15,7 +15,6 @@ namespace HatTrick.Data
         private string _fullZipArchivePath;
 
         private IMemDbSerializer<T> _serializer;
-        private IBinaryReadMemDbSerializer<T> _binReadSerializer;//optional impl
         private IMemDbEncryptor _encryptor;
         #endregion
 
@@ -38,9 +37,6 @@ namespace HatTrick.Data
             _archivePath = config.ArchivePath;
 
             _serializer = config.GetSerializer();
-
-            if (_serializer is IBinaryReadMemDbSerializer<T> binReadSerializer)
-                _binReadSerializer = binReadSerializer;
 
             _encryptor = config.GetEncryptor();
 
@@ -148,12 +144,7 @@ namespace HatTrick.Data
         #region deserialize record
         private T DeserializeRecord(BinaryReader from, int length)
         {
-            if (_binReadSerializer is not null)
-                return _binReadSerializer.Deserialize(from);
-
-            Span<byte> raw = length > 2048 ? new byte[length] : stackalloc byte[length];
-            from.BaseStream.ReadExactly(raw);
-            return _serializer.Deserialize(raw);
+            return _serializer.Deserialize(from, length);
         }
         #endregion
     }
