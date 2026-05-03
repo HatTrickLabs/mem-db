@@ -9,7 +9,7 @@ namespace HatTrick.Data
     internal class MemDbIndexAccessor<T> where T : class
     {
         #region resolve pointers
-        public static int[] ResolvePointers<YIndex>(MemDbIndex<T, YIndex> index, MemDbIndexExpression<T, YIndex> expression) where YIndex : IConvertible
+        public static int[] ResolvePointers<YIndex>(MemDbIndex<T, YIndex> index, MemDbIndexExpression<T, YIndex> expression) where YIndex : IComparable
         {
             int[] pointers = null;
             if (index is MemDbIndexedSet<T, YIndex> idxSet)
@@ -23,7 +23,7 @@ namespace HatTrick.Data
         #endregion
 
         #region resolve index pointers
-        private static int[] ResolveIndexPointers<YIndex>(MemDbIndex<T, YIndex> index, MemDbIndexExpression<T, YIndex> expression) where YIndex : IConvertible
+        private static int[] ResolveIndexPointers<YIndex>(MemDbIndex<T, YIndex> index, MemDbIndexExpression<T, YIndex> expression) where YIndex : IComparable
         {
             int[] pointers = null;
             IndexRelationalOperator op = (IndexRelationalOperator)expression.RelationalOperator;
@@ -65,7 +65,7 @@ namespace HatTrick.Data
         #endregion
 
         #region resolve indexed set pointers
-        private static int[] ResolveIndexedSetPointers<YIndex>(MemDbIndexedSet<T, YIndex> index, MemDbIndexExpression<T, YIndex> expression) where YIndex : IConvertible
+        private static int[] ResolveIndexedSetPointers<YIndex>(MemDbIndexedSet<T, YIndex> index, MemDbIndexExpression<T, YIndex> expression) where YIndex : IComparable
         {
             int[] pointers = null;
             IndexedSetRelationalOperator op = (IndexedSetRelationalOperator)expression.RelationalOperator;

@@ -102,7 +102,7 @@ namespace HatTrick.Data
         #endregion
 
         #region of T
-        internal MemDbIndex<T, YIndex> Of<YIndex>() where YIndex : IConvertible
+        internal MemDbIndex<T, YIndex> Of<YIndex>() where YIndex : IComparable
         {
             if (this is MemDbIndex<T, YIndex> index)
             {
@@ -116,7 +116,7 @@ namespace HatTrick.Data
     #endregion
 
     #region mem db index of T, YIndex [class]
-    internal class MemDbIndex<T, YIndex> : MemDbIndex<T> where T : class where YIndex : IConvertible
+    internal class MemDbIndex<T, YIndex> : MemDbIndex<T> where T : class where YIndex : IComparable
     {
         #region internals
         private Func<T, YIndex> _keyResolver;
@@ -482,7 +482,7 @@ namespace HatTrick.Data
     #endregion
 
     #region mem db indexed set of T, IEnumerable<YIndex> [class]
-    internal class MemDbIndexedSet<T, YIndex> : MemDbIndex<T, YIndex> where T : class where YIndex : IConvertible
+    internal class MemDbIndexedSet<T, YIndex> : MemDbIndex<T, YIndex> where T : class where YIndex : IComparable
     {
         #region internals
         private Func<T, ICollection<YIndex>> _keyResolver;

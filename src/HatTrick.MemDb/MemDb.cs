@@ -395,7 +395,7 @@ namespace HatTrick.Data
         #endregion
 
         #region query via index
-        public IMemDbIndexExpressionRoot<T, YIndex> QueryViaIndex<YIndex>(string indexName) where YIndex : IConvertible
+        public IMemDbIndexExpressionRoot<T, YIndex> QueryViaIndex<YIndex>(string indexName) where YIndex : IComparable
         {
             if (!(_cache is IIndexedQueryAccessor<T> idxAccess))
                 throw new InvalidOperationException($"{_cache.GetType().FullName} does not implement {nameof(IIndexedQueryAccessor<T>)}");
@@ -405,7 +405,7 @@ namespace HatTrick.Data
         #endregion
 
         #region query via indexed set
-        //public IMemDbIndexedSetExpressionRoot<T, YIndex> QueryViaIndexedSet<YIndex>(string indexName) where YIndex : IConvertible
+        //public IMemDbIndexedSetExpressionRoot<T, YIndex> QueryViaIndexedSet<YIndex>(string indexName) where YIndex : IComparable
         //{
         //    if (!(_cache is IIndexedQueryAccessor<T> idxAccess))
         //        throw new InvalidOperationException($"{_cache.GetType().FullName} does not implement {nameof(IIndexedQueryAccessor<T>)}");

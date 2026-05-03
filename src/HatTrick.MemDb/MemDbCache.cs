@@ -467,7 +467,7 @@ namespace HatTrick.Data
         #endregion
 
         #region query via index
-        public IMemDbIndexExpressionRoot<T, YIndex> QueryViaIndex<YIndex>(string indexName) where YIndex : IConvertible
+        public IMemDbIndexExpressionRoot<T, YIndex> QueryViaIndex<YIndex>(string indexName) where YIndex : IComparable
         {
             this.EnsureReadMode(nameof(QueryViaIndex));
 
@@ -486,7 +486,7 @@ namespace HatTrick.Data
         #endregion
 
         #region execute indexed query expression
-        private T[] ExecuteIndexQueryExpression<YIndex>(MemDbIndexExpression<T, YIndex> expression, bool deepCopy) where YIndex : IConvertible
+        private T[] ExecuteIndexQueryExpression<YIndex>(MemDbIndexExpression<T, YIndex> expression, bool deepCopy) where YIndex : IComparable
         {
             MemDbRecord<T>[] records = this.ExecuteIndexQueryExpression(expression);
 
@@ -495,7 +495,7 @@ namespace HatTrick.Data
                 : Array.ConvertAll(records, r => r.Value);
         }
 
-        private MemDbRecord<T>[] ExecuteIndexQueryExpression<YIndex>(MemDbIndexExpression<T, YIndex> expression) where YIndex : IConvertible
+        private MemDbRecord<T>[] ExecuteIndexQueryExpression<YIndex>(MemDbIndexExpression<T, YIndex> expression) where YIndex : IComparable
         {
             var idx = _appliedIndexes.Get(expression.IndexName).Of<YIndex>();
             int skip = expression.SkipCount;
@@ -533,7 +533,7 @@ namespace HatTrick.Data
         #endregion
 
         #region execute indexed update expression
-        private int ExecuteIndexedUpdateExpression<YIndex>(MemDbIndexExpression<T, YIndex> expression, Action<T> apply) where YIndex : IConvertible
+        private int ExecuteIndexedUpdateExpression<YIndex>(MemDbIndexExpression<T, YIndex> expression, Action<T> apply) where YIndex : IComparable
         {
             lock (_lock)
             {
@@ -552,7 +552,7 @@ namespace HatTrick.Data
         #endregion
 
         #region execute indexed delete expression
-        private int ExecuteIndexedDeleteExpression<YIndex>(MemDbIndexExpression<T, YIndex> expression) where YIndex : IConvertible
+        private int ExecuteIndexedDeleteExpression<YIndex>(MemDbIndexExpression<T, YIndex> expression) where YIndex : IComparable
         {
             lock (_lock)
             {
@@ -571,7 +571,7 @@ namespace HatTrick.Data
         #endregion
 
         #region query via indexed set
-        //public IMemDbIndexedSetExpressionRoot<T, YIndex> QueryViaIndexedSet<YIndex>(string indexName) where YIndex : IConvertible
+        //public IMemDbIndexedSetExpressionRoot<T, YIndex> QueryViaIndexedSet<YIndex>(string indexName) where YIndex : IComparable
         //{
         //    this.EnsureReadMode(nameof(QueryViaIndexedSet));
 

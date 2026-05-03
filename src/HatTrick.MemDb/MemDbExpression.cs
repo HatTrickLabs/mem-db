@@ -252,7 +252,7 @@ namespace HatTrick.Data
         #endregion
 
         #region select distinct
-        public Y[] SelectDistinct<Y>(Func<T, Y> selector)// where Y : IConvertible
+        public Y[] SelectDistinct<Y>(Func<T, Y> selector)// where Y : IComparable
         {
             Type t = typeof(Y);
             bool allowShallowCopy = t == typeof(string) || t.IsValueType;
