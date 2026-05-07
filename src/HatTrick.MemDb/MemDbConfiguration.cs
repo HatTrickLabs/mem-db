@@ -261,8 +261,8 @@ namespace HatTrick.Data
         IMemDBConfigurationBuilder<T> IndexOnIdentity(bool shouldIndex);
         IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, YIndex> keyResolver) where YIndex : IComparable;
         IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, YIndex> keyResolver, IMemDbComparer<YIndex> comparer) where YIndex : IComparable;
-        IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, ICollection<YIndex>> keySetResolver) where YIndex : IComparable;
-        IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, ICollection<YIndex>> keySetResolver, IMemDbComparer<YIndex> comparer) where YIndex : IComparable;
+        //IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, ICollection<YIndex>> keySetResolver) where YIndex : IComparable;
+        //IMemDBConfigurationBuilder<T> ApplyIndex<YIndex>(string name, Func<T, ICollection<YIndex>> keySetResolver, IMemDbComparer<YIndex> comparer) where YIndex : IComparable;
         IMemDBConfigurationBuilder<T> SetFlushInterval(int seconds);
         IMemDBConfigurationBuilder<T> SerializeWith(Func<IMemDbSerializer<T>> serializerProvider);
         IMemDBConfigurationBuilder<T> CloneWith(Func<IMemDbCloner<T>> clonerProvider);

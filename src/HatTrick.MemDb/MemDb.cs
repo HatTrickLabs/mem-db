@@ -145,7 +145,7 @@ namespace HatTrick.Data
         #endregion
 
         #region remove configuration for
-        public static void RemoveConfiguationFor(string datasetName)
+        public static void RemoveConfigurationFor(string datasetName)
         {
             lock (_lock)
             {

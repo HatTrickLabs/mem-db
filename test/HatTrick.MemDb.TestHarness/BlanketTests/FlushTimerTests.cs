@@ -68,7 +68,7 @@ namespace HatTrick.Data.TestHarness
                 this.LoadDb(db);
             }
 
-            MemDb.RemoveConfiguationFor(_dataset);
+            MemDb.RemoveConfigurationFor(_dataset);
         }
         #endregion
 
@@ -84,7 +84,7 @@ namespace HatTrick.Data.TestHarness
                 this.LoadDb(db);
             }
 
-            MemDb.RemoveConfiguationFor(_dataset);
+            MemDb.RemoveConfigurationFor(_dataset);
         }
         #endregion
 
@@ -107,7 +107,7 @@ namespace HatTrick.Data.TestHarness
                 Assert.IsEqual(db.Count(), initialCount); 
             }
 
-            MemDb.RemoveConfiguationFor(_dataset);
+            MemDb.RemoveConfigurationFor(_dataset);
         }
         #endregion
 
@@ -133,7 +133,7 @@ namespace HatTrick.Data.TestHarness
                 Assert.IsEqual(db.Count(), count);
             }
 
-            MemDb.RemoveConfiguationFor(_dataset);
+            MemDb.RemoveConfigurationFor(_dataset);
         }
         #endregion
     }

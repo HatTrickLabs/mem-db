@@ -503,6 +503,7 @@ namespace HatTrick.Data
             MemDbRecord<T>[] set = null;
             int length = 0;
 
+            int kept = 0;
             lock (_lock)
             {
                 int[] pointers = MemDbIndexAccessor<T>.ResolvePointers(idx, expression);
@@ -512,11 +513,19 @@ namespace HatTrick.Data
                     return Array.Empty<MemDbRecord<T>>();
 
                 set = new MemDbRecord<T>[length];
+                var predicate = expression.HasFilter ? expression.Filter : null;
                 for (int i = 0; i < pointers.Length; i++)
                 {
-                    set[i] = _records[pointers[i]];
+                    var rec = _records[pointers[i]];
+                    if (predicate?.Invoke(rec.Value) ?? true)
+                        set[kept++] = rec;
                 }
             }
+
+            if (kept == 0 || skip >= kept)
+                return Array.Empty<MemDbRecord<T>>();
+
+            Array.Resize(ref set, kept);
 
             if (expression.HasOrderBy && length > 1)
                     Array.Sort(set, (a,b) => expression.OrderByComparison(a.Value, b.Value));

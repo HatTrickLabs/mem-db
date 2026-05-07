@@ -45,7 +45,7 @@ namespace HatTrick.Data.TestHarness
             }
 
             if (MemDb.ContainsConfigurationFor(_dataset))
-                MemDb.RemoveConfiguationFor(_dataset);
+                MemDb.RemoveConfigurationFor(_dataset);
         }
 
         public void Go(ref List<Failure> failures, string method)
@@ -58,7 +58,7 @@ namespace HatTrick.Data.TestHarness
                 failures.AddRange(_failures);
             }
 
-            MemDb.RemoveConfiguationFor(_dataset);
+            MemDb.RemoveConfigurationFor(_dataset);
         }
         #endregion
 

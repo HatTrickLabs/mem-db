@@ -42,7 +42,7 @@ namespace HatTrick.Data.TestHarness
             }
 
             //remove the read/write configuration
-            MemDb.RemoveConfiguationFor(_dataset);
+            MemDb.RemoveConfigurationFor(_dataset);
 
             //configure for appendonly
             MemDb.ConfigureFor<DigitalAsset>(_dataset, _dbPath).SetMode(AccessMode.AppendOnly).Register();
@@ -88,7 +88,7 @@ namespace HatTrick.Data.TestHarness
             }
 
             //remove the append only configuration
-            MemDb.RemoveConfiguationFor(_dataset);
+            MemDb.RemoveConfigurationFor(_dataset);
 
             //configure for readonly
             MemDb.ConfigureFor<DigitalAsset>(_dataset, _dbPath).SetMode(AccessMode.ReadOnly).Register();
@@ -100,7 +100,7 @@ namespace HatTrick.Data.TestHarness
                 Assert.IsNotNull(a);
             }
 
-            MemDb.RemoveConfiguationFor(_dataset);
+            MemDb.RemoveConfigurationFor(_dataset);
         }
         #endregion
 
@@ -131,7 +131,7 @@ namespace HatTrick.Data.TestHarness
                 Assert.IsEqual(db.Count(), (assetSetlength * 2));
             }
 
-            MemDb.RemoveConfiguationFor(_dataset);
+            MemDb.RemoveConfigurationFor(_dataset);
 
             MemDb.ConfigureFor<DigitalAsset>(_dataset, _dbPath)
                 .SetMode(AccessMode.ReadWrite)

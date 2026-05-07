@@ -85,7 +85,7 @@ namespace HatTrick.Data.TestHarness
             }
 
             MemDb.Restore(_dataset, timestamp, Path.Combine(_dbPath, "_restore"));
-            MemDb.RemoveConfiguationFor(_dataset);
+            MemDb.RemoveConfigurationFor(_dataset);
             this.RegisterMemDb(Path.Combine(_dbPath, "_restore"));
 
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
@@ -142,7 +142,7 @@ namespace HatTrick.Data.TestHarness
             MemDb.Defrag(_dataset);
 
             MemDb.Restore(_dataset, timestamp, Path.Combine(_dbPath, "_restore"));
-            MemDb.RemoveConfiguationFor(_dataset);
+            MemDb.RemoveConfigurationFor(_dataset);
             this.RegisterMemDb(Path.Combine(_dbPath, "_restore"));
 
             int total = (txtCnt + jsonCnt + unknownCnt);
@@ -195,7 +195,7 @@ namespace HatTrick.Data.TestHarness
             MemDb.Restore(_dataset, timestamp, Path.Combine(_dbPath, "_restore"));
 
             //remove the orig config in order to open the restored db
-            MemDb.RemoveConfiguationFor(_dataset);
+            MemDb.RemoveConfigurationFor(_dataset);
             this.RegisterMemDb(Path.Combine(_dbPath, "_restore"));
 
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
@@ -258,7 +258,7 @@ namespace HatTrick.Data.TestHarness
 
             MemDb.Restore(_dataset, timestamp, Path.Combine(_dbPath, "_restore"));
 
-            MemDb.RemoveConfiguationFor(_dataset);
+            MemDb.RemoveConfigurationFor(_dataset);
             this.RegisterMemDb(Path.Combine(_dbPath, "_restore"));
 
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
@@ -274,7 +274,7 @@ namespace HatTrick.Data.TestHarness
         #region cleanup [override]
         public override void Cleanup()
         {
-            MemDb.RemoveConfiguationFor(_dataset);
+            MemDb.RemoveConfigurationFor(_dataset);
             base.Cleanup();
             string bakPath = Path.Combine(_dbPath, "_bak");
             if (Directory.Exists(bakPath))

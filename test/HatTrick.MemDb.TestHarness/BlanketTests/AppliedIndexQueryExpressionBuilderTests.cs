@@ -85,6 +85,12 @@ namespace HatTrick.Data.TestHarness
 
                 var set7 = db.QueryViaIndex<string>(nameof(DigitalAsset.Extension)).In(".docx", ".xlxs", ".jpg", ".jpeg", ".mp4").ToArray();
                 Assert.IsEqual(set7.Length, 0);
+
+                var set8 = db.QueryViaIndex<string>(nameof(DigitalAsset.Extension))
+                    .IsEqualTo(".json")
+                    .Where(a => string.Compare(a.Name, "0600.json", false) >= 0)
+                    .ToArray();
+                Assert.IsEqual(set8.Length, 300);
             }
         }
         #endregion

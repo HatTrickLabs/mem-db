@@ -93,7 +93,7 @@ namespace HatTrick.Data.TestHarness
                 Assert.IsEqual(db.Count(), assets.Length);
             }
 
-            MemDb.RemoveConfiguationFor(_dataset);
+            MemDb.RemoveConfigurationFor(_dataset);
         }
         #endregion
 
@@ -118,7 +118,7 @@ namespace HatTrick.Data.TestHarness
                 }
             }
 
-            MemDb.RemoveConfiguationFor(_dataset);
+            MemDb.RemoveConfigurationFor(_dataset);
         }
         #endregion
 
@@ -142,7 +142,7 @@ namespace HatTrick.Data.TestHarness
                 Assert.IsEqual(db.Count(), 0);
             }
 
-            MemDb.RemoveConfiguationFor(_dataset);
+            MemDb.RemoveConfigurationFor(_dataset);
         }
         #endregion
 
@@ -181,7 +181,7 @@ namespace HatTrick.Data.TestHarness
                 Assert.IsEqual(txt.Length, txtCnt);
             }
 
-            MemDb.RemoveConfiguationFor(_dataset);
+            MemDb.RemoveConfigurationFor(_dataset);
         }
         #endregion
 
@@ -215,7 +215,7 @@ namespace HatTrick.Data.TestHarness
                 Assert.IsEqual(db.Count(), txtCnt + jsonCnt + unknownCnt);
             }
 
-            MemDb.RemoveConfiguationFor(_dataset);
+            MemDb.RemoveConfigurationFor(_dataset);
         }
         #endregion
 
@@ -250,7 +250,7 @@ namespace HatTrick.Data.TestHarness
                 Assert.IsEqual(db.Count(), txtCnt + unknownCnt);
             }
 
-            MemDb.RemoveConfiguationFor(_dataset);
+            MemDb.RemoveConfigurationFor(_dataset);
         }
         #endregion
 
@@ -286,7 +286,7 @@ namespace HatTrick.Data.TestHarness
                 Assert.IsEqual(db.Count(), txtCnt + jsonCnt + unknownCnt);
             }
 
-            MemDb.RemoveConfiguationFor(_dataset);
+            MemDb.RemoveConfigurationFor(_dataset);
         }
         #endregion
 
@@ -322,7 +322,7 @@ namespace HatTrick.Data.TestHarness
                 Assert.IsEqual(db.Count(), txtCnt + jsonCnt + unknownCnt);
             }
 
-            MemDb.RemoveConfiguationFor(_dataset);
+            MemDb.RemoveConfigurationFor(_dataset);
         }
         #endregion
 
@@ -359,7 +359,7 @@ namespace HatTrick.Data.TestHarness
                 Assert.IsEqual(db.Count(), txtCnt + jsonCnt + unknownCnt);
             }
 
-            MemDb.RemoveConfiguationFor(_dataset);
+            MemDb.RemoveConfigurationFor(_dataset);
         }
         #endregion
     }

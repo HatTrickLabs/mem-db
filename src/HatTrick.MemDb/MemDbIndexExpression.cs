@@ -59,6 +59,10 @@ namespace HatTrick.Data
         public abstract int Count();
         #endregion
 
+        #region where
+        public abstract MemDbIndexExpression<T> Where(Func<T, bool> predicate);
+        #endregion
+
         #region order by
         public abstract MemDbIndexExpression<T> OrderBy(Comparison<T> comparison);
         #endregion
@@ -137,6 +141,7 @@ namespace HatTrick.Data
         private YIndex _key;
         private YIndex[] _keySet;
 
+        private Func<T, bool> _filter;
         private Comparison<T> _orderBy;
         private int? _skip;
         private int? _limit;
@@ -166,6 +171,9 @@ namespace HatTrick.Data
         }
 
         internal ExecuteQuery Query => _query;
+
+        internal bool HasFilter => _filter is not null;
+        internal Func<T, bool> Filter => _filter ?? ((x) => true);
 
         internal bool HasOrderBy => _orderBy is not null;
 
@@ -202,6 +210,17 @@ namespace HatTrick.Data
         {
             T[] set = _query(this, false);
             return set.Length;
+        }
+        #endregion
+
+        #region where
+        public override MemDbIndexExpression<T> Where(Func<T, bool> predicate)
+        {
+            if (_filter is not null)
+                throw new InvalidOperationException($"{nameof(MemDbException)} already contains a {nameof(Where)} predicate.");
+
+            _filter = predicate;
+            return this;
         }
         #endregion
 

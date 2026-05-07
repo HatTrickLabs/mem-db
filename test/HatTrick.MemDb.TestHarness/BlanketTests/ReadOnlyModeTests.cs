@@ -42,7 +42,7 @@ namespace HatTrick.Data.TestHarness
             }
             
             //remove the read/write configuration
-            MemDb.RemoveConfiguationFor(_dataset);
+            MemDb.RemoveConfigurationFor(_dataset);
 
             //configure for readonly
             MemDb.ConfigureFor<DigitalAsset>(_dataset, _dbPath).SetMode(AccessMode.ReadOnly).Register();
