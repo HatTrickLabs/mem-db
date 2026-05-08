@@ -67,7 +67,7 @@ namespace HatTrick.Data.TestHarness
                 Console.WriteLine($"{_sw.ElapsedMilliseconds}\tCompleted db load of {total:n0} records.");
 
                 //this.ConcurrentQueriesOnAppliedIdIndexAssisted(db, 500_000);
-                this.QueryByIdNaturalIndexAssisted(db, 50_000);
+                this.QueryByIdIdentityIndexAssisted(db, 50_000);
                 var withIndex = this.ConcurrentQueriesOnAppliedNameIndexAssisted(db, 100);
                 //var noIndex = this.ConcurrentQueriesOnNameWithoutIndex(db, 10);
                 //this.ConcurrentQueriesOnAppliedDirectoryIndexAssisted(db, 10);
@@ -99,12 +99,12 @@ namespace HatTrick.Data.TestHarness
             Console.ReadLine();
         }
 
-        #region query by id natural index assisted
-        private void QueryByIdNaturalIndexAssisted(MemDb<DigitalAsset> db, int iterations)
+        #region query by id identity index assisted
+        private void QueryByIdIdentityIndexAssisted(MemDb<DigitalAsset> db, int iterations)
         {
             _sw.Reset();
 
-            Console.WriteLine($"Starting concurrent queries for {iterations:n0} records by id (natural index assisted)");
+            Console.WriteLine($"Starting concurrent queries for {iterations:n0} records by id (identity index assisted)");
             DigitalAsset[] assets = new DigitalAsset[iterations];
             _sw.Start();
             Parallel.For(0, iterations, (i) =>

@@ -5,15 +5,15 @@ using System.Diagnostics;
 
 namespace HatTrick.Data.TestHarness
 {
-    public class NaturalIndexSupportedQueryTests : TestBase
+    public class IdentityIndexSupportedQueryTests : TestBase
     {
         #region internals
         private static readonly string _dataset = $"assets";
-        private static readonly string _dbPath = Path.Combine(TestBase.DbBasePath, "natural_index");
+        private static readonly string _dbPath = Path.Combine(TestBase.DbBasePath, "identity_index");
         #endregion
 
         #region ctors
-        public NaturalIndexSupportedQueryTests(AssetResolver assetResolver) : base(_dataset, _dbPath, assetResolver)
+        public IdentityIndexSupportedQueryTests(AssetResolver assetResolver) : base(_dataset, _dbPath, assetResolver)
         {
             MemDb.ConfigureFor<DigitalAsset>(_dataset, _dbPath)
                 .CloneWith(() => new DigitalAssetCloner())
@@ -306,8 +306,8 @@ namespace HatTrick.Data.TestHarness
         }
         #endregion
 
-        #region updates against natural index hit
-        public void Test_UpdatesAgainstNaturalIndexHit()
+        #region updates against identity index hit
+        public void Test_UpdatesAgainstIdentityIndexHit()
         {
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {
@@ -329,8 +329,8 @@ namespace HatTrick.Data.TestHarness
         }
         #endregion
 
-        #region deletes against natural index hit
-        public void Test_DeletessAgainstNaturalIndexHit()
+        #region deletes against identity index hit
+        public void Test_DeletessAgainstIdentityIndexHit()
         {
             using (var db = MemDb.Open<DigitalAsset>(_dataset))
             {

@@ -243,9 +243,9 @@ namespace HatTrick.Data.TestHarness
 
                 db.PurgeCache();
 
-                DigitalAsset assetViaNaturalIdx = db.Find(idOf0500);
+                DigitalAsset assetViaIdentityIdx = db.Find(idOf0500);
 
-                Assert.IsEqual(assetViaNaturalIdx.Name, "0500.json");
+                Assert.IsEqual(assetViaIdentityIdx.Name, "0500.json");
 
                 long idOf500ViaAppliedIdx = db.QueryViaIndex<string>(nameof(DigitalAsset.Name))
                     .IsEqualTo("0500.json")
