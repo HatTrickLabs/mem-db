@@ -88,7 +88,7 @@ namespace HatTrick.Data
             if (_mode == AccessMode.ReadOnly)
                 throw new InvalidOperationException($"Flush interval is not applicable when {nameof(AccessMode)} is {AccessMode.ReadOnly}.");
 
-            if (seconds == 0 || seconds == -1)
+            if (seconds == 0)
                 _flushInterval = seconds;
             else
                 _flushInterval = seconds * 1000;//convert to milliseconds
@@ -99,10 +99,10 @@ namespace HatTrick.Data
         protected void SetEncryptionKeyProvider(Func<byte[]> encryptionKeyProvider)
         {
             if (_encryptionKeyProvider is not null)
-                throw new InvalidOperationException("Encryption key provider already configured.");
+                throw new MemDbConfigurationException("Encryption key provider already configured.");
 
             if (_dbPath is null)
-                throw new NotImplementedException("Encryption key is not applicable when database is not persisted (no path provided).");
+                throw new MemDbConfigurationException("Encryption key is not applicable when database is not persisted (no path provided).");
 
             _encryptionKeyProvider = encryptionKeyProvider;
         }
@@ -115,7 +115,7 @@ namespace HatTrick.Data
                 throw new InvalidOperationException("Archive path already provided.");
 
             if (_dbPath is null)
-                throw new NotImplementedException("Archive path is not applicable when database is not persisted (no path provided).");
+                throw new InvalidOperationException("Archive path is not applicable when database is not persisted (no path provided).");
 
             _archivePath = archivePath;
         }
@@ -373,9 +373,6 @@ namespace HatTrick.Data
         #region set flush interval
         public new IMemDBConfigurationBuilder<T> SetFlushInterval(int seconds)
         {
-            if (seconds == 0)//manual flush only
-                base.SetFlushInterval(seconds);
-
             if (seconds < 0)
                 throw new ArgumentOutOfRangeException(nameof(seconds), "Argument cannot be less than 0.");
 
@@ -384,6 +381,7 @@ namespace HatTrick.Data
             if (seconds > maxAllowed)
                 throw new ArgumentOutOfRangeException($"Max allowed flush interval is {maxAllowed} seconds.", nameof(seconds));
 
+            //0 is manual (no auto flush)
             base.SetFlushInterval(seconds);
 
             return this;
@@ -474,9 +472,9 @@ namespace HatTrick.Data
         public IMemDBConfigurationBuilder<T> SnapshotTo(string snapshotPath)
         {
             if (snapshotPath is null)
-                throw new ArgumentNullException(nameof(ArchivePath));
+                throw new ArgumentNullException(nameof(snapshotPath));
 
-            if (ArchivePath == string.Empty)
+            if (snapshotPath == string.Empty)
                 throw new ArgumentException("Argument must contain a value.", nameof(snapshotPath));
 
             base.SetSnapshotPath(snapshotPath);

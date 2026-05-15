@@ -74,7 +74,7 @@ namespace HatTrick.Data
         {
             MemDbConfiguration config = MemDb.GetConfiguration(datasetName);
             if (config is null)
-                throw new ArgumentException($"No configuration registered fr provided datasetName: {datasetName}");
+                throw new ArgumentException($"No configuration registered for provided datasetName: {datasetName}");
 
             if (!config.ShouldArchive)
                 throw new InvalidOperationException($"Configuration for provided dataset '{datasetName}' is not configured to archive on defrag.");

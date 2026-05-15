@@ -58,6 +58,10 @@ namespace HatTrick.Data
         private MemDbException _flushException;
         #endregion
 
+        #region interface
+        public MemDbException FlushException => _flushException;
+        #endregion
+
         #region ctors
         public MemDbPersisterDisposedException(string message) : base(message)
         {
