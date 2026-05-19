@@ -30,10 +30,12 @@ namespace HatTrick.Data
             if (config is null)
                 throw new ArgumentNullException(nameof(config));
 
-            if (utcTimestamp < 0)//the way the binary is packed, Local and Unspecified timestamps will always be negative.
+
+            DateTime pointInTime = DateTime.FromBinary(utcTimestamp);
+            if (pointInTime.Kind != DateTimeKind.Utc)
                 throw new ArgumentException("The 'restore to' timestamp is not UTC. All MemDb timestamps must be represented as UTC.", nameof(utcTimestamp));
 
-            if (utcTimestamp >= DateTime.UtcNow.ToBinary())
+            if (pointInTime >= DateTime.UtcNow)
                 throw new ArgumentException("The 'restore to' utc timestamp must be in the past.", nameof(utcTimestamp));
 
             _overwrite = overwrite;
