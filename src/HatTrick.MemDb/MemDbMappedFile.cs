@@ -424,7 +424,6 @@ namespace HatTrick.Data
         private void WriteInsertsToDisk()
         {
             using var fsDb = new FileStream(_fullDbPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
-            using var dbWriter = new BinaryWriter(fsDb, Encoding.UTF8, true);
             fsDb.Position = fsDb.Length;
 
             while (this.TryPopInsertRecord(out MemDbRecord<T> record))
@@ -432,21 +431,17 @@ namespace HatTrick.Data
                 long startPos = fsDb.Position;
                 try
                 {
-                    int length;
+                    byte[] raw = this.SerializeRecord(record.Value);
+
                     if (record.IsEncrypted)
-                    {
-                        byte[] raw = this.SerializeRecord(record.Value);
                         _encryptor.Encrypt(raw, fsDb);
-                        //we must record the RAW length of the record NOT crypto...we can calc crypto len on read
-                        length = raw.Length;
-                    }
+
                     else
-                    {
-                        this.SerializeRecord(record.Value, dbWriter);
-                        length = (int)(fsDb.Position - startPos);
-                    }
+                        fsDb.Write(raw);
+
                     record.SetPosition(startPos);
-                    record.SetLength(length);
+                    //we must record the RAW length of the record NOT crypto...we can calc crypto len on read
+                    record.SetLength(raw.Length);
                     int mapIdx = _map.Add(record.GetPointer());
                     record.SetMapIndex(mapIdx);
                 }
