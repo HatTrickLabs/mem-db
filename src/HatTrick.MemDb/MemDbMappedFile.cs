@@ -178,7 +178,7 @@ namespace HatTrick.Data
                     T value = null;
                     if (ptr.IsEncrypted)
                     {
-                        Span<byte> raw = _encryptor.Decrypt(fsDb, ptr.Length);
+                        Span<byte> raw = _encryptor.DecryptFrom(fsDb, ptr.Length);
                         value = _serializer.Deserialize(raw);
                     }
                     else
@@ -434,7 +434,7 @@ namespace HatTrick.Data
                     byte[] raw = this.SerializeRecord(record.Value);
 
                     if (record.IsEncrypted)
-                        _encryptor.Encrypt(raw, fsDb);
+                        _encryptor.EncryptTo(raw, fsDb);
 
                     else
                         fsDb.Write(raw);

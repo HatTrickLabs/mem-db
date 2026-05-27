@@ -126,7 +126,7 @@ namespace HatTrick.Data
                 T value = null;
                 if (ptr.IsEncrypted)
                 {
-                    Span<byte> raw = _encryptor.Decrypt(fsDb, ptr.Length);
+                    Span<byte> raw = _encryptor.DecryptFrom(fsDb, ptr.Length);
                     value = _serializer.Deserialize(raw);
                 }
                 else

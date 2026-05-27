@@ -30,7 +30,7 @@ namespace HatTrick.Data
         #endregion
 
         #region encrypt
-        public void Encrypt(byte[] input, Stream output)
+        public void EncryptTo(byte[] input, Stream output)
         {
             _aes.GenerateIV();
             byte[] iv = _aes.IV;
@@ -46,7 +46,7 @@ namespace HatTrick.Data
         #endregion
 
         #region decrypt
-        public byte[] Decrypt(Stream input, int length)
+        public byte[] DecryptFrom(Stream input, int length)
         {
             byte[] iv = new byte[base.IVSize / 8];
             input.ReadExactly(iv);
