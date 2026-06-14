@@ -1,4 +1,7 @@
-﻿using System.IO;
+﻿// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) HatTrick Labs, LLC
+
+using System.IO;
 using BenchmarkDotNet.Attributes;
 using HatTrick.Data;
 
