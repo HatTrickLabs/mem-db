@@ -4,8 +4,32 @@
     <OutputType>Library</OutputType>
     <AssemblyTitle>HatTrick.MemDb</AssemblyTitle>
     <Product>HatTrick.MemDb</Product>
-    <Copyright>Copyright ©  2025</Copyright>
+    <Authors>Jerrod Eiman</Authors>
+    <Company>HatTrick Labs</Company>
+    <Copyright>Hat Trick Labs</Copyright>
+    <Description>Embedded, in-memory database engine for .NET with file-backed persistence.</Description>
     <RootNamespace>HatTrick.Data</RootNamespace>
     <Version>6.2.0</Version>
+    <PackageProjectUrl>https://hattricklabs.com</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/HatTrickLabs/mem-db</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>in-memory database embedded-database memdb</PackageTags>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageIcon>htl-nuget-logo.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <EnableNETAnalyzers>False</EnableNETAnalyzers>
+    <RunAnalyzersDuringLiveAnalysis>False</RunAnalyzersDuringLiveAnalysis>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\build\htl-nuget-logo.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
 </Project>
