@@ -17,6 +17,7 @@
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageIcon>htl-nuget-logo.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReleaseNotes>Initial public release. Versioned and used internally since 2018 — this release continues that version history rather than resetting to 1.0.</PackageReleaseNotes>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <EnableNETAnalyzers>False</EnableNETAnalyzers>
     <RunAnalyzersDuringLiveAnalysis>False</RunAnalyzersDuringLiveAnalysis>

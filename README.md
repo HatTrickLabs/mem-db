@@ -5,7 +5,7 @@
 
 An embedded database engine for .NET applications that need persistent, queryable storage without standing up a database server.
 
-**[Full documentation](https://hattricklabs.com/docs/memdb/)** | **[NuGet package](https://www.nuget.org/packages/HatTrick.MemDb/)** | **[hattricklabs.com](https://hattricklabs.com)**
+**[Full documentation](https://hattricklabs.com/docs/memdb/)** | **[hattricklabs.com](https://hattricklabs.com)**
 
 ---
 
