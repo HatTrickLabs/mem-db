@@ -9,7 +9,7 @@
     <Copyright>Hat Trick Labs</Copyright>
     <Description>Embedded, in-memory database engine for .NET with file-backed persistence.</Description>
     <RootNamespace>HatTrick.Data</RootNamespace>
-    <Version>6.2.0</Version>
+    <Version>6.2.1</Version>
     <PackageProjectUrl>https://hattricklabs.com</PackageProjectUrl>
     <RepositoryUrl>https://github.com/HatTrickLabs/mem-db</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
