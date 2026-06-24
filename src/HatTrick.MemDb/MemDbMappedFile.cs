@@ -473,7 +473,7 @@ namespace HatTrick.Data
         #region snapshot
         DateTime IMemDbSnapshotter.Snapshot()
         {
-            this.EnsureMode(AccessMode.ReadWrite, nameof(IMemDbSnapshotter.Snapshot));
+            this.EnsureMode(AccessMode.AppendOnly | AccessMode.ReadWrite, nameof(IMemDbSnapshotter.Snapshot));
 
             (this as IMemDbPersister<T>).Flush(false);
 

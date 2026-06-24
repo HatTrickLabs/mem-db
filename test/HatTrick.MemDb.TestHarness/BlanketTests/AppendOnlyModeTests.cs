@@ -151,5 +151,56 @@ namespace HatTrick.Data.TestHarness
             }
         }
         #endregion
+
+        #region append only allows snapshot
+        public void Test_AppendOnlyAllowsSnapshot()
+        {
+            //isolated dataset/path -- _dataset/_dbPath are shared (and left populated) by the
+            //other test methods in this container, so reusing them here would make the count
+            //assertion below depend on execution order.
+            const string snapshotDataset = "appendonly_snapshot_assets";
+            string snapshotDbPath = Path.Combine(_dbPath, "snapshot_test");
+            string snapshotTarget = Path.Combine(snapshotDbPath, "target");
+
+            MemDb.ConfigureFor<DigitalAsset>(snapshotDataset, snapshotDbPath)
+                .SetMode(AccessMode.AppendOnly)
+                .CloneWith(() => new DigitalAssetCloner())
+                .SerializeWith(() => new DigitalAssetBinarySerializer())
+                .SnapshotTo(snapshotTarget)
+                .Register();
+
+            int assetSetLength = base.ResolveAssetSet().Length;
+            DateTime snapshotTimestamp;
+            using (var db = MemDb.Open<DigitalAsset>(snapshotDataset))
+            {
+                this.LoadDb(db);
+                snapshotTimestamp = db.Snapshot();
+            }
+
+            string datasetName = MemDb.GetConfiguration(snapshotDataset).GetSnapshotDatasetName(snapshotTimestamp);
+            MemDb.ConfigureFor<DigitalAsset>(datasetName, snapshotTarget)
+                .CloneWith(() => new DigitalAssetCloner())
+                .SerializeWith(() => new DigitalAssetBinarySerializer())
+                .Register();
+
+            using (var db = MemDb.Open<DigitalAsset>(datasetName))
+            {
+                Assert.IsEqual(db.Count(), assetSetLength);
+            }
+
+            MemDb.RemoveConfigurationFor(snapshotDataset);
+            MemDb.RemoveConfigurationFor(datasetName);
+        }
+        #endregion
+
+        #region cleanup
+        public override void Cleanup()
+        {
+            base.Cleanup();
+            string snapshotDbPath = Path.Combine(_dbPath, "snapshot_test");
+            if (Directory.Exists(snapshotDbPath))
+                Directory.Delete(snapshotDbPath, recursive: true);
+        }
+        #endregion
     }
 }
